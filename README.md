@@ -26,7 +26,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja, aceite de certificado autoassinado por host |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Ainda falta o teste com um release publicado |
 
-Recursos (RNF-05): a CPU ociosa com 10 contas registradas fica em 0,1%, abaixo do limite de 2%. A memória com 10 contas e 1 chamada ficou entre 331 e 389 MB no macOS com tela retina, acima do limite de 300 MB; é uma pendência conhecida.
+Recursos (RNF-05): a CPU ociosa com 10 contas registradas fica em 0,1%, abaixo do limite de 2%. A memória com 10 contas e 1 chamada ficou entre 331 e 389 MB no macOS com tela retina e em 350 MB no Linux do CI, acima do limite de 300 MB; é uma pendência conhecida.
 
 ## Instalar
 

@@ -23,7 +23,7 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 1. **[x] RNF-05 (recursos).** Fechado em 03/10/2026 com a CPU aprovada e a memória reprovada no macOS, por decisão do usuário.
     - CPU ociosa com 10 contas registradas: 0,1% (limite de 2%).
     - Memória com 10 contas e 1 chamada: de 331 a 389 MB no macOS com tela retina (limite de 300 MB). Veja as pendências conhecidas.
-    - `npm run test:resources` mede os dois e roda no CI (job `e2e`). No macOS ele falha na memória; no Linux do CI o número ainda não foi visto.
+    - `npm run test:resources` mede os dois e roda no CI (job `e2e`). Ele falha na memória no macOS e no Linux do CI (350 MB por PSS); no CI o passo tem `continue-on-error` para não bloquear.
 2. **[ ] RF-35 (atualização automática).** O código está pronto: `electron-updater` com GitHub Releases em `phs-santos/iris` (repositório público), canais estável e beta, e a tela "Atualização".
     - Onde está: regras em `src/shared/update.ts` (com `tests/updater.test.ts`), ligação com o Electron em `src/main/updater.ts`, tela em `UpdateDialog.vue`, `publish` no `electron-builder.yml`.
     - Restrições que valem: sem atualizar no modo CLI, sem baixar nada sem o usuário pedir e com a verificação de assinatura mantida.
