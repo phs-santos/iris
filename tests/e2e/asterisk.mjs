@@ -10,14 +10,14 @@ import { join } from 'node:path'
 
 const WSS = process.env.PBX_WS ?? 'wss://127.0.0.1:8089/ws'
 const DOMAIN = process.env.PBX_DOMAIN ?? '127.0.0.1'
-const userData = mkdtempSync(join(tmpdir(), 'sip-bench-pbx-'))
+const userData = mkdtempSync(join(tmpdir(), 'argos-pbx-'))
 const shots = process.env.SHOTS_DIR
 const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 
 const app = await electron.launch({
   args,
-  env: { ...process.env, SIP_BENCH_USER_DATA: userData, SIP_BENCH_FAKE_MEDIA: '1' }
+  env: { ...process.env, ARGOS_USER_DATA: userData, ARGOS_FAKE_MEDIA: '1' }
 })
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)

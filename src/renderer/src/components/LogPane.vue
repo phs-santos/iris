@@ -60,7 +60,7 @@ async function save(format: 'txt' | 'json'): Promise<void> {
           null,
           2
         )
-  const path = await window.bench.files.saveText(`sip-bench-log-${stamp}.${format}`, content)
+  const path = await window.argos.files.saveText(`argos-log-${stamp}.${format}`, content)
   if (path) copied.value = `Salvo em ${path}`
   setTimeout(() => (copied.value = ''), 4000)
 }

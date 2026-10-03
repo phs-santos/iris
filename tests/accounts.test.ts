@@ -18,7 +18,7 @@ describe('validateAccount', () => {
 describe('normalizeImported', () => {
   it('separa a senha e completa campos que faltam', () => {
     const [item] = normalizeImported({
-      format: 'sip-bench/accounts',
+      format: 'argos/accounts',
       schemaVersion: 1,
       exportedAt: '',
       accounts: [{ id: 'x', name: 'A', extension: '1', domain: 'd', password: 's3' }]
@@ -29,7 +29,7 @@ describe('normalizeImported', () => {
     expect(item.account.id).toBe('x')
   })
 
-  it('recusa arquivos que não são exportação do SIP Bench', () => {
+  it('recusa arquivos que não são exportação do Argos', () => {
     expect(() => normalizeImported({ accounts: [] })).toThrow(/não é uma exportação/)
   })
 })

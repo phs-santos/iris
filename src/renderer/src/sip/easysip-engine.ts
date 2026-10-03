@@ -178,7 +178,7 @@ export class EasySipEngine implements SipEngine {
         server: account.wssUrl,
         iceServers: iceServers.length ? iceServers : undefined,
         debug: account.rawSipLog,
-        userAgentString: 'SIP Bench'
+        userAgentString: 'Argos'
       },
       {
         preset: account.preset,

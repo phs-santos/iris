@@ -1,8 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC, type BenchApi, type CertificateErrorEvent } from '@shared/types'
+import { IPC, type ArgosApi, type CertificateErrorEvent } from '@shared/types'
 
 // A interface só alcança o sistema por estes canais fixos (RNF-08).
-const api: BenchApi = {
+const api: ArgosApi = {
   accounts: {
     load: () => ipcRenderer.invoke(IPC.accountsLoad),
     save: (accounts) => ipcRenderer.invoke(IPC.accountsSave, accounts)
@@ -29,4 +29,4 @@ const api: BenchApi = {
   appInfo: () => ipcRenderer.invoke(IPC.appInfo)
 }
 
-contextBridge.exposeInMainWorld('bench', api)
+contextBridge.exposeInMainWorld('argos', api)
