@@ -39,8 +39,14 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
     - **RNF-01:** os testes e2e rodam só em Linux. A especificação pede smoke test nos três sistemas.
     - **RNF-02:** falta o checklist manual com FreeSWITCH e Kamailio.
     - **RNF-17:** falta só a assinatura (passo 3). O `.deb` já sai no `dist:linux` e no release; a instalação foi conferida num contêiner Ubuntu 24.04, mas o app instalado por `.deb` ainda não foi aberto numa máquina com tela.
-5. **[ ] Entregas do M4 que não são código:** o guia de uso e o teste com 3 pessoas (RNF-11: primeira chamada em até 2 minutos). O agente prepara o roteiro e o guia; o teste em si é com o usuário.
+5. **[ ] Entregas do M4 que não são código:** o guia de uso e o teste com 3 pessoas (RNF-11: primeira chamada em até 2 minutos).
+    - **Guia: feito**, como tela dentro do app (botão "Guia" ou F1). Texto em `src/renderer/src/guide/content.ts`, tela em `GuideDialog.vue`, capturas em `src/renderer/src/assets/guide` geradas por `npm run guide:shots`. Quando uma tela mudar, atualize a seção do guia e refaça as capturas.
+    - **Falta:** o roteiro do teste com 3 pessoas (o agente prepara) e o teste em si (com o usuário).
 6. **[ ] Fechar o M4.** Critério de saída: todos os RF/RNF essenciais e importantes aprovados, sem defeito crítico aberto. Atualize o "Estado atual" do README, que ainda diz "M0 a M3" e "RNF-17 fica para o M4", e as pendências do `docs/SEGURANCA.md`.
+
+**RF-38 (ajuda da IA), pedido pelo usuário em 03/10/2026:** feito. Só OpenRouter, com a chave do usuário e a máscara ligada por padrão. Regras em `src/shared/ai.ts`, chamada em `src/main/ai.ts`, tela em `AiDialog.vue`, testes em `tests/ai.test.ts` e `test:ai`. Testado em 03/10/2026 com uma chave de verdade (resposta em 9 s, modelo sugerido `anthropic/claude-sonnet-5.5`); o `test:ai` usa uma OpenRouter falsa. Falta o botão no resultado de um passo de cenário.
+
+**Ideias conversadas, ainda sem requisito** (não faça sem o usuário pedir): criador de URA que exporta o plano de discagem e gera os cenários de teste; modo Telefone (tela simples de celular); a lista de melhorias de experiência de uso (erros em português, primeiro uso guiado, chamada recebida em destaque, tela única de Preferências).
 
 **Fora do 1.0** (não faça sem o usuário pedir): RF-20 (early media), RF-27 (BLF), RF-34 (atalhos globais) e RF-36 (gravação). O RF-31 também era "depois", mas já foi feito.
 
@@ -59,7 +65,7 @@ Pendências conhecidas, que não precisam ser feitas agora:
 
 ## Releases
 
-- O repositório é público: `github.com/phs-santos/iris`. A primeira versão pública é a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
+- O repositório é público: `github.com/phs-santos/iris`. A versão pública atual é a 1.0.3 (IA, guia e avisos do Windows); a primeira foi a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
 - Uma tag `v` + versão dispara `.github/workflows/release.yml`, que gera os instaladores dos três sistemas e cria um release **em rascunho**. Publicar o rascunho é com o usuário. O passo a passo está no README, em "Atualização automática".
 - Dar push na `main` e criar tag só com autorização do usuário para aquele release.
 

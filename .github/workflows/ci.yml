@@ -48,6 +48,8 @@ jobs:
               run: xvfb-run -a node tests/e2e/cli.mjs
             - name: Acessibilidade (axe, WCAG A/AA) e atalhos
               run: xvfb-run -a node tests/e2e/a11y.mjs
+            - name: Ajuda da IA com uma OpenRouter falsa (RF-38)
+              run: xvfb-run -a node tests/e2e/ai.mjs
             - name: Subir Asterisk de teste
               run: |
                   ./docker/asterisk/gen-cert.sh

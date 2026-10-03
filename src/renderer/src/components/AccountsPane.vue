@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
+import { useAiStore } from '@renderer/stores/ai'
 import { useCallsStore } from '@renderer/stores/calls'
 import { describeStatus } from '@renderer/lib/accounts'
 import { ref } from 'vue'
 
 const emit = defineEmits<{ new: []; edit: [account: Account]; health: [id: string] }>()
 const accounts = useAccountsStore()
+const ai = useAiStore()
 const calls = useCallsStore()
 const confirmDelete = ref<string | null>(null)
 
@@ -78,6 +80,13 @@ async function remove(id: string): Promise<void> {
                         </button>
                         <button class="btn small" @click="emit('edit', account)">Editar</button>
                         <button class="btn small" @click="emit('health', account.id)">Saúde</button>
+                        <button
+                            v-if="accounts.statusOf(account.id).state === 'error'"
+                            class="btn small"
+                            @click="ai.explainAccount(account.id)"
+                        >
+                            Por que falhou?
+                        </button>
                         <button class="btn small" @click="accounts.duplicate(account.id)">Duplicar</button>
                         <button
                             v-if="confirmDelete !== account.id"

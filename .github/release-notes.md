@@ -21,7 +21,7 @@ Os outros arquivos da lista abaixo não são para baixar à mão:
 
 Os instaladores ainda não são assinados, então o sistema avisa na primeira vez:
 
-- **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**.
+- **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. Se aparecer "O controle inteligente de aplicativos bloqueou um aplicativo", não há botão para liberar: esse recurso do Windows 11 só deixa rodar instalador assinado. Enquanto a Íris não for assinada, ela não instala nessas máquinas, a não ser que o Controle Inteligente de Aplicativos seja desligado em **Segurança do Windows → Controle de aplicativos e do navegador** (o Windows não deixa religar depois sem reinstalar o sistema).
 - **macOS:** arraste a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Se o macOS disser que o app está danificado, rode `xattr -dr com.apple.quarantine /Applications/Iris.app`.
 - **macOS, senha das Chaves:** a Íris guarda as senhas das contas nas Chaves do sistema. Se aparecer o pedido, digite a senha de login do Mac e escolha **Permitir Sempre**.
 - **Linux, `.deb`:** instale com `sudo apt install ./iris_VERSION_amd64.deb`. Para atualizar, baixe e instale o `.deb` da versão nova.

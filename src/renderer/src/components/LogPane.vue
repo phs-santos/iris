@@ -2,12 +2,14 @@
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { formatEntry, formatTime, useLogStore, type LogFilter } from '@renderer/stores/log'
+import { useAiStore } from '@renderer/stores/ai'
 
 /** Linhas desenhadas na tela; o resto continua disponível para copiar e salvar. */
 const VISIBLE_LIMIT = 1500
 
 const accounts = useAccountsStore()
 const log = useLogStore()
+const ai = useAiStore()
 // Por padrão esconde o detalhe interno da biblioteca SIP (nível debug).
 const filter = reactive<LogFilter>({ accountId: null, kind: 'event', minLevel: 'info', text: '' })
 const follow = ref(true)
@@ -133,6 +135,9 @@ async function save(format: 'txt' | 'json'): Promise<void> {
             <button class="btn small" @click="save('txt')">Salvar .txt</button>
             <button class="btn small" @click="save('json')">Salvar .json</button>
             <button class="btn small" @click="log.clear(filter.accountId)">Limpar</button>
+            <button class="btn small" :disabled="matching.length === 0" @click="ai.explainLog(matching)">
+                Explicar com IA
+            </button>
             <span class="note">{{ copied }}</span>
             <button v-if="!follow" class="btn small ghost" @click="jumpToEnd">Ir para o fim</button>
         </div>

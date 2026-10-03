@@ -1,5 +1,6 @@
 // Tipos compartilhados entre o processo principal, o preload e a interface.
 
+import type { AiModel, AiRequest, AiResult, AiSettings, AiStatus } from './ai'
 import type { CliConfig } from './cli'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
@@ -79,6 +80,8 @@ export interface Settings {
     audioOutputId?: string
     /** Canal de atualização (RF-35). Sem o campo, vale o estável. */
     updateChannel?: UpdateChannel
+    /** Ajuda da IA para ler o log (RF-38). */
+    ai?: AiSettings
 }
 
 /** Canais de atualização (RF-35): o beta recebe também as versões de teste (`1.2.0-beta.1`). */
@@ -157,6 +160,15 @@ export interface IrisApi {
         install(): Promise<void>
         onStatus(listener: (status: UpdateStatus) => void): () => void
     }
+    /** Ajuda da IA para ler o log (RF-38). A chave entra, mas nunca volta para a interface. */
+    ai: {
+        status(): Promise<AiStatus>
+        /** `null` apaga a chave. */
+        setKey(key: string | null): Promise<void>
+        setOptions(options: AiSettings): Promise<void>
+        models(): Promise<AiModel[]>
+        explain(request: AiRequest): Promise<AiResult>
+    }
     appInfo(): Promise<{ version: string; platform: string; electron: string; chrome: string }>
 }
 
@@ -181,6 +193,11 @@ export const IPC = {
     updateDownload: 'update:download',
     updateInstall: 'update:install',
     updateStatus: 'update:status',
+    aiStatus: 'ai:status',
+    aiSetKey: 'ai:set-key',
+    aiSetOptions: 'ai:set-options',
+    aiModels: 'ai:models',
+    aiExplain: 'ai:explain',
     cliConfig: 'cli:config',
     cliPrint: 'cli:print',
     cliReport: 'cli:report',

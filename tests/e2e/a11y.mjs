@@ -75,6 +75,44 @@ try {
         .waitFor({ state: 'detached', timeout: 2000 })
         .catch(() => problems.push('[atualização] Esc não fecha'))
 
+    await page.getByRole('button', { name: 'Explicar com IA' }).last().click()
+    await page.getByLabel('Chave da OpenRouter').waitFor()
+    await scan('ajuda da IA')
+    await page.keyboard.press('Escape')
+    await page
+        .getByRole('dialog', { name: /IA$/ })
+        .waitFor({ state: 'detached', timeout: 2000 })
+        .catch(() => problems.push('[ajuda da IA] Esc não fecha'))
+
+    // Guia: todas as seções abrem, as capturas carregam e a busca filtra o índice.
+    await page.keyboard.press('F1')
+    const guide = page.getByRole('dialog', { name: 'Guia da Íris' })
+    await guide.waitFor()
+    await scan('guia')
+    const entries = guide.locator('.entry')
+    const total = await entries.count()
+    for (let i = 0; i < total; i++) {
+        await entries.nth(i).click()
+        const broken = await guide.locator('figure img').evaluateAll((imgs) =>
+            Promise.all(
+                imgs.map((img) =>
+                    img.decode().then(
+                        () => (img.naturalWidth ? null : img.alt),
+                        () => img.alt
+                    )
+                )
+            )
+        )
+        for (const alt of broken.filter(Boolean)) problems.push(`[guia] imagem não carregou: ${alt}`)
+    }
+    await guide.getByRole('button', { name: 'Cenários', exact: true }).click()
+    await scan('guia, seção com tabela e imagem')
+    await guide.getByLabel('Buscar no guia').fill('p95')
+    if ((await entries.count()) !== 1) problems.push('[guia] a busca por "p95" deveria deixar só a seção de cenários')
+    await page.keyboard.press('Escape')
+    await guide.waitFor({ state: 'detached', timeout: 2000 }).catch(() => problems.push('[guia] Esc não fecha'))
+    step(`guia com ${total} seções, capturas carregadas e busca`)
+
     await page.getByRole('tab', { name: 'Cenários' }).click()
     await page.getByRole('button', { name: '+ Exemplo de URA' }).click()
     await page.getByRole('button', { name: 'Executar', exact: true }).click()

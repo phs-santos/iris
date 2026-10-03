@@ -13,6 +13,9 @@ import ImportExportDialog from './components/ImportExportDialog.vue'
 import HealthDialog from './components/HealthDialog.vue'
 import AudioDialog from './components/AudioDialog.vue'
 import UpdateDialog from './components/UpdateDialog.vue'
+import AiDialog from './components/AiDialog.vue'
+import GuideDialog from './components/GuideDialog.vue'
+import { useAiStore } from './stores/ai'
 import ScenariosPane from './components/ScenariosPane.vue'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
@@ -23,12 +26,14 @@ const calls = useCallsStore()
 const log = useLogStore()
 const devices = useDevicesStore()
 const scenarios = useScenariosStore()
+const ai = useAiStore()
 const centerTab = ref<'phone' | 'scenarios'>('phone')
 
 const editing = ref<Account | null>(null)
 const showImportExport = ref(false)
 const showAudio = ref(false)
 const showUpdate = ref(false)
+const showGuide = ref(false)
 const update = ref<UpdateInfo | null>(null)
 // O botão da barra avisa quando há versão nova para baixar ou já baixada (RF-35).
 const updatePending = computed(() => ['available', 'ready'].includes(update.value?.status.state ?? ''))
@@ -79,6 +84,10 @@ async function setUpdateChannel(channel: UpdateChannel): Promise<void> {
 
 // Atalhos de teclado (ver especificação, seção Interface).
 function onKey(event: KeyboardEvent): void {
+    if (event.key === 'F1') {
+        showGuide.value = true
+        return event.preventDefault()
+    }
     const mod = event.ctrlKey || event.metaKey
     if (!mod) return
     const selectedCall = calls.calls.find((c) => c.id === calls.selectedId && c.state !== 'ended')
@@ -161,6 +170,7 @@ onUnmounted(() => {
             <button class="btn small" :class="{ primary: updatePending }" @click="openUpdate">
                 {{ updatePending ? 'Atualização disponível' : 'Atualização' }}
             </button>
+            <button class="btn small" @click="showGuide = true">Guia</button>
         </header>
 
         <div v-if="certError" class="banner" role="alert">
@@ -232,6 +242,8 @@ onUnmounted(() => {
         <ImportExportDialog v-if="showImportExport" @close="showImportExport = false" />
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
         <AudioDialog v-if="showAudio" @close="showAudio = false" />
+        <GuideDialog v-if="showGuide" @close="showGuide = false" />
+        <AiDialog v-if="ai.ask" :ask="ai.ask" @close="ai.ask = null" />
         <UpdateDialog
             v-if="showUpdate && update"
             :info="update"

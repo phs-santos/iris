@@ -48,6 +48,13 @@ const api: IrisApi = {
             return () => ipcRenderer.removeListener(IPC.updateStatus, handler)
         }
     },
+    ai: {
+        status: () => ipcRenderer.invoke(IPC.aiStatus),
+        setKey: (key) => ipcRenderer.invoke(IPC.aiSetKey, key),
+        setOptions: (options) => ipcRenderer.invoke(IPC.aiSetOptions, options),
+        models: () => ipcRenderer.invoke(IPC.aiModels),
+        explain: (request) => ipcRenderer.invoke(IPC.aiExplain, request)
+    },
     appInfo: () => ipcRenderer.invoke(IPC.appInfo)
 }
 

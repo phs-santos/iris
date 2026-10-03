@@ -24,6 +24,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-28, 29, 30 | Cenários: editor de passos (registrar, discar, atender, esperar, aguardar estado, DTMF, transferir, desligar, verificar), resultado de cada passo com tempo, repetição N vezes com relatório .txt/.json |
 | RF-31 | Cenários pela linha de comando, sem janela: resultado de cada passo no terminal, relatório e código de saída 1 quando algum passo falha |
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja, aceite de certificado autoassinado por host |
+| RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Ainda falta o teste com um release publicado |
 
 Recursos (RNF-05): a CPU ociosa com 10 contas registradas fica em 0,1%, abaixo do limite de 2%. A memória com 10 contas e 1 chamada ficou entre 331 e 389 MB no macOS com tela retina e em 350 MB no Linux do CI, acima do limite de 300 MB; é uma pendência conhecida.
@@ -42,7 +43,7 @@ Baixe o instalador da [página de releases](https://github.com/phs-santos/iris/r
 
 Os instaladores ainda não são assinados (RNF-17), então o sistema avisa na primeira vez:
 
-- **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**.
+- **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. Se aparecer "O controle inteligente de aplicativos bloqueou um aplicativo", não há botão para liberar: esse recurso do Windows 11 só deixa rodar instalador assinado. Enquanto a Íris não for assinada, ela não instala nessas máquinas, a não ser que o Controle Inteligente de Aplicativos seja desligado em **Segurança do Windows → Controle de aplicativos e do navegador** (o Windows não deixa religar depois sem reinstalar o sistema).
 - **macOS:** depois de arrastar a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Se o macOS disser que o app está danificado, rode `xattr -dr com.apple.quarantine /Applications/Iris.app`.
 - **macOS, senha das Chaves:** a Íris guarda as senhas das contas nas Chaves do sistema. Sem assinatura, o macOS pede a senha de login depois de cada atualização do app: digite e escolha **Permitir Sempre**. Enquanto o pedido está aberto, a Íris mostra um aviso e as contas ainda não aparecem.
 
@@ -110,6 +111,7 @@ npm test            # testes de unidade (Vitest)
 npm run test:e2e    # ponta a ponta no modo simulado (abre o app)
 npm run test:scenarios   # cenários: executa, força falha, repete 20× e exporta relatório
 npm run test:cli    # linha de comando: códigos de saída 0, 1 e 2
+npm run test:ai     # ajuda da IA com uma OpenRouter falsa: máscara, chave no cofre e resposta na tela
 npm run test:a11y   # acessibilidade: axe (WCAG A/AA) em todas as telas e atalhos de teclado
 npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:pbx    # integração com o Asterisk do docker compose
@@ -128,6 +130,23 @@ npm run dist:mac     # .dmg e .zip (rodar no macOS)
 ```
 
 Os instaladores ainda não são assinados (RNF-17). O `.dmg` e o `.zip` saem para Apple Silicon e para Intel.
+
+## Guia de uso
+
+O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 21 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
+
+O texto fica em `src/renderer/src/guide/content.ts`. As capturas são geradas do próprio app: depois de mudar a interface, rode `npm run guide:shots`.
+
+## Ajuda da IA
+
+A Íris pode pedir a um modelo de IA que explique o log. É opcional e só funciona com a **sua chave da [OpenRouter](https://openrouter.ai/keys)**; o uso é cobrado na sua conta de lá.
+
+- **Onde pedir:** **Explicar com IA** no rodapé do log (usa o filtro atual), no cartão de uma chamada encerrada, e **Por que falhou?** numa conta em erro.
+- **O que sai da máquina:** só o texto que a tela mostra antes de você clicar em **Enviar para a OpenRouter**, mais uma instrução fixa de como responder. Vão no máximo as 400 linhas mais novas do recorte.
+- **Máscara:** ligada por padrão. Ramais, números, IPs, domínios e nomes de conta viram marcadores como `[NÚMERO-1]` e `[HOST-1]`. Dá para desligar na própria tela.
+- **Senhas e autenticação** nunca são enviadas, com ou sem máscara.
+- **A chave** fica no cofre de senhas do sistema, não aparece de novo na tela e não entra em exportações. **Remover chave** apaga.
+- A IA pode errar: confira a explicação com o log antes de mexer no PBX.
 
 ## Atualização automática
 

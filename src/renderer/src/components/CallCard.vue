@@ -4,10 +4,12 @@ import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore, type CallView } from '@renderer/stores/calls'
 import { DtmfSyntaxError, parseDtmfSequence } from '@renderer/lib/dtmf'
 import { duration, now } from '@renderer/lib/now'
+import { useAiStore } from '@renderer/stores/ai'
 
 const props = defineProps<{ call: CallView }>()
 const accounts = useAccountsStore()
 const calls = useCallsStore()
+const ai = useAiStore()
 
 const dtmf = ref('')
 const dtmfError = ref('')
@@ -101,6 +103,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
             <span v-if="consulting">· consultando {{ consulting.remote }}</span>
             <span v-if="call.dtmfReceived">· DTMF recebido {{ call.dtmfReceived }}</span>
             <span v-if="call.endText">· {{ call.endText }}</span>
+            <button v-if="!live" class="btn small explain" @click.stop="ai.explainCall(call)">Explicar com IA</button>
         </div>
 
         <div v-if="live && consultOf" class="consult" @click.stop>
@@ -212,6 +215,9 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
 </template>
 
 <style scoped>
+.explain {
+    margin-left: auto;
+}
 .consult {
     display: flex;
     align-items: center;

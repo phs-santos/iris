@@ -130,6 +130,7 @@ São 37 requisitos em cinco grupos: 15 essenciais, 16 importantes e 6 desejávei
 | RF-35 | Atualização automática, com canais estável e beta | Importante | M4 | Uma versão nova é baixada e aplicada ao reiniciar |
 | RF-36 | Gravar a chamada em arquivo de áudio local | Desejável | Depois | O arquivo contém os dois lados da conversa |
 | RF-37 | Aceitar certificado autoassinado de um host específico, com aviso explícito | Importante | M2 | Só o host aceito conecta; os demais continuam recusados |
+| RF-38 | Ajuda de IA para explicar o log, uma chamada ou uma falha de registro, pela OpenRouter, com a chave do próprio usuário | Desejável | M4 | Sem chave nada é enviado; a tela mostra o texto antes de enviar; por padrão ramais, números, IPs, domínios e nomes saem mascarados; senhas e dados de autenticação nunca saem; a chave fica no cofre de senhas e a interface não consegue lê-la |
 
 ## Requisitos não funcionais
 

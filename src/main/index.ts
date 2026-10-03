@@ -17,6 +17,7 @@ import {
 import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
 import { isUpdateChannel, setupUpdater } from './updater'
+import { AI_SECRET_PREFIX, registerAiIpc } from './ai'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -166,6 +167,8 @@ app.on('certificate-error', (event, _webContents, url, error, _certificate, call
 function registerIpc(): void {
     const isList = (v: unknown, max = 1000): v is unknown[] => Array.isArray(v) && v.length <= max
     const isId = (v: unknown): v is string => isString(v, 200) && v.length > 0
+    // A chave da IA mora no mesmo cofre, mas a interface não pode ler nem trocar por estes canais (RF-38).
+    const isAccountId = (v: unknown): v is string => isId(v) && !v.startsWith(AI_SECRET_PREFIX)
 
     handle(IPC.accountsLoad, () => loadAccounts())
     handle(IPC.accountsSave, (_e, accounts: Account[]) => {
@@ -178,12 +181,12 @@ function registerIpc(): void {
         return saveScenarios(scenarios)
     })
     handle(IPC.secretsGet, (_e, id: string) => {
-        check(isId(id), 'id da conta')
+        check(isAccountId(id), 'id da conta')
         return getSecret(id)
     })
     // Com --contas, as senhas do arquivo ficam só na memória desta execução.
     handle(IPC.secretsSet, (_e, id: string, password: string | null) => {
-        check(isId(id) && (password === null || isString(password, 1000)), 'senha')
+        check(isAccountId(id) && (password === null || isString(password, 1000)), 'senha')
         return setSecret(id, password, !cliOptions?.accountsFile)
     })
     if (!cli) handle(IPC.cliConfig, () => null)
@@ -248,6 +251,7 @@ app.whenReady().then(async () => {
     }
     // Empacotado, o macOS usa o .icns do bundle; em dev o Dock mostraria o ícone do Electron.
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(appIcon)
+    registerAiIpc()
     createWindow()
     createTray()
     await setupUpdater({
