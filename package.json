@@ -18,16 +18,15 @@
     "dist:mac": "electron-vite build && electron-builder --mac --publish never",
     "test:e2e": "electron-vite build && node tests/e2e/smoke.mjs",
     "test:pbx": "electron-vite build && node tests/e2e/asterisk.mjs",
-    "postinstall": "patch-package"
+    "postinstall": "node scripts/apply-patches.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@vitejs/plugin-vue": "^6.0.0",
     "easy-sipjs": "2.7.6",
     "electron": "^44.5.1",
-    "electron-builder --publish never": "^26.0.0",
+    "electron-builder": "27.0.0-alpha.9",
     "electron-vite": "^5.0.0",
-    "patch-package": "^8.0.1",
     "pinia": "^3.0.0",
     "playwright-core": "^1.63.0",
     "typescript": "~5.9.3",

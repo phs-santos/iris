@@ -6,7 +6,6 @@ directories:
 files:
   - out/**
   - package.json
-asarUnpack: []
 win:
   target: nsis
 nsis:
