@@ -36,6 +36,10 @@ jobs:
                   cache: npm
             - run: npm ci
             - run: npm run build
+            # O Ubuntu 24.04 bloqueia o sandbox do Chromium para binários fora de pacotes do sistema.
+            # Liberar aqui mantém o sandbox ligado nos testes, como no app instalado.
+            - name: Liberar o sandbox do Chromium
+              run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
             - name: Ponta a ponta no modo simulado
               run: xvfb-run -a node tests/e2e/smoke.mjs
             - name: Cenários no modo simulado
