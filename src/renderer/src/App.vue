@@ -65,6 +65,12 @@ async function trustHost(): Promise<void> {
     }
 }
 
+/** Abre a tela já procurando: o resultado guardado pode ser de horas atrás (ex.: erro de quando não havia rede). */
+function openUpdate(): void {
+    showUpdate.value = true
+    if (['idle', 'up-to-date', 'error'].includes(update.value?.status.state ?? '')) void window.iris.update.check()
+}
+
 async function setUpdateChannel(channel: UpdateChannel): Promise<void> {
     await window.iris.update.setChannel(channel)
     update.value = await window.iris.update.info()
@@ -152,7 +158,7 @@ onUnmounted(() => {
             <button class="btn small" @click="accounts.unregisterAll()">Desregistrar todas</button>
             <button class="btn small" @click="showAudio = true">Áudio</button>
             <button class="btn small" @click="showImportExport = true">Importar / Exportar</button>
-            <button class="btn small" :class="{ primary: updatePending }" @click="showUpdate = true">
+            <button class="btn small" :class="{ primary: updatePending }" @click="openUpdate">
                 {{ updatePending ? 'Atualização disponível' : 'Atualização' }}
             </button>
         </header>
