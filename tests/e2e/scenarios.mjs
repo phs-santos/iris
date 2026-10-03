@@ -61,7 +61,11 @@ try {
         await page.locator('.acc', { hasText: origin }).locator('.row').click()
         await page.getByRole('button', { name: 'Registrar', exact: true }).click()
         const trust = page.getByRole('button', { name: 'Confiar neste host' })
-        if (await trust.isVisible({ timeout: 8000 }).catch(() => false)) await trust.click()
+        // isVisible não espera: o aviso do certificado pode aparecer um instante depois do clique.
+        await trust
+            .waitFor({ timeout: 8000 })
+            .then(() => trust.click())
+            .catch(() => undefined)
         await page.locator('.acc', { hasText: origin }).locator('.dot.registered').waitFor({ timeout: 15000 })
         step(`${origin} registrada no PBX real`)
     }

@@ -93,7 +93,11 @@ try {
     await page.getByRole('button', { name: 'Registrar todas', exact: true }).click()
     // O certificado autoassinado do PBX de teste precisa ser aceito uma vez (RF-37).
     const trust = page.getByRole('button', { name: 'Confiar neste host' })
-    if (await trust.isVisible({ timeout: 10000 }).catch(() => false)) await trust.click()
+    // isVisible não espera: o aviso do certificado pode aparecer um instante depois do clique.
+    await trust
+        .waitFor({ timeout: 10000 })
+        .then(() => trust.click())
+        .catch(() => undefined)
     const total = ACCOUNTS + 2 // + as duas contas simuladas que registram ao abrir
     await page.getByText(`${total} registradas`).waitFor({ timeout: 60000 })
     step(`${ACCOUNTS} contas registradas no Asterisk em ${((Date.now() - registerStart) / 1000).toFixed(1)} s`)

@@ -120,7 +120,11 @@ try {
     const registerAll = page.getByRole('button', { name: 'Registrar todas', exact: true })
     await registerAll.click()
     const trust = page.getByRole('button', { name: 'Confiar neste host' })
-    if (await trust.isVisible({ timeout: 8000 }).catch(() => false)) await trust.click()
+    // isVisible não espera: o aviso do certificado pode aparecer um instante depois do clique.
+    await trust
+        .waitFor({ timeout: 8000 })
+        .then(() => trust.click())
+        .catch(() => undefined)
     // As 3 de exemplo também registram com "Registrar todas"; 2 delas (a terceira usa senha errada).
     // O Chromium abre os WebSockets do mesmo host um de cada vez. Com o PBX lento (Docker Desktop),
     // a última conta da fila passa dos 5 s do SIP.js e fica em erro; "Registrar todas" tenta só as que faltam.
