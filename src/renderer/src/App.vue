@@ -32,9 +32,9 @@ function newAccount(): void {
 async function trustHost(): Promise<void> {
   if (!certError.value) return
   const host = certError.value.host
-  const settings = await window.argos.settings.load()
+  const settings = await window.iris.settings.load()
   settings.trustedHosts = [...new Set([...settings.trustedHosts, host])]
-  await window.argos.settings.save(settings)
+  await window.iris.settings.save(settings)
   log.add(null, 'warn', 'event', `Certificado de ${host} aceito manualmente`)
   certError.value = null
   // Refaz o registro das contas que usam esse host.
@@ -70,12 +70,12 @@ function onKey(event: KeyboardEvent): void {
 let offCert: (() => void) | undefined
 onMounted(async () => {
   window.addEventListener('keydown', onKey)
-  offCert = window.argos.onCertificateError((event) => {
+  offCert = window.iris.onCertificateError((event) => {
     certError.value = event
     log.add(null, 'error', 'event', `Certificado TLS recusado para ${event.host}: ${event.error}`)
   })
-  const info = await window.argos.appInfo()
-  log.add(null, 'info', 'event', `Argos ${info.version} · Electron ${info.electron} · Chromium ${info.chrome} · ${info.platform}`)
+  const info = await window.iris.appInfo()
+  log.add(null, 'info', 'event', `Íris ${info.version} · Electron ${info.electron} · Chromium ${info.chrome} · ${info.platform}`)
   await accounts.load()
 })
 onUnmounted(() => {
@@ -87,7 +87,7 @@ onUnmounted(() => {
 <template>
   <div class="shell">
     <header class="topbar">
-      <span class="brand">Argos</span>
+      <span class="brand">Íris</span>
       <span class="summary mono tabular">
         {{ accounts.accounts.length }} contas · {{ pbxCount }} PBX · {{ registeredCount }} registradas · {{ calls.active.length }} chamadas
       </span>

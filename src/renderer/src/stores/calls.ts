@@ -173,7 +173,7 @@ export const useCallsStore = defineStore('calls', () => {
         if (view(call.id)?.state === 'ringing') void answer(call.id)
       }, delay)
     } else {
-      window.argos.notify(`${account?.name ?? 'Conta'} está tocando`, `Chamada de ${who}`)
+      window.iris.notify(`${account?.name ?? 'Conta'} está tocando`, `Chamada de ${who}`)
     }
   }
 

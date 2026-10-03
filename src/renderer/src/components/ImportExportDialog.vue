@@ -9,12 +9,12 @@ const message = ref<{ ok: boolean; text: string } | null>(null)
 
 async function doExport(): Promise<void> {
   const json = await accounts.exportJson(includePasswords.value)
-  const path = await window.argos.files.saveText('argos-contas.json', json)
+  const path = await window.iris.files.saveText('iris-contas.json', json)
   if (path) message.value = { ok: true, text: `${accounts.accounts.length} contas exportadas para ${path}` }
 }
 
 async function doImport(): Promise<void> {
-  const text = await window.argos.files.openText()
+  const text = await window.iris.files.openText()
   if (text === null) return
   try {
     const count = await accounts.importJson(text)
@@ -45,7 +45,7 @@ async function doImport(): Promise<void> {
         </section>
         <section>
           <h3>Importar</h3>
-          <p>Lê um arquivo exportado pelo Argos. Contas com o mesmo id são substituídas; as outras são adicionadas.</p>
+          <p>Lê um arquivo exportado pela Íris. Contas com o mesmo id são substituídas; as outras são adicionadas.</p>
           <button class="btn" @click="doImport">Escolher arquivo</button>
         </section>
         <p v-if="message" class="result" :class="message.ok ? 'ok' : 'bad'">{{ message.text }}</p>

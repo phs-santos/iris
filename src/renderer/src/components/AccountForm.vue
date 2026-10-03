@@ -23,7 +23,7 @@ const title = computed(() => (isNew ? 'Nova conta' : `Editar ${props.account.nam
 
 async function effectivePassword(): Promise<string> {
   if (password.value) return password.value
-  return isNew ? '' : ((await window.argos.secrets.get(form.id)) ?? '')
+  return isNew ? '' : ((await window.iris.secrets.get(form.id)) ?? '')
 }
 
 function applyQuickDials(): void {

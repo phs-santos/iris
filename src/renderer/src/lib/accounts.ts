@@ -98,8 +98,8 @@ export function validateAccount(account: Account, password: string): Record<stri
 /** Lê um arquivo de exportação e devolve contas completas, com ids novos quando faltarem. */
 export function normalizeImported(data: unknown): Array<{ account: Account; password?: string }> {
   const file = data as Partial<AccountsExport>
-  if (!file || file.format !== 'argos/accounts' || !Array.isArray(file.accounts)) {
-    throw new Error('Este arquivo não é uma exportação de contas do Argos')
+  if (!file || file.format !== 'iris/accounts' || !Array.isArray(file.accounts)) {
+    throw new Error('Este arquivo não é uma exportação de contas da Íris')
   }
   return file.accounts.map((raw) => {
     const { password, ...rest } = raw

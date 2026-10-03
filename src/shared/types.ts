@@ -47,7 +47,7 @@ export interface Settings {
 
 /** Formato do arquivo de exportação de contas (RF-07). */
 export interface AccountsExport {
-  format: 'argos/accounts'
+  format: 'iris/accounts'
   schemaVersion: 1
   exportedAt: string
   accounts: Array<Account & { password?: string }>
@@ -58,8 +58,8 @@ export interface CertificateErrorEvent {
   error: string
 }
 
-/** API exposta pelo preload em `window.argos`. Cada método mapeia um canal fixo de IPC. */
-export interface ArgosApi {
+/** API exposta pelo preload em `window.iris`. Cada método mapeia um canal fixo de IPC. */
+export interface IrisApi {
   accounts: {
     load(): Promise<Account[]>
     save(accounts: Account[]): Promise<void>

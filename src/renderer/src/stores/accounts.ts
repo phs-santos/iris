@@ -38,14 +38,14 @@ export const useAccountsStore = defineStore('accounts', () => {
   }
 
   async function load(): Promise<void> {
-    encryptionAvailable.value = await window.argos.secrets.encryptionAvailable()
-    let list = await window.argos.accounts.load()
+    encryptionAvailable.value = await window.iris.secrets.encryptionAvailable()
+    let list = await window.iris.accounts.load()
     if (list.length === 0) {
       // Primeiro uso: contas simuladas para explorar o app sem PBX (UC-08).
       const samples = sampleAccounts()
-      for (const { account, password } of samples) await window.argos.secrets.set(account.id, password)
+      for (const { account, password } of samples) await window.iris.secrets.set(account.id, password)
       list = samples.map((s) => s.account)
-      await window.argos.accounts.save(list)
+      await window.iris.accounts.save(list)
     }
     accounts.value = list
     selectedId.value = list[0]?.id ?? null
@@ -54,7 +54,7 @@ export const useAccountsStore = defineStore('accounts', () => {
   }
 
   async function persist(): Promise<void> {
-    await window.argos.accounts.save(JSON.parse(JSON.stringify(accounts.value)))
+    await window.iris.accounts.save(JSON.parse(JSON.stringify(accounts.value)))
   }
 
   async function save(account: Account, password?: string | null): Promise<void> {
@@ -62,7 +62,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     const wasRegistered = index >= 0 && statusOf(account.id).state !== 'disconnected'
     if (index >= 0) accounts.value[index] = account
     else accounts.value.push(account)
-    if (password !== undefined) await window.argos.secrets.set(account.id, password)
+    if (password !== undefined) await window.iris.secrets.set(account.id, password)
     await persist()
     selectedId.value = account.id
     // A conexão usa os dados antigos até ser refeita.
@@ -76,7 +76,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     await unregister(id)
     accounts.value = accounts.value.filter((a) => a.id !== id)
     delete runtime[id]
-    await window.argos.secrets.set(id, null)
+    await window.iris.secrets.set(id, null)
     await persist()
     if (selectedId.value === id) selectedId.value = accounts.value[0]?.id ?? null
   }
@@ -85,7 +85,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     const source = byId(id)
     if (!source) return null
     const copy: Account = { ...(JSON.parse(JSON.stringify(source)) as Account), id: crypto.randomUUID(), name: `${source.name} (cópia)` }
-    const password = await window.argos.secrets.get(id)
+    const password = await window.iris.secrets.get(id)
     await save(copy, password)
     return copy
   }
@@ -97,7 +97,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     const calls = useCallsStore()
     await runtime[id]?.engine?.dispose()
 
-    const password = (await window.argos.secrets.get(id)) ?? ''
+    const password = (await window.iris.secrets.get(id)) ?? ''
     const engine = markRaw(createEngine(account, password))
     runtime[id] = { status: { state: 'connecting' }, engine }
 
@@ -140,14 +140,14 @@ export const useAccountsStore = defineStore('accounts', () => {
 
   async function exportJson(includePasswords: boolean): Promise<string> {
     const data: AccountsExport = {
-      format: 'argos/accounts',
+      format: 'iris/accounts',
       schemaVersion: 1,
       exportedAt: new Date().toISOString(),
       accounts: []
     }
     for (const account of accounts.value) {
       const copy: Account & { password?: string } = JSON.parse(JSON.stringify(account))
-      if (includePasswords) copy.password = (await window.argos.secrets.get(account.id)) ?? undefined
+      if (includePasswords) copy.password = (await window.iris.secrets.get(account.id)) ?? undefined
       data.accounts.push(copy)
     }
     return JSON.stringify(data, null, 2)
@@ -160,7 +160,7 @@ export const useAccountsStore = defineStore('accounts', () => {
       const index = accounts.value.findIndex((a) => a.id === account.id)
       if (index >= 0) accounts.value[index] = account
       else accounts.value.push(account)
-      if (password !== undefined) await window.argos.secrets.set(account.id, password)
+      if (password !== undefined) await window.iris.secrets.set(account.id, password)
     }
     await persist()
     return items.length

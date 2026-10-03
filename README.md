@@ -1,6 +1,6 @@
-# Argos
+# Íris
 
-Argos Panoptes, o gigante de cem olhos da mitologia grega, vigiava tudo sem dormir. Este Argos vigia várias contas e vários PBX ao mesmo tempo.
+Na mitologia grega, Íris é a mensageira dos deuses, que leva recados entre o céu e a terra pelo arco-íris. Esta Íris leva chamadas entre várias contas e vários PBX ao mesmo tempo.
 
 Softphone desktop para testar telefonia: registra várias contas de vários PBX ao mesmo tempo, liga entre elas e mostra o SIP de cada uma na mesma janela. Feito com Electron, Vue 3 e [easy-sipjs](https://www.npmjs.com/package/easy-sipjs).
 
@@ -71,7 +71,7 @@ Os instaladores ainda não são assinados (RNF-17 fica para o M4).
 
 ```
 src/main/       processo principal: janela, bandeja, arquivos, senhas, certificados
-src/preload/    ponte com canais fixos de IPC (window.argos)
+src/preload/    ponte com canais fixos de IPC (window.iris)
 src/shared/     tipos usados pelos três processos
 src/renderer/   interface Vue
   sip/          interface SipEngine, motor easy-sipjs e motor simulado

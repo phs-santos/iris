@@ -1,8 +1,8 @@
-import type { ArgosApi } from '@shared/types'
+import type { IrisApi } from '@shared/types'
 
 declare global {
   interface Window {
-    argos: ArgosApi
+    iris: IrisApi
   }
 }
 

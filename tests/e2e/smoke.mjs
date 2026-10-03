@@ -5,14 +5,14 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-const userData = mkdtempSync(join(tmpdir(), 'argos-e2e-'))
+const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
 const shots = process.env.SHOTS_DIR
-// ARGOS_EXECUTABLE testa um build empacotado (ex.: dist/linux-unpacked/argos).
-const executablePath = process.env.ARGOS_EXECUTABLE
+// IRIS_EXECUTABLE testa um build empacotado (ex.: dist/linux-unpacked/iris).
+const executablePath = process.env.IRIS_EXECUTABLE
 const args = executablePath ? [] : ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 
-const app = await electron.launch({ executablePath, args, env: { ...process.env, ARGOS_USER_DATA: userData } })
+const app = await electron.launch({ executablePath, args, env: { ...process.env, IRIS_USER_DATA: userData } })
 const page = await app.firstWindow()
 await page.setViewportSize?.({ width: 1360, height: 820 }).catch(() => {})
 const step = (msg) => console.log(`✓ ${msg}`)

@@ -29,10 +29,10 @@ let quitting = false
 let trustedHosts = new Set<string>()
 
 // Pasta de dados alternativa, usada pelos testes de ponta a ponta e para rodar perfis separados.
-if (process.env['ARGOS_USER_DATA']) app.setPath('userData', process.env['ARGOS_USER_DATA'])
+if (process.env['IRIS_USER_DATA']) app.setPath('userData', process.env['IRIS_USER_DATA'])
 
 // Microfone falso do Chromium, para testes automatizados sem placa de som.
-if (process.env['ARGOS_FAKE_MEDIA']) app.commandLine.appendSwitch('use-fake-device-for-media-stream')
+if (process.env['IRIS_FAKE_MEDIA']) app.commandLine.appendSwitch('use-fake-device-for-media-stream')
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
@@ -44,7 +44,7 @@ function createWindow(): void {
     height: 820,
     minWidth: 1024,
     minHeight: 640,
-    title: 'Argos',
+    title: 'Íris',
     backgroundColor: '#0f1720',
     show: false,
     autoHideMenuBar: true,
@@ -114,10 +114,10 @@ function trayIcon(): Electron.NativeImage {
 function createTray(): void {
   try {
     tray = new Tray(trayIcon())
-    tray.setToolTip('Argos')
+    tray.setToolTip('Íris')
     tray.setContextMenu(
       Menu.buildFromTemplate([
-        { label: 'Mostrar Argos', click: showWindow },
+        { label: 'Mostrar Íris', click: showWindow },
         { type: 'separator' },
         {
           label: 'Sair',

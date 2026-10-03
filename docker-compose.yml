@@ -1,4 +1,4 @@
-# PBX de teste para desenvolvimento e testes de integração do Argos.
+# PBX de teste para desenvolvimento e testes de integração da Íris.
 # Uso: ./docker/asterisk/gen-cert.sh && docker compose up -d
 # WebSocket seguro em wss://localhost:8089/ws (certificado autoassinado), ramais 1001-1003, senha 1234.
 services:

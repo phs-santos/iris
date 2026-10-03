@@ -1,5 +1,5 @@
-appId: dev.argos.softphone
-productName: Argos
+appId: dev.iris.softphone
+productName: Iris
 directories:
   buildResources: build
   output: dist
@@ -16,7 +16,7 @@ mac:
   target: dmg
   category: public.app-category.developer-tools
   extendInfo:
-    NSMicrophoneUsageDescription: O Argos usa o microfone nas chamadas de teste.
+    NSMicrophoneUsageDescription: A Íris usa o microfone nas chamadas de teste.
 linux:
   # .deb entra quando o projeto tiver repositório e página (exigidos como metadados do pacote).
   target:
