@@ -59,7 +59,7 @@ Pendências conhecidas, que não precisam ser feitas agora:
 
 ## Releases
 
-- O repositório é público: `github.com/phs-santos/iris`. A primeira versão pública é a 1.0.1 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). A tag `v1.0.0` existe, mas o release dela nunca foi publicado: tinha a janela em branco no macOS.
+- O repositório é público: `github.com/phs-santos/iris`. A primeira versão pública é a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
 - Uma tag `v` + versão dispara `.github/workflows/release.yml`, que gera os instaladores dos três sistemas e cria um release **em rascunho**. Publicar o rascunho é com o usuário. O passo a passo está no README, em "Atualização automática".
 - Dar push na `main` e criar tag só com autorização do usuário para aquele release.
 
