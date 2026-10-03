@@ -24,14 +24,21 @@ export async function setupUpdater(options: {
     send: (status: UpdateStatus) => void
     beforeInstall: () => void
 }): Promise<void> {
-    let channel: UpdateChannel = (await loadSettings()).updateChannel ?? 'stable'
+    // Quem instalou uma versão de teste (1.0.0-beta.1) continua recebendo as de teste, até escolher o estável.
+    const prerelease = app.getVersion().includes('-')
+    let channel: UpdateChannel = (await loadSettings()).updateChannel ?? (prerelease ? 'beta' : 'stable')
     let controller: UpdateController | null = null
-    const reason = unsupportedReason()
+    let reason = unsupportedReason()
 
     if (!reason) {
-        const { autoUpdater } = await import('electron-updater')
-        controller = new UpdateController(autoUpdater, options.send, channel)
-        setTimeout(() => void controller?.check(), FIRST_CHECK_DELAY_MS)
+        try {
+            // O pacote é CommonJS: o `autoUpdater` é um getter que só aparece no export padrão.
+            const { autoUpdater } = (await import('electron-updater')).default
+            controller = new UpdateController(autoUpdater, options.send, channel)
+            setTimeout(() => void controller?.check(), FIRST_CHECK_DELAY_MS)
+        } catch (error) {
+            reason = `O atualizador não iniciou: ${error instanceof Error ? error.message : String(error)}`
+        }
     }
 
     handle(IPC.updateInfo, (): UpdateInfo => ({

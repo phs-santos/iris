@@ -20,16 +20,26 @@ electronFuses:
     # Sem certificado, refaz a assinatura ad-hoc depois de mexer no binário (o macOS em Apple Silicon
     # mata binários com assinatura inválida). Com o Developer ID do M4, a assinatura real substitui esta.
     resetAdHocDarwinSignature: true
+# Atualização automática (RF-35): o app instalado procura versões novas nos releases deste repositório.
+# Os scripts dist:* usam --publish never: geram os arquivos (latest*.yml), mas não enviam nada.
+publish:
+    provider: github
+    owner: phs-santos
+    repo: iris
 win:
     target: nsis
 nsis:
+    # Sem espaço no nome: o GitHub troca espaço por ponto e o latest.yml deixaria de bater com o arquivo.
+    artifactName: ${productName}-Setup-${version}.${ext}
     oneClick: false
     allowToChangeInstallationDirectory: true
 mac:
     # O .zip é o que a atualização automática do macOS baixa (RF-35); o .dmg é para instalar à mão.
     target:
-        - dmg
-        - zip
+        - target: dmg
+          arch: [arm64, x64]
+        - target: zip
+          arch: [arm64, x64]
     category: public.app-category.developer-tools
     extendInfo:
         NSMicrophoneUsageDescription: A Íris usa o microfone nas chamadas de teste.

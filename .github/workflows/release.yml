@@ -1,0 +1,68 @@
+name: Release
+
+# Uma tag v1.2.3 gera os instaladores dos três sistemas e cria um release em rascunho.
+# O release só fica público, e o app instalado só passa a enxergar a versão (RF-35), quando
+# alguém publica o rascunho no GitHub.
+on:
+    push:
+        tags: ['v*']
+
+permissions:
+    contents: write
+
+jobs:
+    build:
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest, macos-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - name: A tag tem que ser igual à versão do package.json
+              shell: bash
+              run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+            - run: npm ci
+            - run: npm run typecheck
+            - run: npm test
+            - run: npm run build
+            # Sem certificado (RNF-17), os instaladores saem sem assinatura; o macOS fica com a ad-hoc.
+            - name: Gerar instaladores
+              run: npx electron-builder --publish never
+              env:
+                  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: instaladores-${{ matrix.os }}
+                  if-no-files-found: error
+                  # Os .yml e .blockmap são o que a atualização automática lê.
+                  path: |
+                      dist/*.exe
+                      dist/*.AppImage
+                      dist/*.dmg
+                      dist/*.zip
+                      dist/*.blockmap
+                      dist/latest*.yml
+                      dist/beta*.yml
+                      dist/alpha*.yml
+
+    release:
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/download-artifact@v4
+              with:
+                  path: dist
+                  merge-multiple: true
+            - name: Criar o release em rascunho
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              # Versão com hífen (1.0.0-beta.1) vira pré-lançamento: só o canal beta recebe.
+              run: |
+                  flags="--draft --generate-notes"
+                  case "$GITHUB_REF_NAME" in *-*) flags="$flags --prerelease" ;; esac
+                  gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "Íris ${GITHUB_REF_NAME#v}" $flags

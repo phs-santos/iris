@@ -19,11 +19,13 @@ Revisão de 03/10/2026, sobre o checklist de segurança do Electron e os RNF-07 
 | Exportação de contas sem senha por padrão (RNF-10) | ok, com teste | `tests/privacy.test.ts` |
 | Nada de `v-html`, `innerHTML` ou `eval` na interface; o SIP recebido é mostrado como texto | ok | busca no código |
 | Fuses do Electron: sem `RunAsNode`, sem `NODE_OPTIONS`, sem `--inspect`, só carrega do asar, com verificação de integridade | corrigido | `electron-builder.yml` |
+| Atualização automática (RF-35): só por HTTPS no GitHub Releases, com o sha512 de cada arquivo conferido e a verificação de assinatura do electron-updater mantida; nada é baixado sem o usuário pedir; não roda na linha de comando; o canal vem por IPC conferido | ok, com teste da lógica | `src/main/updater.ts`, `tests/updater.test.ts` |
 | Licenças das bibliotecas empacotadas (RNF-20) | ok, com verificação | `npm run licenses` |
 | `npm audit` | 0 vulnerabilidades | — |
 
 ## Pendências
 
+- Atualização automática sem assinatura: no Windows, enquanto o instalador não for assinado, a atualização é conferida só pelo sha512 publicado no release, sem a assinatura do editor. No macOS ela não instala sem o Developer ID. As duas dependem do RNF-17.
 - Instaladores assinados e notarizados (RNF-17): precisam do Apple Developer ID e de um certificado de assinatura para Windows. Até lá, o macOS recebe assinatura ad-hoc (`resetAdHocDarwinSignature`), que roda na máquina onde foi gerado, mas o Gatekeeper avisa nas outras.
 - `grantFileProtocolExtraPrivileges` continua ligado: a interface carrega módulos ES por `file://`. Para desligar, seria preciso servir a interface por um protocolo próprio (`app://`).
 - O DTMF por RTP no Docker Desktop do macOS perde pacotes de vez em quando (ambiente de teste, não o app); no CI Linux o Asterisk usa a rede do host.

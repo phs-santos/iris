@@ -1,0 +1,5 @@
+# Fim de linha LF em todos os sistemas: o Prettier e os patches de patches/ dependem disso no Windows.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary

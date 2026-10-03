@@ -24,9 +24,11 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
     - CPU ociosa com 10 contas registradas: 0,1% (limite de 2%).
     - Memória com 10 contas e 1 chamada: de 331 a 389 MB no macOS com tela retina (limite de 300 MB). Veja as pendências conhecidas.
     - `npm run test:resources` mede os dois e roda no CI (job `e2e`). No macOS ele falha na memória; no Linux do CI o número ainda não foi visto.
-2. **[ ] RF-35 (atualização automática).** É o único RF que o README marca como pendente. Os releases vão ficar no GitHub Releases (decidido pelo usuário em 03/10/2026). A opção natural é o `electron-updater` com o `publish` do `electron-builder.yml`.
-    - Restrições: sem atualizar no modo CLI (`src/main/cli.ts`), sem baixar nada sem o usuário saber e com a verificação de assinatura mantida.
-    - Os instaladores ainda não são assinados (passo 3). Sem assinatura, o auto-update do macOS não funciona.
+2. **[ ] RF-35 (atualização automática).** O código está pronto: `electron-updater` com GitHub Releases em `phs-santos/iris` (repositório público), canais estável e beta, e a tela "Atualização".
+    - Onde está: regras em `src/shared/update.ts` (com `tests/updater.test.ts`), ligação com o Electron em `src/main/updater.ts`, tela em `UpdateDialog.vue`, `publish` no `electron-builder.yml`.
+    - Restrições que valem: sem atualizar no modo CLI, sem baixar nada sem o usuário pedir e com a verificação de assinatura mantida.
+    - Já conferido: o app empacotado do macOS consulta o repositório (hoje responde "No published versions on GitHub").
+    - **Falta para marcar:** ver uma versão nova ser baixada e aplicada ao reiniciar (o critério de aceitação). Precisa de dois releases publicados (instalar o primeiro, atualizar para o segundo). Dá para fazer no Windows ou no AppImage; no macOS só depois da assinatura (passo 3).
 3. **[ ] RNF-17 (instaladores assinados).** **Bloqueado.** Depende do usuário fornecer o Apple Developer ID (assinar e notarizar) e o certificado de assinatura para Windows. Enquanto isso não chegar, não tente contornar. Hoje o macOS usa assinatura ad-hoc (`resetAdHocDarwinSignature`).
 4. **[ ] RNF ainda sem cumprimento.** Este levantamento foi feito comparando a especificação com o código em 03/10/2026. Confirme cada item antes de começar:
     - **RNF-13:** os textos da interface estão fixos nos componentes. A especificação pede arquivos de tradução (pt-BR, prontos para inglês). É a maior lacuna.
@@ -52,6 +54,12 @@ Pendências conhecidas, que não precisam ser feitas agora:
 - `grantFileProtocolExtraPrivileges` continua ligado. Para desligar, a interface teria que ser servida por um protocolo próprio (`app://`).
 - Abrir a issue do `transport=wss` no easy-sipjs. O patch fica em `patches/`, e o motivo está no README.
 - No Docker Desktop do macOS, o DTMF por RTP às vezes perde pacotes. O problema é do ambiente, não do app.
+
+## Releases
+
+- O repositório é público: `github.com/phs-santos/iris`. A primeira versão pública é a 1.0.0 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura).
+- Uma tag `v` + versão dispara `.github/workflows/release.yml`, que gera os instaladores dos três sistemas e cria um release **em rascunho**. Publicar o rascunho é com o usuário. O passo a passo está no README, em "Atualização automática".
+- Dar push na `main` e criar tag só com autorização do usuário para aquele release.
 
 ## Como trabalhar aqui
 

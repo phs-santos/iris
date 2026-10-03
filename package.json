@@ -1,10 +1,16 @@
 {
     "name": "iris",
     "productName": "Iris",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "description": "Softphone desktop para testes de telefonia: várias contas, vários PBX, log SIP lado a lado.",
     "main": "out/main/index.js",
     "license": "MIT",
+    "author": "Paulo Souza",
+    "homepage": "https://github.com/phs-santos/iris",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/phs-santos/iris.git"
+    },
     "private": true,
     "scripts": {
         "dev": "electron-vite dev",

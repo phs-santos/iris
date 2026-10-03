@@ -24,12 +24,27 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-28, 29, 30 | Cenários: editor de passos (registrar, discar, atender, esperar, aguardar estado, DTMF, transferir, desligar, verificar), resultado de cada passo com tempo, repetição N vezes com relatório .txt/.json |
 | RF-31 | Cenários pela linha de comando, sem janela: resultado de cada passo no terminal, relatório e código de saída 1 quando algum passo falha |
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja, aceite de certificado autoassinado por host |
-
-Ainda não: atualização automática (RF-35).
+| RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Ainda falta o teste com um release publicado |
 
 Recursos (RNF-05): a CPU ociosa com 10 contas registradas fica em 0,1%, abaixo do limite de 2%. A memória com 10 contas e 1 chamada ficou entre 331 e 389 MB no macOS com tela retina, acima do limite de 300 MB; é uma pendência conhecida.
 
-## Rodar
+## Instalar
+
+Baixe o instalador da [página de releases](https://github.com/phs-santos/iris/releases/latest):
+
+| Sistema | Arquivo |
+| --- | --- |
+| Windows | `Iris-Setup-<versão>.exe` |
+| macOS (Apple Silicon) | `Iris-<versão>-arm64.dmg` |
+| macOS (Intel) | `Iris-<versão>.dmg` |
+| Linux | `Iris-<versão>.AppImage` (dê permissão de execução: `chmod +x`) |
+
+Os instaladores ainda não são assinados (RNF-17), então o sistema avisa na primeira vez:
+
+- **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**.
+- **macOS:** depois de arrastar a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Se o macOS disser que o app está danificado, rode `xattr -dr com.apple.quarantine /Applications/Iris.app`.
+
+## Rodar a partir do código
 
 Requer Node.js 22.
 
@@ -107,10 +122,28 @@ Em Linux sem tela, rode os de ponta a ponta com `xvfb-run -a`. Com `PBX_WS=wss:/
 ```bash
 npm run dist:linux   # AppImage
 npm run dist:win     # instalador NSIS (rodar no Windows)
-npm run dist:mac     # .dmg (rodar no macOS)
+npm run dist:mac     # .dmg e .zip (rodar no macOS)
 ```
 
-Os instaladores ainda não são assinados (RNF-17 fica para o M4).
+Os instaladores ainda não são assinados (RNF-17). O `.dmg` e o `.zip` saem para Apple Silicon e para Intel.
+
+## Atualização automática
+
+O app instalado procura versões novas nos releases de [phs-santos/iris](https://github.com/phs-santos/iris/releases), 15 s depois de abrir e quando você clica em **Atualização → Procurar atualização**.
+
+- Nada é baixado sozinho: o app avisa que há versão nova e espera você clicar em **Baixar**. Depois de baixada, ela entra ao reiniciar.
+- **Canais:** o estável recebe só os releases normais. O beta recebe também os marcados como pré-lançamento no GitHub, com versão do tipo `1.2.0-beta.1`.
+- Em desenvolvimento (`npm run dev`) e na linha de comando, o app não procura atualização. No Linux, só o AppImage se atualiza.
+- No macOS, a atualização só instala com o app assinado (RNF-17). Até lá, baixe o `.dmg` novo à mão.
+
+Para publicar uma versão:
+
+1. Mude a versão: `npm version 1.2.3 --no-git-tag-version`, e faça o commit.
+2. Crie e envie a tag igual à versão: `git tag v1.2.3 && git push origin main v1.2.3`.
+3. O fluxo `Release` do GitHub Actions gera os instaladores dos três sistemas e cria um release **em rascunho**, com os instaladores, os `.blockmap` e os `latest*.yml` (sem os `.yml`, o app não acha a versão).
+4. Revise o rascunho e publique. Só então o release aparece para o público e para a atualização automática.
+
+Versão com hífen (`1.2.0-beta.1`) sai marcada como pré-lançamento e chega só ao canal beta.
 
 ## Estrutura
 

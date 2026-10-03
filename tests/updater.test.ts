@@ -117,6 +117,17 @@ describe('atualização automática (RF-35)', () => {
         expect(controller.current().state).toBe('up-to-date')
     })
 
+    it('repositório sem nenhum release conta como em dia, não como erro', async () => {
+        const { source, controller } = setup()
+        source.checkForUpdates = async () => {
+            throw Object.assign(new Error('No published versions on GitHub'), {
+                code: 'ERR_UPDATER_NO_PUBLISHED_VERSIONS'
+            })
+        }
+        await controller.check()
+        expect(controller.current()).toEqual({ state: 'up-to-date' })
+    })
+
     it('falha no download vira erro, sem ficar preso em "baixando"', async () => {
         const { source, controller } = setup()
         source.available = '1.1.0'

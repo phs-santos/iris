@@ -46,7 +46,7 @@ export class UpdateController {
         source.on('update-downloaded', (info: { version: string }) =>
             this.set({ state: 'ready', version: info.version })
         )
-        source.on('error', (error: Error) => this.set({ state: 'error', message: shortMessage(error) }))
+        source.on('error', (error: Error) => this.fail(error))
     }
 
     current(): UpdateStatus {
@@ -56,6 +56,13 @@ export class UpdateController {
     private set(status: UpdateStatus): void {
         this.status = status
         this.emit(status)
+    }
+
+    /** Repositório ainda sem nenhum release não é erro: não há nada mais novo que a versão instalada. */
+    private fail(error: unknown): void {
+        if ((error as { code?: string } | null)?.code === 'ERR_UPDATER_NO_PUBLISHED_VERSIONS')
+            return this.set({ state: 'up-to-date' })
+        this.set({ state: 'error', message: shortMessage(error) })
     }
 
     private get busy(): boolean {
@@ -73,7 +80,7 @@ export class UpdateController {
         try {
             await this.source.checkForUpdates()
         } catch (error) {
-            this.set({ state: 'error', message: shortMessage(error) })
+            this.fail(error)
         }
     }
 
@@ -83,7 +90,7 @@ export class UpdateController {
         try {
             await this.source.downloadUpdate()
         } catch (error) {
-            this.set({ state: 'error', message: shortMessage(error) })
+            this.fail(error)
         }
     }
 

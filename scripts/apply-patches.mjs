@@ -12,7 +12,8 @@ function parse(patch) {
     const files = []
     let file = null
     let hunk = null
-    for (const line of patch.split('\n')) {
+    // Aceita CRLF: no Windows o git pode converter o fim de linha do .patch.
+    for (const line of patch.split(/\r?\n/)) {
         if (line.startsWith('+++ ')) {
             file = { path: line.slice(4).replace(/^b\//, ''), hunks: [] }
             files.push(file)
