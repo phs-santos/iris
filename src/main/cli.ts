@@ -2,12 +2,13 @@
 // os cenários com os mesmos motores SIP e manda as linhas de resultado para cá, que as escreve no
 // terminal e sai com o código certo.
 
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { mkdtempSync, promises as fs, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { CLI_USAGE, EXIT_OK, EXIT_USAGE, parseCliArgs, type CliConfig, type CliOptions } from '@shared/cli'
 import { IPC } from '@shared/types'
+import { handle, on, rendererUrl } from './ipc-guard'
 
 const parsed = parseCliArgs(process.argv.slice(1))
 export const cliOptions: CliOptions | null = parsed && 'options' in parsed ? parsed.options : null
@@ -63,7 +64,7 @@ async function readText(path: string, what: string): Promise<string> {
 
 export function registerCliIpc(): void {
     const options = cliOptions!
-    ipcMain.handle(IPC.cliConfig, async (): Promise<CliConfig> => {
+    handle(IPC.cliConfig, async (): Promise<CliConfig> => {
         clearTimeout(startupTimer)
         return {
             scenarios: options.scenarios,
@@ -74,17 +75,15 @@ export function registerCliIpc(): void {
             scenariosText: options.scenariosFile ? await readText(options.scenariosFile, 'cenários') : undefined
         }
     })
-    ipcMain.on(IPC.cliPrint, (_e, line: string, error: boolean) =>
-        (error ? process.stderr : process.stdout).write(`${line}\n`)
-    )
+    on(IPC.cliPrint, (_e, line: string, error: boolean) => (error ? process.stderr : process.stdout).write(`${line}\n`))
     // O caminho do relatório vem da linha de comando, nunca da interface.
-    ipcMain.handle(IPC.cliReport, async (_e, content: string) => {
+    handle(IPC.cliReport, async (_e, content: string) => {
         if (!options.report) return null
         const path = userPath(options.report)
         await fs.writeFile(path, content, 'utf8')
         return path
     })
-    ipcMain.on(IPC.cliFinish, (_e, code: number) => {
+    on(IPC.cliFinish, (_e, code: number) => {
         cleanup()
         app.exit(Number.isInteger(code) ? code : EXIT_USAGE)
     })
@@ -108,6 +107,5 @@ export function createCliWindow(preload: string): void {
     window.webContents.on('did-fail-load', (_e, code, description) =>
         fail(`não carregou a interface: ${description} (${code})`)
     )
-    if (process.env['ELECTRON_RENDERER_URL']) void window.loadURL(process.env['ELECTRON_RENDERER_URL'])
-    else void window.loadFile(join(__dirname, '../renderer/index.html'))
+    void window.loadURL(rendererUrl())
 }

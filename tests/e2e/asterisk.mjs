@@ -3,7 +3,7 @@
 // envia DTMF para a URA 8000, confere o 486 do número ocupado e faz uma transferência assistida.
 // Uso: npm run build && node tests/e2e/asterisk.mjs
 import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
@@ -144,11 +144,26 @@ try {
 
     await page.getByRole('tab', { name: 'SIP bruto' }).click()
     await page.locator('.line.sip', { hasText: 'SIP/2.0 200 OK' }).first().waitFor()
-    const leaked = await page
-        .locator('.line.sip', { hasText: /Authorization: Digest .*response="[0-9a-f]{32}"/ })
-        .count()
-    if (leaked) throw new Error('O log SIP mostrou o hash de autenticação')
-    step('log SIP bruto sem hash de autenticação')
+    // RNF-10: nem a tela nem os arquivos exportados podem ter Authorization, hash, nonce ou senha.
+    const secret = /Authorization:\s*Digest|\b(response|nonce|cnonce|password|secret)="?(?!\[REDACTED\])[\w/+=.-]{6,}/i
+    const shown = (await page.locator('.line').allTextContents()).filter((l) => secret.test(l))
+    if (shown.length) throw new Error(`O log mostrou dado de autenticação:\n${shown.slice(0, 3).join('\n')}`)
+    const logFile = join(userData, 'log-exportado')
+    await app.evaluate(({ dialog }, file) => {
+        let n = 0
+        dialog.showSaveDialog = async () => ({ canceled: false, filePath: `${file}-${++n}` })
+    }, logFile)
+    await page.getByRole('tab', { name: 'Tudo' }).click()
+    await page.getByRole('button', { name: 'Salvar .txt' }).click()
+    await page.getByRole('button', { name: 'Salvar .json' }).click()
+    await page.getByText(/Salvo em .*log-exportado-2/).waitFor()
+    for (const n of [1, 2]) {
+        const text = readFileSync(`${logFile}-${n}`, 'utf8')
+        if (!text.includes('REGISTER')) throw new Error(`Log exportado ${n} sem o SIP`)
+        const bad = text.split('\n').filter((l) => secret.test(l))
+        if (bad.length) throw new Error(`Log exportado ${n} com dado de autenticação:\n${bad.slice(0, 3).join('\n')}`)
+    }
+    step('log SIP na tela e exportado (.txt e .json) sem Authorization, hash, nonce nem senha')
     if (shots) await page.screenshot({ path: join(shots, 'pbx-4-log.png') })
     console.log('Integração com Asterisk OK')
 } catch (error) {

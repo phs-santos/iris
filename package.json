@@ -24,7 +24,8 @@
         "test:load": "electron-vite build && node tests/e2e/load.mjs",
         "postinstall": "node scripts/apply-patches.mjs",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "licenses": "node scripts/check-licenses.mjs"
     },
     "devDependencies": {
         "@types/node": "^22.10.0",

@@ -7,6 +7,19 @@ files:
     - out/**
     - resources/**
     - package.json
+# Fuses do Electron (revisão de segurança, M4): o binário não roda como Node, não aceita
+# NODE_OPTIONS nem --inspect, só carrega o app de dentro do asar e confere a integridade dele.
+# grantFileProtocolExtraPrivileges fica ligado: a interface carrega módulos por file://.
+electronFuses:
+    runAsNode: false
+    enableCookieEncryption: true
+    enableNodeOptionsEnvironmentVariable: false
+    enableNodeCliInspectArguments: false
+    enableEmbeddedAsarIntegrityValidation: true
+    onlyLoadAppFromAsar: true
+    # Sem certificado, refaz a assinatura ad-hoc depois de mexer no binário (o macOS em Apple Silicon
+    # mata binários com assinatura inválida). Com o Developer ID do M4, a assinatura real substitui esta.
+    resetAdHocDarwinSignature: true
 win:
     target: nsis
 nsis:

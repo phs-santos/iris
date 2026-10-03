@@ -1,6 +1,6 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
 import { promises as fs } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
 import { IPC, type Account, type Scenario, type Settings } from '@shared/types'
 import {
@@ -15,6 +15,7 @@ import {
     setSecret
 } from './storage'
 import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
+import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -74,11 +75,7 @@ function createWindow(): void {
         if (url !== mainWindow?.webContents.getURL()) event.preventDefault()
     })
 
-    if (process.env['ELECTRON_RENDERER_URL']) {
-        mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
-    } else {
-        mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-    }
+    void mainWindow.loadURL(rendererUrl())
 }
 
 function showWindow(): void {
@@ -166,31 +163,52 @@ app.on('certificate-error', (event, _webContents, url, error, _certificate, call
 })
 
 function registerIpc(): void {
-    ipcMain.handle(IPC.accountsLoad, () => loadAccounts())
-    ipcMain.handle(IPC.accountsSave, (_e, accounts: Account[]) => saveAccounts(accounts))
-    ipcMain.handle(IPC.scenariosLoad, () => loadScenarios())
-    ipcMain.handle(IPC.scenariosSave, (_e, scenarios: Scenario[]) => saveScenarios(scenarios))
-    ipcMain.handle(IPC.secretsGet, (_e, id: string) => getSecret(id))
+    const isList = (v: unknown, max = 1000): v is unknown[] => Array.isArray(v) && v.length <= max
+    const isId = (v: unknown): v is string => isString(v, 200) && v.length > 0
+
+    handle(IPC.accountsLoad, () => loadAccounts())
+    handle(IPC.accountsSave, (_e, accounts: Account[]) => {
+        check(isList(accounts) && accounts.every((a) => isPlainObject(a) && isId(a.id)), 'lista de contas')
+        return saveAccounts(accounts)
+    })
+    handle(IPC.scenariosLoad, () => loadScenarios())
+    handle(IPC.scenariosSave, (_e, scenarios: Scenario[]) => {
+        check(isList(scenarios) && scenarios.every((s) => isPlainObject(s) && isId(s.id)), 'lista de cenários')
+        return saveScenarios(scenarios)
+    })
+    handle(IPC.secretsGet, (_e, id: string) => {
+        check(isId(id), 'id da conta')
+        return getSecret(id)
+    })
     // Com --contas, as senhas do arquivo ficam só na memória desta execução.
-    ipcMain.handle(IPC.secretsSet, (_e, id: string, password: string | null) =>
-        setSecret(id, password, !cliOptions?.accountsFile)
-    )
-    if (!cli) ipcMain.handle(IPC.cliConfig, () => null)
-    ipcMain.handle(IPC.secretsAvailable, () => encryptionAvailable())
-    ipcMain.handle(IPC.settingsLoad, () => loadSettings())
-    ipcMain.handle(IPC.settingsSave, async (_e, settings: Settings) => {
+    handle(IPC.secretsSet, (_e, id: string, password: string | null) => {
+        check(isId(id) && (password === null || isString(password, 1000)), 'senha')
+        return setSecret(id, password, !cliOptions?.accountsFile)
+    })
+    if (!cli) handle(IPC.cliConfig, () => null)
+    handle(IPC.secretsAvailable, () => encryptionAvailable())
+    handle(IPC.settingsLoad, () => loadSettings())
+    handle(IPC.settingsSave, async (_e, settings: Settings) => {
+        check(
+            isPlainObject(settings) &&
+                isList(settings.trustedHosts, 200) &&
+                settings.trustedHosts.every((h) => isString(h, 255)),
+            'preferências'
+        )
         await saveSettings(settings)
         trustedHosts = new Set(settings.trustedHosts)
     })
 
-    ipcMain.handle(IPC.filesSaveText, async (_e, defaultName: string, content: string) => {
+    handle(IPC.filesSaveText, async (_e, defaultName: string, content: string) => {
+        check(isString(defaultName, 255) && isString(content, 200_000_000), 'arquivo')
         if (!mainWindow) return null
-        const result = await dialog.showSaveDialog(mainWindow, { defaultPath: defaultName })
+        // Só o nome do arquivo sugerido; a pasta é sempre o usuário quem escolhe no diálogo.
+        const result = await dialog.showSaveDialog(mainWindow, { defaultPath: basename(defaultName) })
         if (result.canceled || !result.filePath) return null
         await fs.writeFile(result.filePath, content, 'utf8')
         return result.filePath
     })
-    ipcMain.handle(IPC.filesOpenText, async () => {
+    handle(IPC.filesOpenText, async () => {
         if (!mainWindow) return null
         const result = await dialog.showOpenDialog(mainWindow, {
             properties: ['openFile'],
@@ -200,14 +218,14 @@ function registerIpc(): void {
         return fs.readFile(result.filePaths[0], 'utf8')
     })
 
-    ipcMain.on(IPC.notify, (_e, title: string, body: string) => {
-        if (!Notification.isSupported()) return
+    on(IPC.notify, (_e, title: string, body: string) => {
+        if (!Notification.isSupported() || !isString(title, 200) || !isString(body, 1000)) return
         const notification = new Notification({ title, body })
         notification.on('click', showWindow)
         notification.show()
     })
 
-    ipcMain.handle(IPC.appInfo, () => ({
+    handle(IPC.appInfo, () => ({
         version: app.getVersion(),
         platform: process.platform,
         electron: process.versions.electron,
