@@ -27,6 +27,8 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 
 Ainda não: atualização automática (RF-35).
 
+Recursos (RNF-05): a CPU ociosa com 10 contas registradas fica em 0,1%, abaixo do limite de 2%. A memória com 10 contas e 1 chamada ficou entre 331 e 389 MB no macOS com tela retina, acima do limite de 300 MB; é uma pendência conhecida.
+
 ## Rodar
 
 Requer Node.js 22.
@@ -95,6 +97,7 @@ npm run test:a11y   # acessibilidade: axe (WCAG A/AA) em todas as telas e atalho
 npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:pbx    # integração com o Asterisk do docker compose
 npm run test:load   # carga: 20 contas e 4 chamadas no Asterisk, mede a resposta da interface
+npm run test:resources   # recursos: RAM com 10 contas e 1 chamada e CPU ociosa, no Asterisk (RNF-05)
 ```
 
 Em Linux sem tela, rode os de ponta a ponta com `xvfb-run -a`. Com `PBX_WS=wss://127.0.0.1:8089/ws`, o teste de cenários roda a URA do Asterisk de teste.

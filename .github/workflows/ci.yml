@@ -51,6 +51,8 @@ jobs:
                   sleep 8
             - name: Integração com Asterisk
               run: xvfb-run -a node tests/e2e/asterisk.mjs
+            - name: Recursos com 10 contas e 1 chamada (RNF-05)
+              run: xvfb-run -a node tests/e2e/resources.mjs
             - name: Cenário de URA 20 vezes no Asterisk (critério do M3)
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/scenarios.mjs
             - name: URA 20 vezes pela linha de comando no Asterisk

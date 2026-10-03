@@ -20,17 +20,11 @@ Quando o código e a especificação divergirem, siga a especificação e avise 
 
 Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando ele terminar.
 
-1. **[ ] RNF-05 (recursos).** Já existe trabalho não commitado:
-    - `src/renderer/src/sip/easysip-engine.ts`: o toque silencioso passou a ser um WAV com 200 ms de silêncio. O WAV vazio tocado em loop deixava a CPU em ~30%.
-    - `tests/e2e/resources.mjs` (novo): mede RAM (≤ 300 MB com 10 contas e 1 chamada) e CPU ociosa (< 2%) com o Asterisk.
-    - `tests/e2e/{asterisk,load,scenarios}.mjs`: o clique na conta agora vai em `.acc .row`. Esse é o ajuste à mudança de estrutura do `AccountsPane` feita na revisão de acessibilidade.
-
-    Para terminar:
-    - rode `docker compose up -d` (no macOS, com `-f docker/compose.ports.yml`), depois `npm run build && node tests/e2e/resources.mjs`, e confira se passa;
-    - adicione `"test:resources"` ao `package.json`, um passo no CI (job `e2e`, depois de subir o Asterisk) e uma linha no README em "Testes";
-    - rode também `test:pbx`, `test:load` e `test:scenarios` para validar os seletores novos;
-    - faça o commit `M4: recursos (RNF-05)`.
-2. **[ ] RF-35 (atualização automática).** É o único RF que o README marca como pendente. Antes de implementar, confirme com o usuário onde os releases vão ficar (GitHub Releases? servidor próprio?). A opção natural é o `electron-updater` com o `publish` do `electron-builder.yml`.
+1. **[x] RNF-05 (recursos).** Fechado em 03/10/2026 com a CPU aprovada e a memória reprovada no macOS, por decisão do usuário.
+    - CPU ociosa com 10 contas registradas: 0,1% (limite de 2%).
+    - Memória com 10 contas e 1 chamada: de 331 a 389 MB no macOS com tela retina (limite de 300 MB). Veja as pendências conhecidas.
+    - `npm run test:resources` mede os dois e roda no CI (job `e2e`). No macOS ele falha na memória; no Linux do CI o número ainda não foi visto.
+2. **[ ] RF-35 (atualização automática).** É o único RF que o README marca como pendente. Os releases vão ficar no GitHub Releases (decidido pelo usuário em 03/10/2026). A opção natural é o `electron-updater` com o `publish` do `electron-builder.yml`.
     - Restrições: sem atualizar no modo CLI (`src/main/cli.ts`), sem baixar nada sem o usuário saber e com a verificação de assinatura mantida.
     - Os instaladores ainda não são assinados (passo 3). Sem assinatura, o auto-update do macOS não funciona.
 3. **[ ] RNF-17 (instaladores assinados).** **Bloqueado.** Depende do usuário fornecer o Apple Developer ID (assinar e notarizar) e o certificado de assinatura para Windows. Enquanto isso não chegar, não tente contornar. Hoje o macOS usa assinatura ad-hoc (`resetAdHocDarwinSignature`).
@@ -51,6 +45,10 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 **Decisões em aberto na especificação** (pergunte ao usuário, não decida sozinho): licença, onde publicar instaladores e atualizações, quem providencia os certificados e quais PBX além do Asterisk entram nos testes automáticos. O nome já foi decidido: Íris.
 
 Pendências conhecidas, que não precisam ser feitas agora:
+- RNF-05, memória: de 331 a 389 MB no macOS com tela retina, contra o limite de 300 MB. O heap JS fica em 10 MB; o peso está no processo de GPU (150 a 190 MB durante a chamada) e na memória nativa da interface. Só abrir o app já custa de 180 a 260 MB. Desligar a aceleração de GPU não resolve.
+- A primeira conexão não tenta de novo: com muitas contas no mesmo host, o Chromium abre os WebSockets um de cada vez, e a última da fila pode passar dos 5 s do SIP.js e ficar em erro (`1006`). Entra no RNF-06.
+- O terminal do VSCode exporta `ELECTRON_RUN_AS_NODE=1`, e os testes e2e falham com "Process failed to launch". Rode com `env -u ELECTRON_RUN_AS_NODE`.
+- Fechar o app no meio de uma chamada de teste deixa canais presos no Asterisk, e o `test:pbx` seguinte falha. Limpe com `docker exec iris-asterisk-1 asterisk -rx 'channel request hangup all'`.
 - `grantFileProtocolExtraPrivileges` continua ligado. Para desligar, a interface teria que ser servida por um protocolo próprio (`app://`).
 - Abrir a issue do `transport=wss` no easy-sipjs. O patch fica em `patches/`, e o motivo está no README.
 - No Docker Desktop do macOS, o DTMF por RTP às vezes perde pacotes. O problema é do ambiente, não do app.

@@ -2,7 +2,7 @@
 // Mede todos os processos do app (principal, interface, GPU, rede) pelo app.getAppMetrics().
 // Uso: docker compose up -d && npm run build && node tests/e2e/resources.mjs
 import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
@@ -56,10 +56,22 @@ const metrics = () =>
     })
 
 /**
- * No macOS, a soma do working set conta várias vezes as bibliotecas do Chromium que os processos
- * compartilham. O footprint (o número do Monitor de Atividade) conta só a memória de cada processo.
+ * A soma do working set conta várias vezes as bibliotecas do Chromium que os processos compartilham.
+ * No macOS, o footprint (o número do Monitor de Atividade) conta só a memória de cada processo.
+ * No Linux, o PSS divide cada página compartilhada entre os processos que a usam.
  */
 function footprint(pids) {
+    if (process.platform === 'linux') {
+        try {
+            return pids.reduce((total, pid) => {
+                const m = /^Pss:\s+(\d+) kB/m.exec(readFileSync(`/proc/${pid}/smaps_rollup`, 'utf8'))
+                if (!m) throw new Error('sem Pss')
+                return total + Number(m[1]) / 1024
+            }, 0)
+        } catch {
+            return undefined
+        }
+    }
     if (process.platform !== 'darwin') return undefined
     const unit = { KB: 1 / 1024, MB: 1, GB: 1024 }
     let total = 0
@@ -105,11 +117,22 @@ try {
     await page.getByRole('button', { name: 'Escolher arquivo' }).click()
     await page.getByText('10 contas importadas').waitFor()
     await page.getByRole('button', { name: 'Fechar' }).click()
-    await page.getByRole('button', { name: 'Registrar todas', exact: true }).click()
+    const registerAll = page.getByRole('button', { name: 'Registrar todas', exact: true })
+    await registerAll.click()
     const trust = page.getByRole('button', { name: 'Confiar neste host' })
     if (await trust.isVisible({ timeout: 8000 }).catch(() => false)) await trust.click()
     // As 3 de exemplo também registram com "Registrar todas"; 2 delas (a terceira usa senha errada).
-    await page.getByText('12 registradas').waitFor({ timeout: 30000 })
+    // O Chromium abre os WebSockets do mesmo host um de cada vez. Com o PBX lento (Docker Desktop),
+    // a última conta da fila passa dos 5 s do SIP.js e fica em erro; "Registrar todas" tenta só as que faltam.
+    for (let attempt = 1; ; attempt++) {
+        try {
+            await page.getByText('12 registradas').waitFor({ timeout: 15000 })
+            break
+        } catch (error) {
+            if (attempt === 3) throw error
+            await registerAll.click()
+        }
+    }
     for (const name of ['Suporte 1001', 'Vendas 1002', 'Lab 2001']) {
         await page.locator('.acc', { hasText: name }).locator('.row').click()
         const off = page.getByRole('button', { name: 'Desregistrar', exact: true })

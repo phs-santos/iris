@@ -23,6 +23,7 @@
         "test:a11y": "electron-vite build && node tests/e2e/a11y.mjs",
         "test:pbx": "electron-vite build && node tests/e2e/asterisk.mjs",
         "test:load": "electron-vite build && node tests/e2e/load.mjs",
+        "test:resources": "electron-vite build && node tests/e2e/resources.mjs",
         "postinstall": "node scripts/apply-patches.mjs",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
