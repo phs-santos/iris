@@ -44,7 +44,9 @@ mac:
     extendInfo:
         NSMicrophoneUsageDescription: A Íris usa o microfone nas chamadas de teste.
 linux:
-    # .deb entra quando o projeto tiver repositório e página (exigidos como metadados do pacote).
     target:
         - AppImage
+        - deb
     category: Development
+    # O .deb exige um mantenedor com e-mail; este é o endereço público da conta no GitHub.
+    maintainer: Paulo Souza <phs-santos@users.noreply.github.com>

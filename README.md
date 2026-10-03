@@ -37,7 +37,8 @@ Baixe o instalador da [página de releases](https://github.com/phs-santos/iris/r
 | Windows | `Iris-Setup-<versão>.exe` |
 | macOS (Apple Silicon) | `Iris-<versão>-arm64.dmg` |
 | macOS (Intel) | `Iris-<versão>.dmg` |
-| Linux | `Iris-<versão>.AppImage` (dê permissão de execução: `chmod +x`) |
+| Linux (Debian, Ubuntu, Mint) | `iris_<versão>_amd64.deb` (instale com `sudo apt install ./iris_<versão>_amd64.deb`) |
+| Linux (outras distribuições) | `Iris-<versão>.AppImage` (dê permissão de execução: `chmod +x`) |
 
 Os instaladores ainda não são assinados (RNF-17), então o sistema avisa na primeira vez:
 
@@ -121,7 +122,7 @@ Em Linux sem tela, rode os de ponta a ponta com `xvfb-run -a`. Com `PBX_WS=wss:/
 ## Gerar instaladores
 
 ```bash
-npm run dist:linux   # AppImage
+npm run dist:linux   # AppImage e .deb
 npm run dist:win     # instalador NSIS (rodar no Windows)
 npm run dist:mac     # .dmg e .zip (rodar no macOS)
 ```
@@ -134,7 +135,7 @@ O app instalado procura versões novas nos releases de [phs-santos/iris](https:/
 
 - Nada é baixado sozinho: o app avisa que há versão nova e espera você clicar em **Baixar**. Depois de baixada, ela entra ao reiniciar.
 - **Canais:** o estável recebe só os releases normais. O beta recebe também os marcados como pré-lançamento no GitHub, com versão do tipo `1.2.0-beta.1`.
-- Em desenvolvimento (`npm run dev`) e na linha de comando, o app não procura atualização. No Linux, só o AppImage se atualiza.
+- Em desenvolvimento (`npm run dev`) e na linha de comando, o app não procura atualização. No Linux, só o AppImage se atualiza; quem usa o `.deb` instala o da versão nova.
 - No macOS, a atualização só instala com o app assinado (RNF-17). Até lá, baixe o `.dmg` novo à mão.
 
 Para publicar uma versão:

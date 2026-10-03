@@ -38,7 +38,7 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
     - **RNF-04:** falta medir no CI a abertura (≤ 3 s) e o registro (≤ 2 s). A resposta da interface (≤ 100 ms) já é medida em `load.mjs`.
     - **RNF-01:** os testes e2e rodam só em Linux. A especificação pede smoke test nos três sistemas.
     - **RNF-02:** falta o checklist manual com FreeSWITCH e Kamailio.
-    - **RNF-17:** além da assinatura, falta o `.deb`, que depende de repositório e página nos metadados (veja `electron-builder.yml`).
+    - **RNF-17:** falta só a assinatura (passo 3). O `.deb` já sai no `dist:linux` e no release; a instalação foi conferida num contêiner Ubuntu 24.04, mas o app instalado por `.deb` ainda não foi aberto numa máquina com tela.
 5. **[ ] Entregas do M4 que não são código:** o guia de uso e o teste com 3 pessoas (RNF-11: primeira chamada em até 2 minutos). O agente prepara o roteiro e o guia; o teste em si é com o usuário.
 6. **[ ] Fechar o M4.** Critério de saída: todos os RF/RNF essenciais e importantes aprovados, sem defeito crítico aberto. Atualize o "Estado atual" do README, que ainda diz "M0 a M3" e "RNF-17 fica para o M4", e as pendências do `docs/SEGURANCA.md`.
 

@@ -16,7 +16,7 @@ export const isUpdateChannel = (v: unknown): v is UpdateChannel => v === 'stable
 function unsupportedReason(): string | null {
     if (!app.isPackaged) return 'A atualização automática funciona só no app instalado.'
     if (process.platform === 'linux' && !process.env['APPIMAGE'])
-        return 'No Linux, a atualização automática funciona só no AppImage.'
+        return 'No Linux, a atualização automática funciona só no AppImage. Com o .deb, instale o da versão nova.'
     return null
 }
 
