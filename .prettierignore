@@ -5,3 +5,4 @@ package-lock.json
 patches/
 docker/
 *.md
+docs/CONCEITO.html

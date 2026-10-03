@@ -102,7 +102,10 @@ try {
     for (let i = 0; i < CALLS; i++) {
         const from = exts[i * 2]
         const to = exts[i * 2 + 1]
-        await page.locator('.acc', { hasText: `Carga ${from}` }).click()
+        await page
+            .locator('.acc', { hasText: `Carga ${from}` })
+            .locator('.row')
+            .click()
         await page.getByLabel('Número').fill(to)
         await page.getByRole('button', { name: 'Ligar', exact: true }).click()
     }

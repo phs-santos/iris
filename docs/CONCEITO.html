@@ -1,0 +1,475 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>SIP Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Layout: documento de conceito em coluna única, com "telas" desenhadas como bancada de instrumentos (painéis escuros/claros com fios de estado). */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --sunk:#e8ecf0; --line:#d3d9e0;
+  --fg:#16202b; --muted:#5a6878; --accent:#1f5fd1; --accent-soft:#e3ecfb;
+  --ok:#1a8a52; --ok-soft:#dff3e8; --warn:#b87406; --warn-soft:#fbefd9; --bad:#c23a32; --bad-soft:#f8e1df;
+  --screen:#0f1720; --screen-2:#17212c; --screen-line:#2a3744; --screen-fg:#d7e0ea; --screen-muted:#8496a8;
+  --display:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0d1218; --surface:#141b23; --sunk:#1a232d; --line:#283442;
+  --fg:#e3e9ef; --muted:#93a2b2; --accent:#6b9cf5; --accent-soft:#1a2a45;
+  --ok:#43c283; --ok-soft:#14301f; --warn:#e3a43a; --warn-soft:#33270f; --bad:#ef7a70; --bad-soft:#3a1a18;
+  --screen:#070b10; --screen-2:#0f161e; --screen-line:#24303c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1218; --surface:#141b23; --sunk:#1a232d; --line:#283442;
+  --fg:#e3e9ef; --muted:#93a2b2; --accent:#6b9cf5; --accent-soft:#1a2a45;
+  --ok:#43c283; --ok-soft:#14301f; --warn:#e3a43a; --warn-soft:#33270f; --bad:#ef7a70; --bad-soft:#3a1a18;
+  --screen:#070b10; --screen-2:#0f161e; --screen-line:#24303c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15.5px;line-height:1.6;padding-inline:16px;padding-block:0 64px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+.prose{max-width:68ch}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(2.4rem,6vw,3.6rem);letter-spacing:-.01em}
+h2{font-size:1.75rem}
+h3{font-size:1.15rem}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:18px}
+.lede{font-size:1.15rem;color:var(--muted);max-width:60ch}
+code,.mono{font-family:var(--mono);font-size:.88em}
+code{background:var(--sunk);padding:1px 5px;border-radius:4px}
+header.top{padding-top:48px;display:flex;flex-direction:column;gap:16px}
+.status-row{display:flex;gap:8px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:.75rem;padding:3px 9px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.chip b{color:var(--fg);font-weight:500}
+
+/* listas em grade */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.cell{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.cell p{color:var(--muted);font-size:.93rem}
+ul.plain{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:6px}
+
+/* ===== telas ===== */
+.screen{background:var(--screen);color:var(--screen-fg);border-radius:10px;border:1px solid var(--screen-line);overflow:hidden;font-size:13px;line-height:1.45}
+.screen-scroll{overflow-x:auto}
+.titlebar{display:flex;align-items:center;gap:12px;padding:8px 14px;border-bottom:1px solid var(--screen-line);background:var(--screen-2);font-family:var(--mono);font-size:12px;color:var(--screen-muted)}
+.titlebar .brand{color:var(--screen-fg);font-weight:500}
+.titlebar .sp{flex:1}
+.tb-btn{border:1px solid var(--screen-line);border-radius:5px;padding:2px 8px}
+.app{display:grid;grid-template-columns:230px 1fr 320px;min-width:880px;min-height:430px}
+.pane{border-right:1px solid var(--screen-line);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.pane:last-child{border-right:0}
+.pane-h{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--screen-muted);display:flex;justify-content:space-between}
+.pbx{font-family:var(--mono);font-size:11px;color:var(--screen-muted);margin-top:4px}
+.acc{display:flex;gap:9px;align-items:center;padding:8px;border-radius:6px;border:1px solid transparent}
+.acc.sel{background:var(--screen-2);border-color:var(--screen-line)}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+.d-ok{background:#3fcf86;box-shadow:0 0 0 3px rgba(63,207,134,.18)}
+.d-warn{background:#f0b13e}
+.d-bad{background:#f0675e}
+.d-off{background:#55636f}
+.acc .n{font-weight:500}
+.acc .s{font-family:var(--mono);font-size:11px;color:var(--screen-muted)}
+.acc .tag{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--screen-muted);border:1px solid var(--screen-line);border-radius:4px;padding:0 5px}
+.s-btn{font-family:var(--mono);font-size:11.5px;border:1px solid var(--screen-line);border-radius:5px;padding:5px 8px;text-align:center;color:var(--screen-fg)}
+.s-btn.pri{background:#2f6fe4;border-color:#2f6fe4;color:#fff}
+.s-btn.go{background:#1f9d5c;border-color:#1f9d5c;color:#fff}
+.s-btn.stop{background:#c9433a;border-color:#c9433a;color:#fff}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.field{background:var(--screen-2);border:1px solid var(--screen-line);border-radius:6px;padding:7px 9px;font-family:var(--mono);color:var(--screen-fg)}
+.field.big{font-size:18px;letter-spacing:.04em}
+.lbl{font-family:var(--mono);font-size:10.5px;color:var(--screen-muted)}
+.quick{display:flex;gap:6px;flex-wrap:wrap}
+.quick span{font-family:var(--mono);font-size:11px;border:1px dashed var(--screen-line);border-radius:5px;padding:2px 7px;color:var(--screen-muted)}
+.call{border:1px solid var(--screen-line);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px;background:var(--screen-2)}
+.call.ring{border-color:#f0b13e}
+.call .top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{font-family:var(--mono);font-size:10.5px;border-radius:999px;padding:1px 8px}
+.p-ok{background:rgba(63,207,134,.16);color:#6fe0a6}
+.p-warn{background:rgba(240,177,62,.16);color:#f3c56f}
+.p-hold{background:rgba(120,150,255,.16);color:#a9bcff}
+.timer{margin-left:auto;font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--screen-muted)}
+.q{font-family:var(--mono);font-size:11px;color:var(--screen-muted)}
+.log{font-family:var(--mono);font-size:11px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log .t{color:#62717f}
+.log .a{color:#9fb6ff}
+.log .r{color:#6fe0a6}
+.log .e{color:#ff8f86}
+.log .y{color:#f3c56f}
+.tabs{display:flex;gap:4px;font-family:var(--mono);font-size:11px}
+.tabs span{padding:2px 8px;border-radius:4px;color:var(--screen-muted)}
+.tabs span.on{background:var(--screen-2);color:var(--screen-fg)}
+.callout{font-size:12px;color:var(--screen-muted);border-top:1px solid var(--screen-line);padding:8px 14px;font-family:var(--mono)}
+
+/* anotações sob as telas */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;counter-reset:n}
+.note{display:flex;gap:10px;font-size:.92rem;color:var(--muted);min-width:0}
+.note b{color:var(--fg)}
+.note::before{counter-increment:n;content:counter(n);flex:none;width:22px;height:22px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-family:var(--mono);font-size:.75rem;display:grid;place-items:center;margin-top:2px}
+
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.two > *{min-width:0}
+.mini{min-width:0}
+.mini .body{padding:12px;display:flex;flex-direction:column;gap:9px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form-grid > div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.toggle{display:flex;align-items:center;gap:8px;font-size:12px}
+.sw{width:26px;height:14px;border-radius:999px;background:#55636f;position:relative;flex:none}
+.sw.on{background:#1f9d5c}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#fff}
+.sw.on::after{left:14px}
+
+/* fluxos */
+.flow{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px}
+.steps{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.step{font-size:.88rem;background:var(--sunk);border-radius:6px;padding:5px 10px}
+.arrow{color:var(--muted);font-family:var(--mono)}
+.flow p{color:var(--muted);font-size:.93rem}
+
+/* tabelas */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:.92rem}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:500;background:var(--sunk)}
+tr:last-child td{border-bottom:0}
+td code{white-space:nowrap}
+
+/* fases */
+.phases{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.phase{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.phase .k{display:inline-block;font-family:var(--mono);font-size:.72rem;padding:2px 8px;border-radius:999px;width:max-content}
+.k1{background:var(--ok-soft);color:var(--ok)}
+.k2{background:var(--accent-soft);color:var(--accent)}
+.k3{background:var(--sunk);color:var(--muted)}
+.risk{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-left:3px solid var(--warn);background:var(--warn-soft);border-radius:0 8px 8px 0}
+.risk p{font-size:.93rem}
+.risks{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.decide{display:flex;flex-direction:column;gap:12px}
+.q-item{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.q-item .rec{font-size:.9rem;color:var(--muted)}
+.q-item .rec b{color:var(--accent);font-weight:600}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;overflow-x:auto}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <span class="eyebrow">Conceito · v0 · para discussão</span>
+  <h1>SIP Bench</h1>
+  <p class="lede">Uma bancada de testes SIP no navegador. Você cadastra várias contas, de vários PBX, registra todas de uma vez, liga entre elas e vê na mesma tela o que aconteceu no SIP.</p>
+  <div class="status-row">
+    <span class="chip">base <b>easy-sipjs 2.7.6</b></span>
+    <span class="chip">WebRTC + <b>WSS</b></span>
+    <span class="chip">presets <b>asterisk · kamailio · generic</b></span>
+    <span class="chip">nome provisório</span>
+  </div>
+</header>
+
+<section>
+  <span class="eyebrow">O problema</span>
+  <h2>Testar telefonia hoje exige três softphones e paciência</h2>
+  <div class="prose"><p>Para validar uma URA, uma fila ou uma transferência, o desenvolvedor costuma abrir um softphone por ramal, alternar entre janelas e caçar o erro num <code>sngrep</code> no servidor. Softphones comuns são feitos para atender cliente, não para testar: escondem o SIP, registram uma conta por vez e não lembram cenários. O SIP Bench inverte isso. Cada conta é um cartão, cada chamada é visível, e o log SIP fica ao lado, filtrado por conta.</p></div>
+  <div class="grid">
+    <div class="cell"><h3>Ligar A → B sem trocar de app</h3><p>Ramal 1001 do PBX de homologação liga para o 2001 do PBX de produção. Os dois lados aparecem na mesma tela.</p></div>
+    <div class="cell"><h3>Testar URA com DTMF</h3><p>Disca, espera o áudio, manda <code>1</code>, depois <code>4321#</code>. Sem procurar o teclado numérico.</p></div>
+    <div class="cell"><h3>Validar um PBX novo</h3><p>Registra, faz OPTIONS, roda o diagnóstico de WebRTC e mostra o que falhou: certificado, ICE, permissão de microfone.</p></div>
+    <div class="cell"><h3>Reproduzir bug de cliente</h3><p>Importa o JSON de contas que o colega exportou, repete o cenário e copia o log SIP já sem senha.</p></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Princípios</span>
+  <h2>O que guia as decisões</h2>
+  <div class="grid">
+    <div class="cell"><h3>Uma tela só</h3><p>Contas, chamadas e log ficam sempre visíveis. Nada importante mora num menu.</p></div>
+    <div class="cell"><h3>Estado em cor e forma</h3><p>Registro, toque, chamada em espera: cada estado tem um ponto e uma etiqueta reconhecíveis de longe.</p></div>
+    <div class="cell"><h3>Zero SIP para configurar</h3><p>Ramal, senha, domínio e WSS. O resto vem do preset do easy-sipjs.</p></div>
+    <div class="cell"><h3>Funciona sem PBX</h3><p>Um modo simulado deixa explorar a interface, demonstrar e testar a própria ferramenta.</p></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Tela 1 · principal</span>
+  <h2>Contas, discador e log lado a lado</h2>
+  <div class="screen">
+    <div class="screen-scroll">
+      <div class="titlebar"><span class="brand">SIP Bench</span><span>3 contas · 2 PBX</span><span class="sp"></span><span class="tb-btn">Registrar todas</span><span class="tb-btn">Importar / Exportar</span><span class="tb-btn">Simulado: off</span></div>
+      <div class="app">
+        <div class="pane">
+          <div class="pane-h"><span>Contas</span><span>+ nova</span></div>
+          <div>
+            <div class="pbx">pbx-homolog.empresa.com</div>
+            <div class="acc sel"><span class="dot d-ok"></span><div><div class="n">Suporte 1001</div><div class="s">registrado · 42 ms</div></div><span class="tag">AA</span></div>
+            <div class="acc"><span class="dot d-ok"></span><div><div class="n">Vendas 1002</div><div class="s">registrado · 40 ms</div></div></div>
+          </div>
+          <div>
+            <div class="pbx">kamailio.lab.local</div>
+            <div class="acc"><span class="dot d-bad"></span><div><div class="n">Lab 2001</div><div class="s">403 Forbidden</div></div></div>
+            <div class="acc"><span class="dot d-off"></span><div><div class="n">Lab 2002</div><div class="s">desconectado</div></div></div>
+          </div>
+        </div>
+        <div class="pane">
+          <div class="pane-h"><span>Discar</span><span>de: Suporte 1001</span></div>
+          <div class="row"><div class="field big" style="flex:1">8000</div><span class="s-btn go">Ligar</span></div>
+          <div class="quick"><span>1002 Vendas</span><span>2001 Lab</span><span>*97 correio</span><span>8000 URA</span></div>
+          <div class="pane-h" style="margin-top:6px"><span>Chamadas</span><span>2 ativas</span></div>
+          <div class="call">
+            <div class="top"><span class="dot d-ok"></span><b>1001 → 8000</b><span class="pill p-ok">em chamada</span><span class="timer">00:41</span></div>
+            <div class="row"><span class="s-btn">Mudo</span><span class="s-btn">Espera</span><span class="s-btn">DTMF</span><span class="s-btn">Transferir</span><span class="s-btn stop">Desligar</span></div>
+            <div class="row"><div class="field" style="flex:1">1 · espera 2s · 4321#</div><span class="s-btn">Enviar</span></div>
+            <div class="q">qualidade 92 · jitter 8 ms · perda 0,2% · RTT 74 ms · opus</div>
+          </div>
+          <div class="call ring">
+            <div class="top"><span class="dot d-warn"></span><b>1002 ← 3005 Maria</b><span class="pill p-warn">tocando</span><span class="timer">00:03</span></div>
+            <div class="row"><span class="s-btn go">Atender</span><span class="s-btn stop">Recusar</span></div>
+          </div>
+        </div>
+        <div class="pane">
+          <div class="pane-h"><span>Log</span><span>todas · copiar</span></div>
+          <div class="tabs"><span class="on">Eventos</span><span>SIP bruto</span><span>Saúde</span></div>
+          <div class="log">
+            <div><span class="t">00:24:01</span> <span class="a">1001</span> REGISTER → <span class="r">200 OK</span></div>
+            <div><span class="t">00:24:01</span> <span class="a">1002</span> REGISTER → <span class="r">200 OK</span></div>
+            <div><span class="t">00:24:02</span> <span class="a">2001</span> REGISTER → <span class="e">403 Forbidden</span></div>
+            <div><span class="t">00:24:30</span> <span class="a">1001</span> INVITE sip:8000 → 100 Trying</div>
+            <div><span class="t">00:24:30</span> <span class="a">1001</span> ← 183 Session Progress (early media)</div>
+            <div><span class="t">00:24:31</span> <span class="a">1001</span> ← <span class="r">200 OK</span> · ICE connected</div>
+            <div><span class="t">00:24:47</span> <span class="a">1001</span> DTMF 1 (sip-info)</div>
+            <div><span class="t">00:25:08</span> <span class="a">1002</span> ← INVITE de 3005 "Maria"</div>
+            <div><span class="t">00:25:09</span> <span class="a">2001</span> <span class="y">reconectando 2/5 em 4 s</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout">Desenho ilustrativo. Valores de exemplo.</div>
+  </div>
+  <div class="notes">
+    <div class="note"><span><b>Contas agrupadas por PBX.</b> O ponto mostra o registro; a linha de baixo mostra latência ou o código de erro. "AA" marca auto-atender.</span></div>
+    <div class="note"><span><b>Discar "de" uma conta.</b> A conta selecionada é a origem. Os atalhos sugerem as outras contas e números salvos.</span></div>
+    <div class="note"><span><b>Cada chamada é um cartão.</b> Conta, direção, estado, tempo e controles. Várias chamadas ao mesmo tempo, de contas diferentes.</span></div>
+    <div class="note"><span><b>Log com filtro por conta.</b> Eventos legíveis por padrão; SIP bruto (já sem senha e nonce) numa aba.</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Telas 2 e 3</span>
+  <h2>Cadastrar uma conta e saber se o PBX está saudável</h2>
+  <div class="two">
+    <div class="screen mini">
+      <div class="titlebar"><span class="brand">Nova conta</span><span class="sp"></span><span>preset: asterisk</span></div>
+      <div class="body">
+        <div class="form-grid">
+          <div><span class="lbl">Nome</span><div class="field">Suporte 1001</div></div>
+          <div><span class="lbl">Ramal</span><div class="field">1001</div></div>
+          <div><span class="lbl">Domínio</span><div class="field">pbx-homolog.empresa.com</div></div>
+          <div><span class="lbl">Senha</span><div class="field">••••••••</div></div>
+          <div style="grid-column:1/-1"><span class="lbl">WebSocket</span><div class="field">wss://pbx-homolog.empresa.com:8089/ws</div></div>
+        </div>
+        <div class="lbl">Avançado: usuário de autenticação · STUN/TURN · provider sipjs/jssip · modo DTMF</div>
+        <div class="toggle"><span class="sw on"></span>Auto-atender após 1 s</div>
+        <div class="toggle"><span class="sw on"></span>Mostrar SIP bruto no log</div>
+        <div class="toggle"><span class="sw"></span>Lembrar senha neste navegador</div>
+        <div class="row"><span class="s-btn">Testar conexão</span><span class="s-btn pri">Salvar e registrar</span></div>
+      </div>
+    </div>
+    <div class="screen mini">
+      <div class="titlebar"><span class="brand">Saúde · Suporte 1001</span><span class="sp"></span><span>verificado 00:25:12</span></div>
+      <div class="body">
+        <div class="log" style="font-size:12px;gap:6px">
+          <div><span class="r">✓</span> Página em HTTPS (contexto seguro)</div>
+          <div><span class="r">✓</span> Permissão de microfone</div>
+          <div><span class="r">✓</span> WebSocket conectado</div>
+          <div><span class="r">✓</span> Registrado · expira em 540 s</div>
+          <div><span class="r">✓</span> OPTIONS respondeu em 42 ms</div>
+          <div><span class="y">!</span> Sem TURN configurado</div>
+          <div><span class="y">!</span> Navegador não escolhe alto-falante</div>
+        </div>
+        <div class="q">Sem TURN, chamadas atrás de NAT simétrico podem ficar mudas. Adicione um servidor TURN em Avançado.</div>
+        <div class="row"><span class="s-btn">Rodar de novo</span><span class="s-btn">Copiar relatório</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><span><b>Só quatro campos obrigatórios.</b> O preset preenche DTMF, estratégia de espera e recuperação de ICE.</span></div>
+    <div class="note"><span><b>"Testar conexão" antes de salvar.</b> Mostra o código SIP da falha em vez de um "erro de registro" genérico.</span></div>
+    <div class="note"><span><b>Saúde vem do próprio easy-sipjs.</b> <code>checkHealth()</code> e <code>diagnose()</code> viram uma lista de verificação com o que fazer.</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Fluxos</span>
+  <h2>Os quatro caminhos mais comuns</h2>
+  <div class="flow">
+    <h3>Primeiro uso</h3>
+    <div class="steps"><span class="step">Abrir</span><span class="arrow">→</span><span class="step">Nova conta</span><span class="arrow">→</span><span class="step">Testar conexão</span><span class="arrow">→</span><span class="step">Salvar e registrar</span><span class="arrow">→</span><span class="step">Ponto verde</span></div>
+    <p>Sem PBX à mão, o modo simulado já vem com três contas de exemplo para explorar.</p>
+  </div>
+  <div class="flow">
+    <h3>Ligar de uma conta para outra</h3>
+    <div class="steps"><span class="step">Selecionar 1001</span><span class="arrow">→</span><span class="step">Atalho "2001 Lab"</span><span class="arrow">→</span><span class="step">Ligar</span><span class="arrow">→</span><span class="step">2001 toca na mesma tela</span><span class="arrow">→</span><span class="step">Auto-atende ou Atender</span></div>
+    <p>Os dois cartões de chamada ficam lado a lado. O log intercala os eventos das duas contas por horário.</p>
+  </div>
+  <div class="flow">
+    <h3>Testar uma URA</h3>
+    <div class="steps"><span class="step">Discar 8000</span><span class="arrow">→</span><span class="step">Ouvir a mensagem</span><span class="arrow">→</span><span class="step">Sequência "1 · espera 2s · 4321#"</span><span class="arrow">→</span><span class="step">Conferir DTMF no log</span></div>
+    <p>A sequência aceita pausas e pode ser salva como atalho da conta.</p>
+  </div>
+  <div class="flow">
+    <h3>Transferir</h3>
+    <div class="steps"><span class="step">Em chamada</span><span class="arrow">→</span><span class="step">Transferir</span><span class="arrow">→</span><span class="step">Cega: digitar destino</span><span class="arrow">ou</span><span class="step">Assistida: escolher outra chamada</span><span class="arrow">→</span><span class="step">Progresso 100/180/200 no cartão</span></div>
+    <p>O easy-sipjs já entrega o progresso da transferência pelo NOTIFY, então dá para ver se ela completou de fato.</p>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Arquitetura</span>
+  <h2>Uma instância do easy-sipjs por conta</h2>
+  <div class="prose"><p>O app é só front-end. Cada conta cadastrada vira um <code>SipClient</code> próprio, com seu WebSocket e seu registro. Um gerenciador de contas cuida da lista; todos os eventos dos clientes passam por um barramento que alimenta o estado da tela e o log. O modo simulado usa a opção <code>customProvider</code> da biblioteca, então a interface não sabe se está falando com um PBX de verdade.</p></div>
+<pre class="mermaid">
+flowchart LR
+  UI["Interface<br/>Contas · Discador · Chamadas · Log"] --> Store["Estado da tela"]
+  Store --> AM["Gerenciador de contas"]
+  AM --> C1["SipClient · 1001"]
+  AM --> C2["SipClient · 1002"]
+  AM --> C3["SipClient · 2001"]
+  C1 --> P1["PBX homolog (WSS)"]
+  C2 --> P1
+  C3 --> P2["Kamailio lab (WSS)"]
+  C1 & C2 & C3 -. eventos .-> Bus["Barramento de eventos"]
+  Bus --> Store
+  Bus --> Log["Log por conta<br/>(memória circular)"]
+  AM --> Persist["Perfis em JSON<br/>localStorage · import/export"]
+  AM -. modo simulado .-> Mock["customProvider simulado"]
+</pre>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Função na tela</th><th>Chamada no easy-sipjs</th><th>Observação</th></tr></thead>
+      <tbody>
+        <tr><td>Registrar / desregistrar</td><td><code>connect()</code> · <code>disconnect()</code></td><td>Refresh e reconexão automáticos</td></tr>
+        <tr><td>Estado do ponto da conta</td><td><code>on('connection-state')</code> · <code>on('register-failed')</code></td><td>connecting, registered, error…</td></tr>
+        <tr><td>Ligar</td><td><code>dial(destino, { remoteElement })</code></td><td>Um elemento de áudio por chamada</td></tr>
+        <tr><td>Chamada recebida</td><td><code>on('invite')</code> → <code>accept()</code> / <code>reject()</code></td><td>Auto-atender é só um timer no app</td></tr>
+        <tr><td>Mudo, espera, DTMF</td><td><code>session.mute()</code> · <code>hold()</code> · <code>sendDTMF()</code></td><td>DTMF sip-info, rtp-event ou auto</td></tr>
+        <tr><td>Transferir</td><td><code>session.transfer(destino | outraSessao)</code></td><td>Progresso via <code>transfer-progress</code></td></tr>
+        <tr><td>Qualidade</td><td><code>session.getQuality()</code></td><td>Score, jitter, perda, RTT, codec</td></tr>
+        <tr><td>Saúde e diagnóstico</td><td><code>checkHealth()</code> · <code>diagnose()</code></td><td>OPTIONS, HTTPS, mic, ICE</td></tr>
+        <tr><td>Log SIP bruto</td><td><code>debug: true</code> + <code>onSipLog</code></td><td>Senha e nonce já removidos</td></tr>
+        <tr><td>BLF / presença</td><td><code>subscribePresence()</code> · <code>onPresence()</code></td><td>Fase 2</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Escopo por fase</span>
+  <h2>O que entra primeiro</h2>
+  <div class="phases">
+    <div class="phase"><span class="k k1">MVP</span><h3>Bancada básica</h3>
+      <ul class="plain"><li>Várias contas, vários PBX, registrar todas</li><li>Discar, atender, recusar, desligar</li><li>Mudo, espera, DTMF com sequência</li><li>Auto-atender por conta</li><li>Log por conta com SIP bruto</li><li>Importar e exportar contas em JSON</li><li>Modo simulado</li></ul></div>
+    <div class="phase"><span class="k k2">Fase 2</span><h3>Diagnóstico e cenários</h3>
+      <ul class="plain"><li>Transferência cega e assistida</li><li>Painel de qualidade da chamada</li><li>Saúde e diagnóstico por conta</li><li>BLF / presença das outras contas</li><li>Cenários salvos: "liga, espera, DTMF, desliga"</li></ul></div>
+    <div class="phase"><span class="k k3">Depois</span><h3>Fora do navegador</h3>
+      <ul class="plain"><li>Versão desktop (Tauri ou Electron)</li><li>Rodar cenários sem tela, em CI</li><li>Gravar a chamada localmente</li><li>Perfis compartilhados pelo time</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Pontos de atenção</span>
+  <h2>O que pode atrapalhar</h2>
+  <div class="risks">
+    <div class="risk"><h3>O PBX precisa falar WebRTC</h3><p>Exige WSS com certificado válido e DTLS-SRTP. PBX só com UDP/TCP fica de fora sem um gateway.</p></div>
+    <div class="risk"><h3>Certificado autoassinado</h3><p>O navegador recusa o WSS em silêncio. A tela de saúde precisa dizer isso e mostrar o link para aceitar o certificado.</p></div>
+    <div class="risk"><h3>Vários toques ao mesmo tempo</h3><p>Cada <code>SipClient</code> toca o próprio ringtone. Com auto-atender e várias contas, convém um toque central.</p></div>
+    <div class="risk"><h3>Senhas no navegador</h3><p>Por padrão a senha não é salva. A exportação em JSON sai sem senha, a menos que o usuário peça.</p></div>
+  </div>
+</section>
+
+<section class="decide">
+  <span class="eyebrow">Para decidir antes de desenvolver</span>
+  <h2>Três escolhas</h2>
+  <div class="q-item"><h3>Qual stack de interface?</h3><p class="rec">Recomendo <b>Vue 3 + Vite + TypeScript</b>: o easy-sipjs já traz um composable Vue e um exemplo nessa stack. Alternativa: HTML e JS puros, num arquivo só.</p></div>
+  <div class="q-item"><h3>Web ou desktop no MVP?</h3><p class="rec">Recomendo <b>web</b>, rodando em localhost ou num servidor interno. Desktop fica para depois.</p></div>
+  <div class="q-item"><h3>Onde ficam as contas?</h3><p class="rec">Recomendo <b>no navegador, com import/export em JSON</b>. Um servidor de perfis só se o time pedir.</p></div>
+</section>
+
+</div>
+
+<!--claude-mermaid-runtime-begin:3477-->
+<style>.mermaid-diagram{margin-block:4px}.mermaid-diagram svg{display:block;margin:0 auto;max-width:100%;height:auto}</style>
+<script src="/_runtime/mermaid-11.16.1.min.js"></script>
+<script>(function(){
+var CFG={"palettes":{"light":{"surface":"#f4efe4","text":"#42392e","line":"#8a7f6d","border":"#7a6c52","bg":"#fffdf8"},"dark":{"surface":"#262b34","text":"#f2f3f5","line":"#a8adb8","border":"#9aa4b8","bg":"#1f232b"}}};
+if(typeof mermaid==='undefined')return;
+var pres=Array.prototype.slice.call(document.querySelectorAll('pre.mermaid')).filter(function(p){if(p.hasAttribute('data-claude-mermaid-claimed'))return false;p.setAttribute('data-claude-mermaid-claimed','1');return true;});
+if(!pres.length)return;
+var mq=window.matchMedia?window.matchMedia('(prefers-color-scheme: dark)'):null;
+var root=document.documentElement;
+var items=pres.map(function(pre){
+var mount=document.createElement('div');mount.className='mermaid-diagram';
+return {pre:pre,mount:mount,src:pre.textContent||''};
+});
+var seq=0;
+var renderGen=0;
+var lastKey='';
+function pageBg(fallback){
+var els=[document.body,document.documentElement];
+for(var i=0;i<els.length;i++){
+var c=els[i]&&getComputedStyle(els[i]).backgroundColor;
+if(c&&c!=='transparent'&&c!=='rgba(0, 0, 0, 0)')return c;
+}
+return fallback;
+}
+function render(){
+var theme=root.getAttribute('data-theme');
+var dark=theme==='dark'||(!!(mq&&mq.matches)&&theme!=='light');
+var pal=dark?CFG.palettes.dark:CFG.palettes.light;
+var bg=pageBg(pal.bg);
+var key=(dark?'d':'l')+'|'+bg;
+if(key===lastKey)return;
+lastKey=key;
+var gen=++renderGen;
+var font=getComputedStyle(document.body).fontFamily||'sans-serif';
+var nat={useMaxWidth:false};
+mermaid.initialize({
+startOnLoad:false,securityLevel:'strict',theme:'base',
+flowchart:nat,sequence:nat,er:nat,state:nat,class:nat,pie:nat,
+gantt:nat,journey:nat,timeline:nat,gitGraph:nat,mindmap:nat,xyChart:nat,
+quadrantChart:nat,sankey:nat,c4:nat,requirement:nat,block:nat,
+packet:nat,kanban:nat,architecture:nat,radar:nat,
+themeVariables:{background:bg,mainBkg:pal.surface,primaryColor:pal.surface,
+primaryTextColor:pal.text,lineColor:pal.line,primaryBorderColor:pal.border,
+nodeBorder:pal.border,clusterBorder:pal.border,edgeLabelBackground:bg,
+clusterBkg:'rgba(127,127,127,0.07)',titleColor:pal.text,
+darkMode:dark,rowOdd:bg,rowEven:'rgba(127,127,127,0.07)',
+attributeBackgroundColorOdd:bg,attributeBackgroundColorEven:'rgba(127,127,127,0.07)',
+fontSize:'16px',fontFamily:font},
+themeCSS:'.node rect, .node circle, .node polygon, .node path, .cluster rect { stroke-width: 2px; }'
+});
+items.forEach(function(it){
+var id='claude-mermaid-'+seq++;
+mermaid.render(id,it.src).then(function(r){
+if(gen!==renderGen)return;
+var prev=it.pre.previousElementSibling;
+if(prev&&prev.className==='mermaid-diagram'&&prev!==it.mount)return;
+it.mount.innerHTML=r.svg;
+if(!it.mount.parentNode)it.pre.parentNode.insertBefore(it.mount,it.pre);
+it.pre.style.display='none';
+},function(){
+var scratch=document.getElementById(id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+scratch=document.getElementById('d'+id);
+if(scratch)scratch.parentNode.removeChild(scratch);
+if(gen!==renderGen)return;
+if(it.mount.parentNode)it.mount.parentNode.removeChild(it.mount);
+it.pre.style.display='';
+});
+});
+}
+render();
+if(mq&&mq.addEventListener)mq.addEventListener('change',render);
+if(typeof MutationObserver!=='undefined')new MutationObserver(render).observe(root,{attributes:true,attributeFilter:['data-theme']});
+})();</script>
+<!--claude-mermaid-runtime-end-->
+
+</body></html>

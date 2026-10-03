@@ -58,7 +58,7 @@ try {
         await page.getByRole('button', { name: 'Escolher arquivo' }).click()
         await page.getByText('1 contas importadas').waitFor()
         await page.getByRole('button', { name: 'Fechar' }).click()
-        await page.locator('.acc', { hasText: origin }).click()
+        await page.locator('.acc', { hasText: origin }).locator('.row').click()
         await page.getByRole('button', { name: 'Registrar', exact: true }).click()
         const trust = page.getByRole('button', { name: 'Confiar neste host' })
         if (await trust.isVisible({ timeout: 8000 }).catch(() => false)) await trust.click()

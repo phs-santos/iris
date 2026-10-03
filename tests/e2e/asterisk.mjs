@@ -48,7 +48,7 @@ try {
     await addAccount('PBX 1003', '1003', true)
     if (shots) await page.screenshot({ path: join(shots, 'pbx-1-registradas.png') })
 
-    await page.locator('.acc', { hasText: 'PBX 1001' }).click()
+    await page.locator('.acc', { hasText: 'PBX 1001' }).locator('.row').click()
     await page.getByLabel('Número').fill('1002')
     await page.getByRole('button', { name: 'Ligar', exact: true }).click()
     await page.locator('.call', { hasText: /1002\s*←\s*1001/ }).waitFor({ timeout: 20000 })

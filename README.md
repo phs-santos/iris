@@ -4,7 +4,7 @@ Na mitologia grega, Íris é a mensageira dos deuses, que leva recados entre o c
 
 Softphone desktop para testar telefonia: registra várias contas de vários PBX ao mesmo tempo, liga entre elas e mostra o SIP de cada uma na mesma janela. Feito com Electron, Vue 3 e [easy-sipjs](https://www.npmjs.com/package/easy-sipjs).
 
-A especificação completa (requisitos, arquitetura e plano de entrega) está no documento do projeto.
+A especificação completa (requisitos, arquitetura e plano de entrega) está em [docs/ESPECIFICACAO.md](docs/ESPECIFICACAO.md), e o conceito visual em [docs/CONCEITO.html](docs/CONCEITO.html). Os dois usam o nome antigo do projeto, SIP Bench.
 
 ## Estado atual
 

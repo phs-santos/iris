@@ -14,9 +14,36 @@ import {
 } from './engine'
 import { audioOutput } from './audio'
 
-// WAV vazio: desliga o toque próprio de cada SipClient; o app toca um toque central
-// para não sobrepor sons quando várias contas recebem chamadas.
-const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA='
+/**
+ * Silêncio de verdade (200 ms, 8 kHz, 8 bits) para desligar o toque próprio de cada SipClient; o app
+ * toca um toque central para não sobrepor sons quando várias contas recebem chamadas. O easy-sipjs
+ * toca o toque em loop: um WAV sem amostras em loop deixava o Chromium reiniciando a reprodução sem
+ * parar, com a CPU em ~30% depois da primeira chamada recebida (RNF-05).
+ */
+function silentWav(ms = 200, rate = 8000): string {
+    const samples = Math.round((rate * ms) / 1000)
+    const bytes = new Uint8Array(44 + samples)
+    const view = new DataView(bytes.buffer)
+    const text = (offset: number, value: string): void =>
+        [...value].forEach((c, i) => view.setUint8(offset + i, c.charCodeAt(0)))
+    text(0, 'RIFF')
+    view.setUint32(4, 36 + samples, true)
+    text(8, 'WAVE')
+    text(12, 'fmt ')
+    view.setUint32(16, 16, true) // tamanho do bloco fmt
+    view.setUint16(20, 1, true) // PCM
+    view.setUint16(22, 1, true) // mono
+    view.setUint32(24, rate, true)
+    view.setUint32(28, rate, true) // bytes por segundo
+    view.setUint16(32, 1, true) // bytes por amostra
+    view.setUint16(34, 8, true) // bits por amostra
+    text(36, 'data')
+    view.setUint32(40, samples, true)
+    bytes.fill(0x80, 44) // 0x80 é o zero do PCM de 8 bits
+    return `data:audio/wav;base64,${btoa(String.fromCharCode(...bytes))}`
+}
+
+const SILENT_WAV = silentWav()
 
 let nextId = 1
 

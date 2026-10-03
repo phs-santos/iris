@@ -1,0 +1,78 @@
+# Íris: guia para o agente
+
+Softphone desktop de testes de telefonia (Electron + Vue 3 + Pinia + easy-sipjs). O [README.md](README.md) descreve o produto, os comandos e a estrutura de pastas. Leia-o antes de mexer. Este arquivo diz **onde o projeto está, o que fazer a seguir e como trabalhar aqui**.
+
+Documentos de referência em [docs/](docs/). O projeto se chamava "SIP Bench", e esse é o nome que aparece neles.
+
+- [docs/ESPECIFICACAO.md](docs/ESPECIFICACAO.md): é **a fonte da verdade**. Tem os 37 RF e os 20 RNF com prioridade, marco e critério de aceitação, além da arquitetura, do plano de entrega (M0 a M4), da estratégia de testes, dos riscos e das decisões. É uma cópia do Claude Doc de 03/10/2026; os dois diagramas embutidos (arquitetura e cronograma) não vieram na exportação.
+- [docs/CONCEITO.html](docs/CONCEITO.html): o conceito visual inicial (telas, fluxos), anterior à decisão pelo desktop. Serve de referência de interface, não de escopo.
+- [docs/SEGURANCA.md](docs/SEGURANCA.md): revisão de segurança do M4.
+
+Quando o código e a especificação divergirem, siga a especificação e avise o usuário. Se algo não estiver em nenhum desses documentos, pergunte ao usuário em vez de inventar o escopo.
+
+## Estado (03/10/2026)
+
+- **M0 a M3 concluídos.** O README lista o que cada RF já faz.
+- **M4 em andamento.** Já feito: revisão de segurança ([docs/SEGURANCA.md](docs/SEGURANCA.md)) e revisão de acessibilidade (RNF-12, `test:a11y`).
+- Typecheck, testes de unidade, Prettier e licenças passam.
+
+## Próximos passos, em ordem
+
+Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando ele terminar.
+
+1. **[ ] RNF-05 (recursos).** Já existe trabalho não commitado:
+    - `src/renderer/src/sip/easysip-engine.ts`: o toque silencioso passou a ser um WAV com 200 ms de silêncio. O WAV vazio tocado em loop deixava a CPU em ~30%.
+    - `tests/e2e/resources.mjs` (novo): mede RAM (≤ 300 MB com 10 contas e 1 chamada) e CPU ociosa (< 2%) com o Asterisk.
+    - `tests/e2e/{asterisk,load,scenarios}.mjs`: o clique na conta agora vai em `.acc .row`. Esse é o ajuste à mudança de estrutura do `AccountsPane` feita na revisão de acessibilidade.
+
+    Para terminar:
+    - rode `docker compose up -d` (no macOS, com `-f docker/compose.ports.yml`), depois `npm run build && node tests/e2e/resources.mjs`, e confira se passa;
+    - adicione `"test:resources"` ao `package.json`, um passo no CI (job `e2e`, depois de subir o Asterisk) e uma linha no README em "Testes";
+    - rode também `test:pbx`, `test:load` e `test:scenarios` para validar os seletores novos;
+    - faça o commit `M4: recursos (RNF-05)`.
+2. **[ ] RF-35 (atualização automática).** É o único RF que o README marca como pendente. Antes de implementar, confirme com o usuário onde os releases vão ficar (GitHub Releases? servidor próprio?). A opção natural é o `electron-updater` com o `publish` do `electron-builder.yml`.
+    - Restrições: sem atualizar no modo CLI (`src/main/cli.ts`), sem baixar nada sem o usuário saber e com a verificação de assinatura mantida.
+    - Os instaladores ainda não são assinados (passo 3). Sem assinatura, o auto-update do macOS não funciona.
+3. **[ ] RNF-17 (instaladores assinados).** **Bloqueado.** Depende do usuário fornecer o Apple Developer ID (assinar e notarizar) e o certificado de assinatura para Windows. Enquanto isso não chegar, não tente contornar. Hoje o macOS usa assinatura ad-hoc (`resetAdHocDarwinSignature`).
+4. **[ ] RNF ainda sem cumprimento.** Este levantamento foi feito comparando a especificação com o código em 03/10/2026. Confirme cada item antes de começar:
+    - **RNF-13:** os textos da interface estão fixos nos componentes. A especificação pede arquivos de tradução (pt-BR, prontos para inglês). É a maior lacuna.
+    - **RNF-14:** não há log interno do app em arquivo rotativo (5 × 10 MB na pasta de dados).
+    - **RNF-15:** não há lint (ESLint) nem relatório de cobertura no CI. A meta é 70% ou mais na camada de domínio.
+    - **RNF-06:** a reconexão usa o `autoReconnect` do easy-sipjs. Falta a espera crescente com limite de tentativas configurável e o teste que derruba o contêiner do PBX.
+    - **RNF-04:** falta medir no CI a abertura (≤ 3 s) e o registro (≤ 2 s). A resposta da interface (≤ 100 ms) já é medida em `load.mjs`.
+    - **RNF-01:** os testes e2e rodam só em Linux. A especificação pede smoke test nos três sistemas.
+    - **RNF-02:** falta o checklist manual com FreeSWITCH e Kamailio.
+    - **RNF-17:** além da assinatura, falta o `.deb`, que depende de repositório e página nos metadados (veja `electron-builder.yml`).
+5. **[ ] Entregas do M4 que não são código:** o guia de uso e o teste com 3 pessoas (RNF-11: primeira chamada em até 2 minutos). O agente prepara o roteiro e o guia; o teste em si é com o usuário.
+6. **[ ] Fechar o M4.** Critério de saída: todos os RF/RNF essenciais e importantes aprovados, sem defeito crítico aberto. Atualize o "Estado atual" do README, que ainda diz "M0 a M3" e "RNF-17 fica para o M4", e as pendências do `docs/SEGURANCA.md`.
+
+**Fora do 1.0** (não faça sem o usuário pedir): RF-20 (early media), RF-27 (BLF), RF-34 (atalhos globais) e RF-36 (gravação). O RF-31 também era "depois", mas já foi feito.
+
+**Decisões em aberto na especificação** (pergunte ao usuário, não decida sozinho): licença, onde publicar instaladores e atualizações, quem providencia os certificados e quais PBX além do Asterisk entram nos testes automáticos. O nome já foi decidido: Íris.
+
+Pendências conhecidas, que não precisam ser feitas agora:
+- `grantFileProtocolExtraPrivileges` continua ligado. Para desligar, a interface teria que ser servida por um protocolo próprio (`app://`).
+- Abrir a issue do `transport=wss` no easy-sipjs. O patch fica em `patches/`, e o motivo está no README.
+- No Docker Desktop do macOS, o DTMF por RTP às vezes perde pacotes. O problema é do ambiente, não do app.
+
+## Como trabalhar aqui
+
+- **Idioma:** código, comentários, interface, mensagens de teste, commits e documentação em **português**. Escreva frases simples, sem jargão desnecessário.
+- **Commits:**
+    - título curto, com o marco e/ou o requisito: `M4: …`, `RF-31: …`, `… (RNF-05)`;
+    - no corpo, em lista com `-`, o que mudou e por quê, e por último os testes;
+    - termine com a linha `Co-Authored-By`;
+    - só faça o commit quando o usuário pedir.
+- **Requisitos no código:** cite o RF/RNF no comentário quando ele explica uma decisão, por exemplo `// … (RNF-19)`. Comente o *porquê*, com a mesma densidade do código ao redor.
+- **Formato:** Prettier, com 4 espaços, sem ponto e vírgula, aspas simples e 120 colunas. Rode `npm run format` antes do commit.
+- **Antes de dar algo por pronto:** rode `npm run typecheck`, `npm test` e `npm run format:check`. Se mexer na interface, rode também `npm run test:e2e` e `npm run test:a11y`. Se mexer no SIP, rode `test:pbx` com o Asterisk. Informe o que rodou e o que não rodou.
+- **Arquitetura que deve ser mantida:**
+    - a interface só conhece `SipEngine` (`src/renderer/src/sip/engine.ts`, RNF-16). O motor real é `easysip-engine.ts`; o simulado é `mock-engine.ts`. Recursos novos entram nos dois;
+    - o IPC passa só pelos canais fixos de `src/preload`, registrados com `handle`/`on` de `src/main/ipc-guard.ts`, e os argumentos são conferidos (veja `docs/SEGURANCA.md`);
+    - nada de `v-html`, `innerHTML` ou `eval`. Senhas nunca vão para log nem para exportação (RNF-10);
+    - mudança de formato em `accounts.json`, `settings.json` ou `scenarios.json` precisa de migração (RNF-19).
+- **Testes e2e:**
+    - são scripts Playwright em `tests/e2e/*.mjs`;
+    - usam `IRIS_USER_DATA` (pasta temporária) e `IRIS_FAKE_MEDIA=1`;
+    - `PBX_WS` aponta para o Asterisk. O plano de discagem está no README.
+- **README:** quando um requisito terminar, atualize a tabela "Estado atual" e, se houver comando novo, a seção "Testes".
