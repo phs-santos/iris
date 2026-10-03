@@ -91,6 +91,17 @@ function onKey(event: KeyboardEvent): void {
     event.preventDefault()
 }
 
+// O cofre de senhas pode ficar esperando o usuário (no macOS, o pedido de senha do Keychain).
+const VAULT_NOTICE_DELAY_MS = 1500
+const vaultSlow = ref(false)
+const waitingVault = computed(() => vaultSlow.value && !accounts.loaded)
+/** Espera a tela ser desenhada; o tempo limite cobre a janela que ainda não apareceu. */
+const firstPaint = (): Promise<void> =>
+    new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        setTimeout(resolve, 500)
+    })
+
 let offCert: (() => void) | undefined
 let offUpdate: (() => void) | undefined
 onMounted(async () => {
@@ -115,6 +126,9 @@ onMounted(async () => {
         `Íris ${info.version} · Electron ${info.electron} · Chromium ${info.chrome} · ${info.platform}`
     )
     await devices.load()
+    // As contas leem o cofre de senhas do sistema: a interface aparece antes, com um aviso se demorar.
+    await firstPaint()
+    setTimeout(() => (vaultSlow.value = true), VAULT_NOTICE_DELAY_MS)
     await accounts.load()
     await scenarios.load()
 })
@@ -150,6 +164,11 @@ onUnmounted(() => {
             </span>
             <button class="btn small stop" @click="trustHost">Confiar neste host</button>
             <button class="btn small" @click="certError = null">Ignorar</button>
+        </div>
+
+        <div v-if="waitingVault" class="banner warn" role="status">
+            Esperando o sistema liberar o cofre de senhas. Se aparecer um pedido de senha do sistema (no macOS, o das
+            Chaves), digite a senha de login do computador e escolha "Permitir Sempre". As contas aparecem em seguida.
         </div>
 
         <div v-if="accounts.loaded && !accounts.encryptionAvailable" class="banner warn" role="status">

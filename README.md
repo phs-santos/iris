@@ -43,6 +43,7 @@ Os instaladores ainda não são assinados (RNF-17), então o sistema avisa na pr
 
 - **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**.
 - **macOS:** depois de arrastar a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Se o macOS disser que o app está danificado, rode `xattr -dr com.apple.quarantine /Applications/Iris.app`.
+- **macOS, senha das Chaves:** a Íris guarda as senhas das contas nas Chaves do sistema. Sem assinatura, o macOS pede a senha de login depois de cada atualização do app: digite e escolha **Permitir Sempre**. Enquanto o pedido está aberto, a Íris mostra um aviso e as contas ainda não aparecem.
 
 ## Rodar a partir do código
 

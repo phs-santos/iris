@@ -49,6 +49,8 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 Pendências conhecidas, que não precisam ser feitas agora:
 - RNF-05, memória: de 331 a 389 MB no macOS com tela retina, contra o limite de 300 MB. O heap JS fica em 10 MB; o peso está no processo de GPU (150 a 190 MB durante a chamada) e na memória nativa da interface. Só abrir o app já custa de 180 a 260 MB. Desligar a aceleração de GPU não resolve.
 - A primeira conexão não tenta de novo: com muitas contas no mesmo host, o Chromium abre os WebSockets um de cada vez, e a última da fila pode passar dos 5 s do SIP.js e ficar em erro (`1006`). Entra no RNF-06.
+- Os testes e2e rodam o app sem empacotar, e os fuses impedem o Playwright de abrir o app empacotado. Antes de um release, abra o app empacotado e **olhe a janela**: a tela em branco do Keychain passou por todos os testes. Para inspecionar, gere um pacote de diagnóstico com `npx electron-builder --dir -c.electronFuses.enableNodeCliInspectArguments=true -c.directories.output=<pasta>` e abra com `electron.launch({ executablePath })`.
+- No macOS sem assinatura, o Keychain pede a senha de login a cada build novo ("Iris Safe Storage"). O cofre usa as funções assíncronas do `safeStorage` para não travar a janela.
 - O terminal do VSCode exporta `ELECTRON_RUN_AS_NODE=1`, e os testes e2e falham com "Process failed to launch". Rode com `env -u ELECTRON_RUN_AS_NODE`.
 - Fechar o app no meio de uma chamada de teste deixa canais presos no Asterisk, e o `test:pbx` seguinte falha. Limpe com `docker exec iris-asterisk-1 asterisk -rx 'channel request hangup all'`.
 - `grantFileProtocolExtraPrivileges` continua ligado. Para desligar, a interface teria que ser servida por um protocolo próprio (`app://`).

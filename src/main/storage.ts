@@ -61,31 +61,38 @@ export async function saveSettings(settings: Settings): Promise<void> {
 // Guardadas com a criptografia do sistema (Keychain, DPAPI, libsecret). Quando o
 // sistema não oferece criptografia, a senha fica só na memória desta execução:
 // nunca vai para o disco em texto puro (RNF-07).
+// Usa as funções assíncronas do safeStorage: as síncronas travam o processo principal enquanto o
+// macOS mostra o pedido de senha do Keychain, e a janela ficava em branco até o usuário responder.
 
 type SecretsFile = Record<string, string>
 const memorySecrets = new Map<string, string>()
 
-export function encryptionAvailable(): boolean {
-    return safeStorage.isEncryptionAvailable()
+export function encryptionAvailable(): Promise<boolean> {
+    return safeStorage.isAsyncEncryptionAvailable()
 }
 
 export async function getSecret(accountId: string): Promise<string | null> {
     if (memorySecrets.has(accountId)) return memorySecrets.get(accountId) ?? null
-    if (!encryptionAvailable()) return null
+    if (!(await encryptionAvailable())) return null
     const secrets = (await readJson<SecretsFile>('secrets.json')) ?? {}
     const encrypted = secrets[accountId]
     if (!encrypted) return null
-    const password = safeStorage.decryptString(Buffer.from(encrypted, 'base64'))
-    memorySecrets.set(accountId, password)
-    return password
+    try {
+        const { result } = await safeStorage.decryptStringAsync(Buffer.from(encrypted, 'base64'))
+        memorySecrets.set(accountId, result)
+        return result
+    } catch {
+        // O usuário negou o acesso ao cofre ou a chave mudou: a senha precisa ser digitada de novo.
+        return null
+    }
 }
 
 export async function setSecret(accountId: string, password: string | null, persist = true): Promise<void> {
     if (password === null) memorySecrets.delete(accountId)
     else memorySecrets.set(accountId, password)
-    if (!persist || !encryptionAvailable()) return
+    if (!persist || !(await encryptionAvailable())) return
     const secrets = (await readJson<SecretsFile>('secrets.json')) ?? {}
     if (password === null) delete secrets[accountId]
-    else secrets[accountId] = safeStorage.encryptString(password).toString('base64')
+    else secrets[accountId] = (await safeStorage.encryptStringAsync(password)).toString('base64')
     await writeJson('secrets.json', secrets)
 }
