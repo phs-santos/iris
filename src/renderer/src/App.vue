@@ -11,6 +11,7 @@ import LogPane from './components/LogPane.vue'
 import AccountForm from './components/AccountForm.vue'
 import ImportExportDialog from './components/ImportExportDialog.vue'
 import HealthDialog from './components/HealthDialog.vue'
+import logoMark from './assets/logo-mark.svg'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
@@ -94,7 +95,7 @@ onUnmounted(() => {
 <template>
     <div class="shell">
         <header class="topbar">
-            <span class="brand">Íris</span>
+            <span class="brand"><img class="brand-mark" :src="logoMark" alt="" />Íris</span>
             <span class="summary mono tabular">
                 {{ accounts.accounts.length }} contas · {{ pbxCount }} PBX · {{ registeredCount }} registradas ·
                 {{ calls.active.length }} chamadas
@@ -160,8 +161,14 @@ onUnmounted(() => {
     background: var(--panel);
 }
 .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
     font-weight: 700;
     letter-spacing: 0.01em;
+}
+.brand-mark {
+    height: 14px;
 }
 .summary {
     color: var(--muted);

@@ -80,6 +80,8 @@ src/renderer/   interface Vue
 tests/          unidade (Vitest) e ponta a ponta (Playwright)
 docker/         Asterisk de teste
 patches/        correção aplicada ao easy-sipjs no npm install
+build/          ícone do app: icon.svg (fonte) e icon.png 1024 px, usado pelo electron-builder
+resources/      icon.png 512 px para a janela e o Dock em dev
 ```
 
 ## Correção no easy-sipjs

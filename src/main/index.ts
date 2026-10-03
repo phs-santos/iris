@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
+import appIcon from '../../resources/icon.png?asset'
 import { IPC, type Account, type Settings } from '@shared/types'
 import {
     encryptionAvailable,
@@ -34,6 +35,7 @@ function createWindow(): void {
         minWidth: 1024,
         minHeight: 640,
         title: 'Íris',
+        icon: appIcon,
         backgroundColor: '#0f1720',
         show: false,
         autoHideMenuBar: true,
@@ -207,6 +209,8 @@ app.whenReady().then(async () => {
     trustedHosts = new Set((await loadSettings()).trustedHosts)
     setupSecurity()
     registerIpc()
+    // Empacotado, o macOS usa o .icns do bundle; em dev o Dock mostraria o ícone do Electron.
+    if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(appIcon)
     createWindow()
     createTray()
 

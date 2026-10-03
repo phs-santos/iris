@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+    <!-- Íris: o arco-íris da mensageira (três bandas) envolvendo o fone. Grade de ícone do macOS: placa de 824 px. -->
+    <defs>
+        <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#1d2a37" />
+            <stop offset="1" stop-color="#0b1117" />
+        </linearGradient>
+        <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#6aa3ff" />
+            <stop offset="1" stop-color="#3f7fe8" />
+        </linearGradient>
+        <linearGradient id="lavender" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#c3d0ff" />
+            <stop offset="1" stop-color="#97a9f5" />
+        </linearGradient>
+        <linearGradient id="green" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5fe0a0" />
+            <stop offset="1" stop-color="#2fb874" />
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.35" />
+        </filter>
+    </defs>
+    <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)" />
+    <rect x="101.5" y="101.5" width="821" height="821" rx="183.5" fill="none" stroke="#2c3d4f" stroke-width="3" />
+    <g fill="none" stroke-linecap="round" stroke-width="56" filter="url(#shadow)">
+        <path d="M182 670 A330 330 0 0 1 842 670" stroke="url(#blue)" />
+        <path d="M267 670 A245 245 0 0 1 757 670" stroke="url(#lavender)" />
+        <path d="M352 670 A160 160 0 0 1 672 670" stroke="url(#green)" />
+    </g>
+    <path
+        filter="url(#shadow)"
+        fill="url(#blue)"
+        transform="translate(512 628) scale(7.5) translate(-12 -12)"
+        d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"
+    />
+</svg>
