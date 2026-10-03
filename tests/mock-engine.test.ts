@@ -4,131 +4,131 @@ import type { CallEnd, EngineCall, RegStatus } from '@renderer/sip/engine'
 import { newAccount } from '@renderer/lib/accounts'
 
 const make = (extension: string, password = '1234', domain = 'demo.local'): MockEngine =>
-  new MockEngine(newAccount({ name: extension, extension, domain, simulated: true, rawSipLog: true }), password)
+    new MockEngine(newAccount({ name: extension, extension, domain, simulated: true, rawSipLog: true }), password)
 
 async function registered(engine: MockEngine): Promise<void> {
-  const p = engine.connect()
-  await vi.advanceTimersByTimeAsync(MOCK_TIMING.register)
-  await p
+    const p = engine.connect()
+    await vi.advanceTimersByTimeAsync(MOCK_TIMING.register)
+    await p
 }
 
 describe('MockEngine', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    resetMockNetwork()
-  })
-  afterEach(() => vi.useRealTimers())
+    beforeEach(() => {
+        vi.useFakeTimers()
+        resetMockNetwork()
+    })
+    afterEach(() => vi.useRealTimers())
 
-  it('registra com senha válida e recusa senha errada com 403', async () => {
-    const ok = make('1001')
-    const bad = make('1002', 'errada')
-    const statuses: RegStatus[] = []
-    bad.on('status', (s) => statuses.push(s))
-    await registered(ok)
-    await registered(bad)
-    expect(ok.registered).toBe(true)
-    expect(statuses.at(-1)).toEqual({ state: 'error', code: 403, reason: 'Forbidden' })
-  })
+    it('registra com senha válida e recusa senha errada com 403', async () => {
+        const ok = make('1001')
+        const bad = make('1002', 'errada')
+        const statuses: RegStatus[] = []
+        bad.on('status', (s) => statuses.push(s))
+        await registered(ok)
+        await registered(bad)
+        expect(ok.registered).toBe(true)
+        expect(statuses.at(-1)).toEqual({ state: 'error', code: 403, reason: 'Forbidden' })
+    })
 
-  it('liga entre duas contas do mesmo domínio e encerra dos dois lados', async () => {
-    const a = make('1001')
-    const b = make('1002')
-    await registered(a)
-    await registered(b)
+    it('liga entre duas contas do mesmo domínio e encerra dos dois lados', async () => {
+        const a = make('1001')
+        const b = make('1002')
+        await registered(a)
+        await registered(b)
 
-    let incoming: EngineCall | undefined
-    b.on('incoming', (call) => (incoming = call))
-    const out = await a.dial('1002')
-    const progress: number[] = []
-    let outEstablished = false
-    let inEnd: CallEnd | undefined
-    out.on('progress', (code) => progress.push(code))
-    out.on('established', () => (outEstablished = true))
+        let incoming: EngineCall | undefined
+        b.on('incoming', (call) => (incoming = call))
+        const out = await a.dial('1002')
+        const progress: number[] = []
+        let outEstablished = false
+        let inEnd: CallEnd | undefined
+        out.on('progress', (code) => progress.push(code))
+        out.on('established', () => (outEstablished = true))
 
-    await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying + MOCK_TIMING.ringing)
-    expect(progress).toEqual([100, 180])
-    expect(incoming?.remote).toBe('1001')
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying + MOCK_TIMING.ringing)
+        expect(progress).toEqual([100, 180])
+        expect(incoming?.remote).toBe('1001')
 
-    incoming!.on('ended', (e) => (inEnd = e))
-    await incoming!.answer()
-    expect(outEstablished).toBe(true)
+        incoming!.on('ended', (e) => (inEnd = e))
+        await incoming!.answer()
+        expect(outEstablished).toBe(true)
 
-    await out.hangup()
-    expect(inEnd).toEqual({ by: 'remote' })
-  })
+        await out.hangup()
+        expect(inEnd).toEqual({ by: 'remote' })
+    })
 
-  it('entrega o DTMF enviado ao outro lado', async () => {
-    const a = make('1001')
-    const b = make('1002')
-    await registered(a)
-    await registered(b)
-    let incoming: EngineCall | undefined
-    b.on('incoming', (call) => (incoming = call))
-    const out = await a.dial('1002')
-    await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
-    const received: string[] = []
-    incoming!.on('dtmf', (t) => received.push(t))
-    await incoming!.answer()
-    await out.sendDtmf('5', 'sip-info')
-    expect(received).toEqual(['5'])
-  })
+    it('entrega o DTMF enviado ao outro lado', async () => {
+        const a = make('1001')
+        const b = make('1002')
+        await registered(a)
+        await registered(b)
+        let incoming: EngineCall | undefined
+        b.on('incoming', (call) => (incoming = call))
+        const out = await a.dial('1002')
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
+        const received: string[] = []
+        incoming!.on('dtmf', (t) => received.push(t))
+        await incoming!.answer()
+        await out.sendDtmf('5', 'sip-info')
+        expect(received).toEqual(['5'])
+    })
 
-  it('recusar devolve 486 para quem ligou', async () => {
-    const a = make('1001')
-    const b = make('1002')
-    await registered(a)
-    await registered(b)
-    let incoming: EngineCall | undefined
-    b.on('incoming', (call) => (incoming = call))
-    const out = await a.dial('1002')
-    let end: CallEnd | undefined
-    out.on('ended', (e) => (end = e))
-    await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
-    await incoming!.reject()
-    expect(end).toEqual({ by: 'remote', code: 486, reason: 'Busy Here' })
-  })
+    it('recusar devolve 486 para quem ligou', async () => {
+        const a = make('1001')
+        const b = make('1002')
+        await registered(a)
+        await registered(b)
+        let incoming: EngineCall | undefined
+        b.on('incoming', (call) => (incoming = call))
+        const out = await a.dial('1002')
+        let end: CallEnd | undefined
+        out.on('ended', (e) => (end = e))
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
+        await incoming!.reject()
+        expect(end).toEqual({ by: 'remote', code: 486, reason: 'Busy Here' })
+    })
 
-  it('simula números especiais: 486 ocupado, 404 desconhecido e URA com early media', async () => {
-    const a = make('1001')
-    await registered(a)
+    it('simula números especiais: 486 ocupado, 404 desconhecido e URA com early media', async () => {
+        const a = make('1001')
+        await registered(a)
 
-    const ends: Record<string, CallEnd | undefined> = {}
-    for (const n of ['486', '777']) {
-      const call = await a.dial(n)
-      call.on('ended', (e) => (ends[n] = e))
-    }
-    const ivr = await a.dial('8000')
-    const ivrProgress: Array<[number, boolean]> = []
-    let ivrUp = false
-    ivr.on('progress', (code, _r, early) => ivrProgress.push([code, early]))
-    ivr.on('established', () => (ivrUp = true))
+        const ends: Record<string, CallEnd | undefined> = {}
+        for (const n of ['486', '777']) {
+            const call = await a.dial(n)
+            call.on('ended', (e) => (ends[n] = e))
+        }
+        const ivr = await a.dial('8000')
+        const ivrProgress: Array<[number, boolean]> = []
+        let ivrUp = false
+        ivr.on('progress', (code, _r, early) => ivrProgress.push([code, early]))
+        ivr.on('established', () => (ivrUp = true))
 
-    await vi.advanceTimersByTimeAsync(MOCK_TIMING.ivrAnswer + MOCK_TIMING.trying)
-    expect(ends['486']?.code).toBe(486)
-    expect(ends['777']?.code).toBe(404)
-    expect(ivrProgress).toEqual([
-      [100, false],
-      [183, true]
-    ])
-    expect(ivrUp).toBe(true)
-  })
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.ivrAnswer + MOCK_TIMING.trying)
+        expect(ends['486']?.code).toBe(486)
+        expect(ends['777']?.code).toBe(404)
+        expect(ivrProgress).toEqual([
+            [100, false],
+            [183, true]
+        ])
+        expect(ivrUp).toBe(true)
+    })
 
-  it('não liga para conta de outro domínio', async () => {
-    const a = make('1001', '1234', 'demo.local')
-    const b = make('1002', '1234', 'lab.local')
-    await registered(a)
-    await registered(b)
-    const incoming = vi.fn()
-    b.on('incoming', incoming)
-    const out = await a.dial('1002')
-    let end: CallEnd | undefined
-    out.on('ended', (e) => (end = e))
-    await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
-    expect(incoming).not.toHaveBeenCalled()
-    expect(end?.code).toBe(404)
-  })
+    it('não liga para conta de outro domínio', async () => {
+        const a = make('1001', '1234', 'demo.local')
+        const b = make('1002', '1234', 'lab.local')
+        await registered(a)
+        await registered(b)
+        const incoming = vi.fn()
+        b.on('incoming', incoming)
+        const out = await a.dial('1002')
+        let end: CallEnd | undefined
+        out.on('ended', (e) => (end = e))
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
+        expect(incoming).not.toHaveBeenCalled()
+        expect(end?.code).toBe(404)
+    })
 
-  it('exige registro para ligar', async () => {
-    await expect(make('1001').dial('1002')).rejects.toThrow(/registrada/)
-  })
+    it('exige registro para ligar', async () => {
+        await expect(make('1001').dial('1002')).rejects.toThrow(/registrada/)
+    })
 })

@@ -2,12 +2,12 @@
 # Uso: ./docker/asterisk/gen-cert.sh && docker compose up -d
 # WebSocket seguro em wss://localhost:8089/ws (certificado autoassinado), ramais 1001-1003, senha 1234.
 services:
-  asterisk:
-    image: andrius/asterisk:latest
-    network_mode: host
-    volumes:
-      - ./docker/asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
-      - ./docker/asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
-      - ./docker/asterisk/http.conf:/etc/asterisk/http.conf:ro
-      - ./docker/asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
-      - ./docker/asterisk/keys:/etc/asterisk/keys:ro
+    asterisk:
+        image: andrius/asterisk:latest
+        network_mode: host
+        volumes:
+            - ./docker/asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+            - ./docker/asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+            - ./docker/asterisk/http.conf:/etc/asterisk/http.conf:ro
+            - ./docker/asterisk/rtp.conf:/etc/asterisk/rtp.conf:ro
+            - ./docker/asterisk/keys:/etc/asterisk/keys:ro

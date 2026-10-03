@@ -16,94 +16,100 @@ const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 
 const app = await electron.launch({
-  args,
-  env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
+    args,
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
 })
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)
 
 async function addAccount(name, ext, autoAnswer, expectCertPrompt = false) {
-  await page.getByRole('button', { name: '+ Nova' }).click()
-  const form = page.locator('form.dialog')
-  await form.getByRole('textbox', { name: 'Nome' }).fill(name)
-  await form.getByRole('textbox', { name: 'Ramal' }).fill(ext)
-  await form.getByRole('textbox', { name: 'Domínio SIP' }).fill(DOMAIN)
-  await form.getByLabel('Senha').fill('1234')
-  await form.getByRole('textbox', { name: 'WebSocket (WSS)' }).fill(WSS)
-  if (autoAnswer) await form.getByText('Auto-atender após').locator('input[type=checkbox]').check()
-  await form.getByRole('button', { name: 'Salvar e registrar' }).click()
-  if (expectCertPrompt) {
-    // O PBX de teste usa certificado autoassinado: o app recusa e oferece confiar no host (RF-37).
-    await page.getByRole('button', { name: 'Confiar neste host' }).click({ timeout: 10000 })
-    step('certificado autoassinado recusado e aceito pelo usuário')
-  }
-  await page.locator('.acc', { hasText: name }).locator('.dot.registered').waitFor({ timeout: 10000 })
-  step(`${name} registrada no Asterisk`)
+    await page.getByRole('button', { name: '+ Nova' }).click()
+    const form = page.locator('form.dialog')
+    await form.getByRole('textbox', { name: 'Nome' }).fill(name)
+    await form.getByRole('textbox', { name: 'Ramal' }).fill(ext)
+    await form.getByRole('textbox', { name: 'Domínio SIP' }).fill(DOMAIN)
+    await form.getByLabel('Senha').fill('1234')
+    await form.getByRole('textbox', { name: 'WebSocket (WSS)' }).fill(WSS)
+    if (autoAnswer) await form.getByText('Auto-atender após').locator('input[type=checkbox]').check()
+    await form.getByRole('button', { name: 'Salvar e registrar' }).click()
+    if (expectCertPrompt) {
+        // O PBX de teste usa certificado autoassinado: o app recusa e oferece confiar no host (RF-37).
+        await page.getByRole('button', { name: 'Confiar neste host' }).click({ timeout: 10000 })
+        step('certificado autoassinado recusado e aceito pelo usuário')
+    }
+    await page.locator('.acc', { hasText: name }).locator('.dot.registered').waitFor({ timeout: 10000 })
+    step(`${name} registrada no Asterisk`)
 }
 
 try {
-  await page.getByText('3 contas').waitFor()
-  await addAccount('PBX 1001', '1001', false, true)
-  await addAccount('PBX 1002', '1002', true)
-  if (shots) await page.screenshot({ path: join(shots, 'pbx-1-registradas.png') })
+    await page.getByText('3 contas').waitFor()
+    await addAccount('PBX 1001', '1001', false, true)
+    await addAccount('PBX 1002', '1002', true)
+    if (shots) await page.screenshot({ path: join(shots, 'pbx-1-registradas.png') })
 
-  await page.locator('.acc', { hasText: 'PBX 1001' }).click()
-  await page.getByLabel('Número').fill('1002')
-  await page.getByRole('button', { name: 'Ligar', exact: true }).click()
-  await page.locator('.call', { hasText: /1002\s*←\s*1001/ }).waitFor({ timeout: 20000 })
-  step('1002 recebeu a chamada de 1001 pelo Asterisk')
-  await page.locator('.pill', { hasText: 'em chamada' }).nth(1).waitFor({ timeout: 25000 })
-  step('auto-atender conectou; as duas pontas em chamada')
-  await page.waitForTimeout(2500)
-  if (shots) await page.screenshot({ path: join(shots, 'pbx-2-em-chamada.png') })
-  const quality = await page.locator('.quality').first().textContent({ timeout: 5000 }).catch(() => null)
-  step(`qualidade: ${quality?.trim() ?? 'sem amostra'}`)
+    await page.locator('.acc', { hasText: 'PBX 1001' }).click()
+    await page.getByLabel('Número').fill('1002')
+    await page.getByRole('button', { name: 'Ligar', exact: true }).click()
+    await page.locator('.call', { hasText: /1002\s*←\s*1001/ }).waitFor({ timeout: 20000 })
+    step('1002 recebeu a chamada de 1001 pelo Asterisk')
+    await page.locator('.pill', { hasText: 'em chamada' }).nth(1).waitFor({ timeout: 25000 })
+    step('auto-atender conectou; as duas pontas em chamada')
+    await page.waitForTimeout(2500)
+    if (shots) await page.screenshot({ path: join(shots, 'pbx-2-em-chamada.png') })
+    const quality = await page
+        .locator('.quality')
+        .first()
+        .textContent({ timeout: 5000 })
+        .catch(() => null)
+    step(`qualidade: ${quality?.trim() ?? 'sem amostra'}`)
 
-  const outgoing = page.locator('.call', { hasText: /1001\s*→\s*1002/ })
-  await outgoing.getByRole('button', { name: 'Desligar' }).click()
-  await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor({ timeout: 10000 })
-  step('desligou dos dois lados')
+    const outgoing = page.locator('.call', { hasText: /1001\s*→\s*1002/ })
+    await outgoing.getByRole('button', { name: 'Desligar' }).click()
+    await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor({ timeout: 10000 })
+    step('desligou dos dois lados')
 
-  await page.getByLabel('Número').fill('486')
-  await page.getByRole('button', { name: 'Ligar', exact: true }).click()
-  await page.locator('.call', { hasText: '486 Busy Here' }).waitFor({ timeout: 20000 })
-  step('486 aparece no cartão da chamada')
+    await page.getByLabel('Número').fill('486')
+    await page.getByRole('button', { name: 'Ligar', exact: true }).click()
+    await page.locator('.call', { hasText: '486 Busy Here' }).waitFor({ timeout: 20000 })
+    step('486 aparece no cartão da chamada')
 
-  await page.getByLabel('Número').fill('8000')
-  await page.getByRole('button', { name: 'Ligar', exact: true }).click()
-  const ivr = page.locator('.call', { hasText: /1001\s*→\s*8000/ })
-  await ivr.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
-  await ivr.getByRole('button', { name: 'DTMF' }).click()
-  await ivr.getByLabel('Sequência DTMF').fill('w1 4321')
-  await ivr.getByRole('button', { name: 'Enviar' }).click()
-  await page.locator('.list').getByText('DTMF enviado: 1').waitFor({ timeout: 10000 })
-  step('DTMF 4321 enviado para a URA')
-  // Com docker disponível, confere no log do Asterisk que a URA recebeu os dígitos.
-  await page.waitForTimeout(1500)
-  try {
-    const out = execSync('docker compose logs --since 60s asterisk', { encoding: 'utf8' })
-    if (!/URA recebeu 4321/.test(out)) throw new Error('A URA do Asterisk não recebeu 4321')
-    step('Asterisk confirmou: URA recebeu 4321')
-  } catch (error) {
-    if (/não recebeu/.test(error.message)) throw error
-    console.log('  (docker indisponível; conferência no Asterisk pulada)')
-  }
-  // A URA desliga sozinha depois de ler 4 dígitos.
-  await ivr.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
-  step('URA encerrou a chamada')
+    await page.getByLabel('Número').fill('8000')
+    await page.getByRole('button', { name: 'Ligar', exact: true }).click()
+    const ivr = page.locator('.call', { hasText: /1001\s*→\s*8000/ })
+    await ivr.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await ivr.getByRole('button', { name: 'DTMF' }).click()
+    await ivr.getByLabel('Sequência DTMF').fill('w1 4321')
+    await ivr.getByRole('button', { name: 'Enviar' }).click()
+    await page.locator('.list').getByText('DTMF enviado: 1').waitFor({ timeout: 10000 })
+    step('DTMF 4321 enviado para a URA')
+    // Com docker disponível, confere no log do Asterisk que a URA recebeu os dígitos.
+    await page.waitForTimeout(1500)
+    try {
+        const out = execSync('docker compose logs --since 60s asterisk', { encoding: 'utf8' })
+        if (!/URA recebeu 4321/.test(out)) throw new Error('A URA do Asterisk não recebeu 4321')
+        step('Asterisk confirmou: URA recebeu 4321')
+    } catch (error) {
+        if (/não recebeu/.test(error.message)) throw error
+        console.log('  (docker indisponível; conferência no Asterisk pulada)')
+    }
+    // A URA desliga sozinha depois de ler 4 dígitos.
+    await ivr.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
+    step('URA encerrou a chamada')
 
-  await page.getByRole('tab', { name: 'SIP bruto' }).click()
-  await page.locator('.line.sip', { hasText: 'SIP/2.0 200 OK' }).first().waitFor()
-  const leaked = await page.locator('.line.sip', { hasText: /Authorization: Digest .*response="[0-9a-f]{32}"/ }).count()
-  if (leaked) throw new Error('O log SIP mostrou o hash de autenticação')
-  step('log SIP bruto sem hash de autenticação')
-  if (shots) await page.screenshot({ path: join(shots, 'pbx-3-log.png') })
-  console.log('Integração com Asterisk OK')
+    await page.getByRole('tab', { name: 'SIP bruto' }).click()
+    await page.locator('.line.sip', { hasText: 'SIP/2.0 200 OK' }).first().waitFor()
+    const leaked = await page
+        .locator('.line.sip', { hasText: /Authorization: Digest .*response="[0-9a-f]{32}"/ })
+        .count()
+    if (leaked) throw new Error('O log SIP mostrou o hash de autenticação')
+    step('log SIP bruto sem hash de autenticação')
+    if (shots) await page.screenshot({ path: join(shots, 'pbx-3-log.png') })
+    console.log('Integração com Asterisk OK')
 } catch (error) {
-  if (shots) await page.screenshot({ path: join(shots, 'pbx-erro.png') })
-  console.error(error)
-  process.exitCode = 1
+    if (shots) await page.screenshot({ path: join(shots, 'pbx-erro.png') })
+    console.error(error)
+    process.exitCode = 1
 } finally {
-  await app.close()
-  rmSync(userData, { recursive: true, force: true })
+    await app.close()
+    rmSync(userData, { recursive: true, force: true })
 }

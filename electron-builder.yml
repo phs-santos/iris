@@ -1,23 +1,23 @@
 appId: dev.iris.softphone
 productName: Iris
 directories:
-  buildResources: build
-  output: dist
+    buildResources: build
+    output: dist
 files:
-  - out/**
-  - package.json
+    - out/**
+    - package.json
 win:
-  target: nsis
+    target: nsis
 nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
+    oneClick: false
+    allowToChangeInstallationDirectory: true
 mac:
-  target: dmg
-  category: public.app-category.developer-tools
-  extendInfo:
-    NSMicrophoneUsageDescription: A Íris usa o microfone nas chamadas de teste.
+    target: dmg
+    category: public.app-category.developer-tools
+    extendInfo:
+        NSMicrophoneUsageDescription: A Íris usa o microfone nas chamadas de teste.
 linux:
-  # .deb entra quando o projeto tiver repositório e página (exigidos como metadados do pacote).
-  target:
-    - AppImage
-  category: Development
+    # .deb entra quando o projeto tiver repositório e página (exigidos como metadados do pacote).
+    target:
+        - AppImage
+    category: Development
