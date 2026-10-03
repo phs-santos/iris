@@ -27,7 +27,9 @@ export class UpdateController {
     constructor(
         private source: UpdateSource,
         private emit: (status: UpdateStatus) => void,
-        channel: UpdateChannel
+        channel: UpdateChannel,
+        /** O app procura versão nova, mas não baixa: o usuário instala à mão (macOS sem assinatura). */
+        private manual = false
     ) {
         // Nada é baixado sem o usuário saber; depois de baixada, a versão entra ao reiniciar.
         source.autoDownload = false
@@ -85,7 +87,7 @@ export class UpdateController {
     }
 
     async download(): Promise<void> {
-        if (this.status.state !== 'available') return
+        if (this.manual || this.status.state !== 'available') return
         this.set({ state: 'downloading', version: this.status.version, percent: 0 })
         try {
             await this.source.downloadUpdate()

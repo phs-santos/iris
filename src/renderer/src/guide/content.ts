@@ -742,7 +742,10 @@ export const GUIDE: GuideSection[] = [
                     ['Windows', 'Sim'],
                     ['Linux, AppImage', 'Sim'],
                     ['Linux, .deb', 'Não: baixe e instale o `.deb` da versão nova'],
-                    ['macOS', 'Ainda não instala sozinha, porque o app não é assinado. Baixe o `.dmg` novo']
+                    [
+                        'macOS',
+                        'Avisa da versão nova, mas ainda não instala sozinha, porque o app não é assinado. O botão **Abrir página de download** leva ao `.dmg` novo; instale por cima e as contas continuam'
+                    ]
                 ]
             }
         ]

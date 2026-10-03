@@ -155,7 +155,7 @@ O app instalado procura versões novas nos releases de [phs-santos/iris](https:/
 - Nada é baixado sozinho: o app avisa que há versão nova e espera você clicar em **Baixar**. Depois de baixada, ela entra ao reiniciar.
 - **Canais:** o estável recebe só os releases normais. O beta recebe também os marcados como pré-lançamento no GitHub, com versão do tipo `1.2.0-beta.1`.
 - Em desenvolvimento (`npm run dev`) e na linha de comando, o app não procura atualização. No Linux, só o AppImage se atualiza; quem usa o `.deb` instala o da versão nova.
-- No macOS, a atualização só instala com o app assinado (RNF-17). Até lá, baixe o `.dmg` novo à mão.
+- No macOS, a atualização só instala com o app assinado (RNF-17). Até lá, o app avisa da versão nova e o botão **Abrir página de download** leva ao `.dmg`; instale por cima e as contas continuam.
 
 Para publicar uma versão:
 

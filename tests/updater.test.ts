@@ -77,6 +77,17 @@ describe('atualização automática (RF-35)', () => {
         ])
     })
 
+    it('no modo manual (macOS sem assinatura) avisa da versão nova e nunca baixa', async () => {
+        const source = new FakeSource()
+        const controller = new UpdateController(source, () => undefined, 'stable', true)
+        source.available = '1.1.0'
+        await controller.check()
+        expect(controller.current()).toEqual({ state: 'available', version: '1.1.0' })
+        await controller.download()
+        expect(source.downloads).toBe(0)
+        expect(controller.current().state).toBe('available')
+    })
+
     it('só instala com a versão já baixada', async () => {
         const { source, controller } = setup()
         source.available = '1.1.0'

@@ -102,6 +102,8 @@ export interface UpdateInfo {
     currentVersion: string
     channel: UpdateChannel
     status: UpdateStatus
+    /** O app avisa da versão nova, mas a instalação é à mão, pela página de download. */
+    manual: boolean
 }
 
 /** Formato do arquivo de exportação de contas (RF-07). */
@@ -158,6 +160,8 @@ export interface IrisApi {
         download(): Promise<void>
         /** Fecha o app e instala a versão já baixada. */
         install(): Promise<void>
+        /** Abre no navegador a página com o instalador da versão mais nova. */
+        openDownloadPage(): Promise<void>
         onStatus(listener: (status: UpdateStatus) => void): () => void
     }
     /** Ajuda da IA para ler o log (RF-38). A chave entra, mas nunca volta para a interface. */
@@ -192,6 +196,7 @@ export const IPC = {
     updateCheck: 'update:check',
     updateDownload: 'update:download',
     updateInstall: 'update:install',
+    updateOpenDownload: 'update:open-download',
     updateStatus: 'update:status',
     aiStatus: 'ai:status',
     aiSetKey: 'ai:set-key',

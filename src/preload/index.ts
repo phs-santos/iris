@@ -42,6 +42,7 @@ const api: IrisApi = {
         check: () => ipcRenderer.invoke(IPC.updateCheck),
         download: () => ipcRenderer.invoke(IPC.updateDownload),
         install: () => ipcRenderer.invoke(IPC.updateInstall),
+        openDownloadPage: () => ipcRenderer.invoke(IPC.updateOpenDownload),
         onStatus: (listener) => {
             const handler = (_e: Electron.IpcRendererEvent, status: UpdateStatus): void => listener(status)
             ipcRenderer.on(IPC.updateStatus, handler)

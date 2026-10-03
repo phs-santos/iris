@@ -27,7 +27,9 @@ const message = computed(() => {
         case 'up-to-date':
             return 'Você já está na versão mais recente deste canal.'
         case 'available':
-            return `A versão ${s.version} está disponível. Nada foi baixado ainda.`
+            return props.info.manual
+                ? `A versão ${s.version} está disponível. Neste Mac a Íris ainda não consegue se atualizar sozinha, porque o app não é assinado. Baixe o instalador novo (.dmg) e instale por cima; suas contas continuam.`
+                : `A versão ${s.version} está disponível. Nada foi baixado ainda.`
         case 'downloading':
             return `Baixando a versão ${s.version}: ${s.percent}%`
         case 'ready':
@@ -66,7 +68,16 @@ const message = computed(() => {
                 </p>
             </div>
             <footer>
-                <button v-if="status.state === 'available'" class="btn primary" @click="api.download()">Baixar</button>
+                <button
+                    v-if="status.state === 'available' && info.manual"
+                    class="btn primary"
+                    @click="api.openDownloadPage()"
+                >
+                    Abrir página de download
+                </button>
+                <button v-else-if="status.state === 'available'" class="btn primary" @click="api.download()">
+                    Baixar
+                </button>
                 <button
                     v-else-if="status.state === 'ready'"
                     class="btn primary"

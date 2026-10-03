@@ -28,7 +28,8 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
     - Onde está: regras em `src/shared/update.ts` (com `tests/updater.test.ts`), ligação com o Electron em `src/main/updater.ts`, tela em `UpdateDialog.vue`, `publish` no `electron-builder.yml`.
     - Restrições que valem: sem atualizar no modo CLI, sem baixar nada sem o usuário pedir e com a verificação de assinatura mantida.
     - Já conferido: o app empacotado do macOS consulta o repositório (hoje responde "No published versions on GitHub").
-    - **Falta para marcar:** ver uma versão nova ser baixada e aplicada ao reiniciar (o critério de aceitação). Precisa de dois releases publicados (instalar o primeiro, atualizar para o segundo). Dá para fazer no Windows ou no AppImage; no macOS só depois da assinatura (passo 3).
+    - **macOS sem assinatura:** confirmado em 03/10/2026 (1.0.2 → 1.0.3) que o download termina e a instalação falha com "Code signature … did not pass validation". Por isso, com assinatura ad-hoc o app entra em modo manual: avisa da versão nova e abre a página de download.
+    - **Falta para marcar:** ver uma versão nova ser baixada e aplicada ao reiniciar (o critério de aceitação), no Windows ou no AppImage; no macOS só depois da assinatura (passo 3).
 3. **[ ] RNF-17 (instaladores assinados).** **Bloqueado.** Depende do usuário fornecer o Apple Developer ID (assinar e notarizar) e o certificado de assinatura para Windows. Enquanto isso não chegar, não tente contornar. Hoje o macOS usa assinatura ad-hoc (`resetAdHocDarwinSignature`).
 4. **[ ] RNF ainda sem cumprimento.** Este levantamento foi feito comparando a especificação com o código em 03/10/2026. Confirme cada item antes de começar:
     - **RNF-13:** os textos da interface estão fixos nos componentes. A especificação pede arquivos de tradução (pt-BR, prontos para inglês). É a maior lacuna.
@@ -65,7 +66,7 @@ Pendências conhecidas, que não precisam ser feitas agora:
 
 ## Releases
 
-- O repositório é público: `github.com/phs-santos/iris`. A versão pública atual é a 1.0.3 (IA, guia e avisos do Windows); a primeira foi a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
+- O repositório é público: `github.com/phs-santos/iris`. A versão pública atual é a 1.0.4 (a 1.0.3 trouxe IA, guia e avisos do Windows; a 1.0.4, o aviso de atualização manual no macOS); a primeira foi a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
 - Uma tag `v` + versão dispara `.github/workflows/release.yml`, que gera os instaladores dos três sistemas e cria um release **em rascunho**. Publicar o rascunho é com o usuário. O passo a passo está no README, em "Atualização automática".
 - Dar push na `main` e criar tag só com autorização do usuário para aquele release.
 
