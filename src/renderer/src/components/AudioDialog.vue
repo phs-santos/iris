@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useDialog } from '@renderer/lib/dialog'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useDevicesStore } from '@renderer/stores/devices'
 
 const emit = defineEmits<{ close: [] }>()
+const dialogEl = ref<HTMLElement | null>(null)
+useDialog(dialogEl, () => emit('close'))
 const devices = useDevicesStore()
 
 const level = ref(0)
@@ -76,8 +79,8 @@ onUnmounted(stopMeter)
 </script>
 
 <template>
-    <div class="overlay" @click.self="emit('close')" @keydown.esc="emit('close')">
-        <div class="dialog" role="dialog" aria-labelledby="audio-title">
+    <div class="overlay" @click.self="emit('close')">
+        <div ref="dialogEl" class="dialog" role="dialog" aria-modal="true" aria-labelledby="audio-title" tabindex="-1">
             <header>
                 <h2 id="audio-title">Áudio</h2>
                 <button class="btn small ghost" aria-label="Fechar" @click="emit('close')">✕</button>

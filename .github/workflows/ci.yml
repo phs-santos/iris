@@ -42,6 +42,8 @@ jobs:
               run: RUNS=5 xvfb-run -a node tests/e2e/scenarios.mjs
             - name: Cenários pela linha de comando
               run: xvfb-run -a node tests/e2e/cli.mjs
+            - name: Acessibilidade (axe, WCAG A/AA) e atalhos
+              run: xvfb-run -a node tests/e2e/a11y.mjs
             - name: Subir Asterisk de teste
               run: |
                   ./docker/asterisk/gen-cert.sh

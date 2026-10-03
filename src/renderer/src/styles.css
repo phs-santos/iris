@@ -7,7 +7,8 @@
     --line: #263442;
     --fg: #dbe4ee;
     --muted: #8597a9;
-    --faint: #5c6c7c;
+    /* Cinza mais claro com contraste AA (4,5:1) sobre o fundo e os painéis. */
+    --faint: #7f8f9f;
     --accent: #4f8ff7;
     --ok: #3fcf86;
     --warn: #f0b13e;
@@ -94,13 +95,14 @@ textarea {
     font-size: 12px;
 }
 .btn.primary {
-    background: var(--accent);
-    border-color: var(--accent);
+    /* Mais escuro que --accent para o texto branco ter contraste AA. */
+    background: #2f6fd6;
+    border-color: #2f6fd6;
     color: #fff;
 }
 .btn.go {
-    background: #1f9d5c;
-    border-color: #1f9d5c;
+    background: #17824b;
+    border-color: #17824b;
     color: #fff;
 }
 .btn.stop {
@@ -139,25 +141,35 @@ textarea.input {
     border-color: var(--bad);
 }
 
-/* Estado */
+/* Estado: cada estado tem cor e forma (RNF-12), para não depender só da cor. */
 .dot {
     width: 9px;
     height: 9px;
     border-radius: 50%;
     flex: none;
-    background: var(--faint);
+    box-sizing: border-box;
+    /* desconectada: anel vazio */
+    border: 2px solid var(--muted);
+    background: transparent;
 }
 .dot.registered {
+    /* registrada: círculo cheio */
+    border: 0;
     background: var(--ok);
     box-shadow: 0 0 0 3px rgba(63, 207, 134, 0.18);
 }
 .dot.connecting,
 .dot.connected {
-    background: var(--warn);
+    /* conectando: anel pulsando */
+    border-color: var(--warn);
     animation: pulse 1.2s ease-in-out infinite;
 }
 .dot.error {
+    /* erro: losango cheio */
+    border: 0;
+    border-radius: 1px;
     background: var(--bad);
+    transform: rotate(45deg) scale(0.85);
 }
 
 .pill {

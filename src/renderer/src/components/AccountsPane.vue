@@ -41,12 +41,16 @@ async function remove(id: string): Promise<void> {
                     :key="account.id"
                     class="acc"
                     :class="{ sel: accounts.selectedId === account.id }"
-                    role="button"
-                    tabindex="0"
                     @click="accounts.selectedId = account.id"
-                    @keydown.enter="accounts.selectedId = account.id"
                 >
-                    <div class="row">
+                    <!-- Só a linha é botão; as ações ficam ao lado, não dentro dele (RNF-12). -->
+                    <button
+                        type="button"
+                        class="row"
+                        :aria-pressed="accounts.selectedId === account.id"
+                        :aria-label="`${account.name}, ${account.extension}, ${describeStatus(accounts.statusOf(account.id))}`"
+                        @click.stop="accounts.selectedId = account.id"
+                    >
                         <span class="dot" :class="accounts.statusOf(account.id).state"></span>
                         <span class="swatch" :style="{ background: account.color }"></span>
                         <div class="info">
@@ -62,7 +66,7 @@ async function remove(id: string): Promise<void> {
                             <span v-if="account.autoAnswer.enabled" class="tag" title="Auto-atender">AA</span>
                             <span v-if="account.simulated" class="tag" title="PBX simulado">SIM</span>
                         </div>
-                    </div>
+                    </button>
 
                     <div v-if="accounts.selectedId === account.id" class="actions" @click.stop>
                         <button class="btn small" @click="toggle(account)">
@@ -146,6 +150,13 @@ async function remove(id: string): Promise<void> {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
 }
 .swatch {
     width: 3px;

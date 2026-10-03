@@ -251,7 +251,9 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
     border-left-color: var(--bad);
 }
 .call.ended {
-    opacity: 0.7;
+    /* Sem transparência, que derrubava o contraste do texto: borda tracejada e fundo do app. */
+    background: var(--bg);
+    border-style: dashed;
 }
 .top {
     display: flex;

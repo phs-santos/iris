@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDialog } from '@renderer/lib/dialog'
 import { computed, reactive, ref } from 'vue'
 import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
@@ -7,6 +8,8 @@ import { createEngine, type RegStatus } from '@renderer/sip'
 
 const props = defineProps<{ account: Account }>()
 const emit = defineEmits<{ close: [] }>()
+const dialogEl = ref<HTMLElement | null>(null)
+useDialog(dialogEl, () => emit('close'))
 const accounts = useAccountsStore()
 
 const isNew = !accounts.byId(props.account.id)
@@ -86,11 +89,19 @@ async function save(register: boolean): Promise<void> {
 </script>
 
 <template>
-    <div class="overlay" @click.self="emit('close')" @keydown.esc="emit('close')">
-        <form class="dialog" @submit.prevent="save(true)">
+    <div class="overlay" @click.self="emit('close')">
+        <form
+            ref="dialogEl"
+            class="dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="account-title"
+            tabindex="-1"
+            @submit.prevent="save(true)"
+        >
             <header>
                 <span class="swatch" :style="{ background: form.color }"></span>
-                <h2>{{ title }}</h2>
+                <h2 id="account-title">{{ title }}</h2>
                 <button type="button" class="btn small ghost" aria-label="Fechar" @click="emit('close')">✕</button>
             </header>
 

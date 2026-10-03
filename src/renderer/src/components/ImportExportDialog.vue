@@ -1,8 +1,11 @@
 <script setup lang="ts">
+import { useDialog } from '@renderer/lib/dialog'
 import { ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 
 const emit = defineEmits<{ close: [] }>()
+const dialogEl = ref<HTMLElement | null>(null)
+useDialog(dialogEl, () => emit('close'))
 const accounts = useAccountsStore()
 const includePasswords = ref(false)
 const message = ref<{ ok: boolean; text: string } | null>(null)
@@ -29,8 +32,8 @@ async function doImport(): Promise<void> {
 </script>
 
 <template>
-    <div class="overlay" @click.self="emit('close')" @keydown.esc="emit('close')">
-        <div class="dialog" role="dialog" aria-labelledby="ie-title">
+    <div class="overlay" @click.self="emit('close')">
+        <div ref="dialogEl" class="dialog" role="dialog" aria-modal="true" aria-labelledby="ie-title" tabindex="-1">
             <header>
                 <h2 id="ie-title">Importar e exportar contas</h2>
                 <button class="btn small ghost" aria-label="Fechar" @click="emit('close')">✕</button>

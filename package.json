@@ -20,6 +20,7 @@
         "test:e2e": "electron-vite build && node tests/e2e/smoke.mjs",
         "test:scenarios": "electron-vite build && node tests/e2e/scenarios.mjs",
         "test:cli": "electron-vite build && node tests/e2e/cli.mjs",
+        "test:a11y": "electron-vite build && node tests/e2e/a11y.mjs",
         "test:pbx": "electron-vite build && node tests/e2e/asterisk.mjs",
         "test:load": "electron-vite build && node tests/e2e/load.mjs",
         "postinstall": "node scripts/apply-patches.mjs",
@@ -30,6 +31,7 @@
     "devDependencies": {
         "@types/node": "^22.10.0",
         "@vitejs/plugin-vue": "^6.0.0",
+        "axe-core": "4.13.0",
         "easy-sipjs": "2.7.6",
         "electron": "^44.5.1",
         "electron-builder": "27.0.0-alpha.9",

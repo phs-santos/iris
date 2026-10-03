@@ -108,7 +108,7 @@ async function save(format: 'txt' | 'json'): Promise<void> {
             <input v-model="filter.text" class="input" placeholder="Buscar" aria-label="Buscar no log" />
         </div>
 
-        <div ref="listEl" class="list mono" @scroll="onScroll">
+        <div ref="listEl" class="list mono" role="log" tabindex="0" aria-label="Linhas do log" @scroll="onScroll">
             <p v-if="matching.length > VISIBLE_LIMIT" class="trimmed">
                 Mostrando as últimas {{ VISIBLE_LIMIT }} de {{ matching.length }} linhas. Copiar e salvar levam todas.
             </p>

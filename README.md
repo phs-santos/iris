@@ -91,6 +91,8 @@ npm test            # testes de unidade (Vitest)
 npm run test:e2e    # ponta a ponta no modo simulado (abre o app)
 npm run test:scenarios   # cenários: executa, força falha, repete 20× e exporta relatório
 npm run test:cli    # linha de comando: códigos de saída 0, 1 e 2
+npm run test:a11y   # acessibilidade: axe (WCAG A/AA) em todas as telas e atalhos de teclado
+npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:pbx    # integração com o Asterisk do docker compose
 npm run test:load   # carga: 20 contas e 4 chamadas no Asterisk, mede a resposta da interface
 ```
