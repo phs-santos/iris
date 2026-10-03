@@ -11,14 +11,18 @@ import LogPane from './components/LogPane.vue'
 import AccountForm from './components/AccountForm.vue'
 import ImportExportDialog from './components/ImportExportDialog.vue'
 import HealthDialog from './components/HealthDialog.vue'
+import AudioDialog from './components/AudioDialog.vue'
+import { useDevicesStore } from './stores/devices'
 import logoMark from './assets/logo-mark.svg'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
 const log = useLogStore()
+const devices = useDevicesStore()
 
 const editing = ref<Account | null>(null)
 const showImportExport = ref(false)
+const showAudio = ref(false)
 const healthFor = ref<string | null>(null)
 const certError = ref<CertificateErrorEvent | null>(null)
 const dialer = ref<InstanceType<typeof DialerPane> | null>(null)
@@ -84,6 +88,7 @@ onMounted(async () => {
         'event',
         `Íris ${info.version} · Electron ${info.electron} · Chromium ${info.chrome} · ${info.platform}`
     )
+    await devices.load()
     await accounts.load()
 })
 onUnmounted(() => {
@@ -103,6 +108,7 @@ onUnmounted(() => {
             <span class="spacer"></span>
             <button class="btn small" @click="accounts.registerAll()">Registrar todas</button>
             <button class="btn small" @click="accounts.unregisterAll()">Desregistrar todas</button>
+            <button class="btn small" @click="showAudio = true">Áudio</button>
             <button class="btn small" @click="showImportExport = true">Importar / Exportar</button>
         </header>
 
@@ -143,6 +149,7 @@ onUnmounted(() => {
         <AccountForm v-if="editing" :account="editing" @close="editing = null" />
         <ImportExportDialog v-if="showImportExport" @close="showImportExport = false" />
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
+        <AudioDialog v-if="showAudio" @close="showAudio = false" />
     </div>
 </template>
 

@@ -1,4 +1,4 @@
-// Saída de áudio das chamadas e toque central de chamada recebida.
+// Dispositivos de áudio (RF-19), saída das chamadas e toque central de chamada recebida.
 
 type SinkElement = HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }
 
@@ -29,6 +29,35 @@ class AudioOutput {
 
 export const audioOutput = new AudioOutput()
 
+/**
+ * Microfone escolhido. Os motores pedem o microfone com `getUserMedia({ audio: true })`, então
+ * a escolha entra trocando esse pedido pelo dispositivo selecionado. Se ele sumiu (desconectado),
+ * cai no padrão do sistema em vez de deixar a chamada sem áudio.
+ */
+class AudioInput {
+    deviceId = ''
+    private installed = false
+
+    install(): void {
+        const media = navigator.mediaDevices
+        if (this.installed || !media?.getUserMedia) return
+        this.installed = true
+        const original = media.getUserMedia.bind(media)
+        media.getUserMedia = async (constraints?: MediaStreamConstraints) => {
+            if (!this.deviceId || constraints?.audio !== true) return original(constraints)
+            try {
+                return await original({ ...constraints, audio: { deviceId: { exact: this.deviceId } } })
+            } catch (error) {
+                const name = (error as Error).name
+                if (name !== 'OverconstrainedError' && name !== 'NotFoundError') throw error
+                return original(constraints)
+            }
+        }
+    }
+}
+
+export const audioInput = new AudioInput()
+
 /** Toque de chamada sintetizado (dois tons de 1 s a cada 3 s), um só para todas as contas. */
 class Ringer {
     private ctx?: AudioContext
@@ -38,9 +67,24 @@ class Ringer {
         return this.timer !== undefined
     }
 
+    private deviceId = ''
+
+    setDevice(deviceId: string): void {
+        this.deviceId = deviceId
+        void this.applySink()
+    }
+
+    private async applySink(): Promise<void> {
+        const ctx = this.ctx as (AudioContext & { setSinkId?: (id: string) => Promise<void> }) | undefined
+        await ctx?.setSinkId?.(this.deviceId).catch(() => undefined)
+    }
+
     start(): void {
         if (this.timer) return
-        this.ctx ??= new AudioContext()
+        if (!this.ctx) {
+            this.ctx = new AudioContext()
+            void this.applySink()
+        }
         const ring = (): void => {
             const ctx = this.ctx
             if (!ctx) return

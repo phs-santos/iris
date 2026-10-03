@@ -62,6 +62,16 @@ async function doTransfer(): Promise<void> {
     showTransfer.value = false
 }
 
+async function doConsult(): Promise<void> {
+    if (!transferTo.value.trim()) return
+    await calls.startConsult(c.value.id, transferTo.value)
+    showTransfer.value = false
+}
+
+// Transferência assistida: a chamada original (em espera) e a de consulta se referenciam.
+const consultOf = computed(() => calls.calls.find((x) => x.id === c.value.consultFor))
+const consulting = computed(() => calls.calls.find((x) => x.id === c.value.consultId))
+
 const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
 </script>
 
@@ -88,8 +98,20 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
             <span v-if="call.progress && call.state !== 'established' && live">· {{ call.progress }}</span>
             <span v-if="call.muted">· mudo</span>
             <span v-if="call.transfer">· transferência {{ call.transfer }}</span>
+            <span v-if="consulting">· consultando {{ consulting.remote }}</span>
             <span v-if="call.dtmfReceived">· DTMF recebido {{ call.dtmfReceived }}</span>
             <span v-if="call.endText">· {{ call.endText }}</span>
+        </div>
+
+        <div v-if="live && consultOf" class="consult" @click.stop>
+            <span>
+                Consulta para transferir <b class="mono">{{ consultOf.remote }}</b>
+                <span class="muted">{{ established ? '' : '(aguardando atender)' }}</span>
+            </span>
+            <button class="btn go" :disabled="!established" @click="calls.completeTransfer(call.id)">
+                Concluir transferência
+            </button>
+            <button class="btn" @click="calls.cancelConsult(call.id)">Cancelar e voltar</button>
         </div>
 
         <div v-if="live" class="controls" @click.stop>
@@ -122,7 +144,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                 <button
                     class="btn"
                     :class="{ on: showTransfer }"
-                    :disabled="!established"
+                    :disabled="!established || Boolean(consulting) || Boolean(consultOf)"
                     @click="showTransfer = !showTransfer"
                 >
                     Transferir
@@ -170,8 +192,15 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     placeholder="Destino da transferência"
                     aria-label="Destino"
                 />
-                <button class="btn primary" type="submit" :disabled="!transferTo.trim()">Transferir (cega)</button>
+                <button class="btn" type="submit" :disabled="!transferTo.trim()">Cega</button>
+                <button class="btn primary" type="button" :disabled="!transferTo.trim()" @click="doConsult">
+                    Consultar antes
+                </button>
             </form>
+            <p class="hint">
+                Cega: transfere na hora. Consultar antes: põe esta chamada em espera e liga para o destino; depois você
+                conclui ou volta.
+            </p>
         </div>
 
         <div v-if="established && call.quality" class="quality mono tabular">
@@ -183,6 +212,19 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
 </template>
 
 <style scoped>
+.consult {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    border: 1px dashed var(--accent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.consult > span {
+    flex: 1;
+}
 .call {
     border: 1px solid var(--line);
     border-left-width: 3px;

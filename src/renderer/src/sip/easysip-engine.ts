@@ -144,6 +144,21 @@ class EasySipCall implements EngineCall {
         await this.session?.transfer(target)
     }
 
+    get sipSession(): ISipSession | undefined {
+        return this.session
+    }
+
+    async attendedTransfer(consult: EngineCall): Promise<void> {
+        const other = consult instanceof EasySipCall ? consult.sipSession : undefined
+        if (!this.session || !other) throw new Error('As duas chamadas precisam estar em andamento')
+        // O easy-sipjs monta o Refer-To com Replaces a partir da outra sessão.
+        await this.session.transfer(other)
+    }
+
+    async setInputDevice(deviceId: string): Promise<void> {
+        await this.session?.setAudioInput(deviceId || 'default')
+    }
+
     async quality(): Promise<CallQuality | null> {
         if (!this.session) return null
         try {

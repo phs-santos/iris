@@ -67,6 +67,13 @@ export interface EngineCall {
     setHeld(held: boolean): Promise<void>
     sendDtmf(tone: string, mode: DtmfMode): Promise<void>
     transfer(target: string): Promise<void>
+    /**
+     * Transferência assistida (RF-16): manda o outro lado desta chamada para o outro lado de `consult`
+     * (REFER com Replaces). As duas chamadas locais terminam quando a transferência conclui.
+     */
+    attendedTransfer(consult: EngineCall): Promise<void>
+    /** Troca o microfone da chamada em andamento. "" volta para o padrão do sistema. */
+    setInputDevice(deviceId: string): Promise<void>
     quality(): Promise<CallQuality | null>
 }
 

@@ -148,6 +148,46 @@ class MockCall implements EngineCall {
         })
     }
 
+    async attendedTransfer(consult: EngineCall): Promise<void> {
+        const other = consult instanceof MockCall ? consult : undefined
+        if (this.state !== 'established' || other?.state !== 'established')
+            throw new Error('As duas chamadas precisam estar em andamento')
+        const a = this.peer
+        const c = other.peer
+        this.engine.sip(
+            `→ REFER (Refer-To: sip:${other.remote}@${this.engine.domain}?Replaces=${other.id}; Referred-By: ${this.engine.extension})`
+        )
+        this.emit('transfer', 100, 'Trying', false)
+        this.later(300, () => {
+            if (this.state !== 'established' || other.state !== 'established') {
+                this.emit('transfer', 481, 'Call/Transaction Does Not Exist', true)
+                return
+            }
+            this.emit('transfer', 200, 'OK', true)
+            // O PBX junta os dois lados remotos e derruba as duas pernas locais.
+            if (a) {
+                // Sem ponta C local (ex.: URA), A passa a falar com o destino simulado.
+                a.peer = c
+                a.ivr = other.ivr
+                a.engine.log('info', `Agora em chamada com ${other.remote} (transferência de ${this.engine.extension})`)
+                a.engine.sip('← INVITE (Replaces)')
+            }
+            if (c) {
+                c.peer = a
+                c.engine.log('info', `Agora em chamada com ${this.remote} (transferência de ${this.engine.extension})`)
+                c.engine.sip('← re-INVITE')
+            }
+            this.engine.log('info', `${this.remote} transferido para ${other.remote}`)
+            this.engine.sip('← BYE')
+            this.end({ by: 'remote', reason: `Transferida para ${other.remote}` })
+            other.end({ by: 'remote', reason: `Transferência concluída com ${this.remote}` })
+        })
+    }
+
+    async setInputDevice(deviceId: string): Promise<void> {
+        this.engine.log('info', `Microfone da chamada trocado para ${deviceId || 'o padrão do sistema'}`)
+    }
+
     async quality(): Promise<CallQuality | null> {
         if (this.state !== 'established') return null
         const jitter = 4 + Math.round(Math.random() * 6)

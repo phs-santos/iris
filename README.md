@@ -8,7 +8,7 @@ A especificação completa (requisitos, arquitetura e plano de entrega) está no
 
 ## Estado atual
 
-Marco **M0 (fundação)** concluído, com boa parte do **M1 (MVP)** já funcionando:
+Marcos **M0 (fundação)** e **M1 (MVP)** concluídos:
 
 | Requisito | O que já funciona |
 | --- | --- |
@@ -17,12 +17,13 @@ Marco **M0 (fundação)** concluído, com boa parte do **M1 (MVP)** já funciona
 | RF-07 | Importar e exportar contas em JSON, sem senhas por padrão |
 | RF-08 | Reconexão e renovação de registro (do easy-sipjs) |
 | RF-09 a RF-14 | Discar, receber, auto-atender, várias chamadas, mudo, espera, DTMF com sequência e pausas |
-| RF-15, 17, 18 | Transferência cega com progresso; cabeçalhos SIP extras no INVITE |
+| RF-15, 16, 17, 18 | Transferência cega e assistida (consulta, concluir ou voltar) com progresso; cabeçalhos SIP extras no INVITE |
+| RF-19 | Escolha de microfone e alto-falante, com medidor e som de teste, aplicada também às chamadas em andamento |
 | RF-21, 22, 23 | Log por conta com filtros, aba de SIP bruto sem senhas, copiar e salvar .txt/.json |
 | RF-24, 25, 26 | Saúde da conta, diagnóstico de microfone e TURN, qualidade da chamada |
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja, aceite de certificado autoassinado por host |
 
-Ainda não: transferência assistida (RF-16), escolha de microfone e alto-falante (RF-19), cenários (RF-28 a 31), atualização automática (RF-35).
+Ainda não: cenários (RF-28 a 31), atualização automática (RF-35).
 
 ## Rodar
 
@@ -39,8 +40,11 @@ No primeiro uso o app cria três contas no **PBX simulado** (senha `1234`), ent�
 
 ```bash
 ./docker/asterisk/gen-cert.sh   # certificado autoassinado para o WSS
-docker compose up -d
+docker compose up -d            # Linux
+docker compose -f docker-compose.yml -f docker/compose.ports.yml up -d   # macOS e Windows
 ```
+
+No Docker Desktop (macOS e Windows) a rede do host não fica exposta, então o `docker/compose.ports.yml` mapeia as portas do WSS e do RTP e faz o ICE anunciar `127.0.0.1`.
 
 Cadastre contas com domínio `127.0.0.1`, WebSocket `wss://127.0.0.1:8089/ws`, ramais `1001` a `1003` e senha `1234`. Na primeira conexão o app recusa o certificado e oferece **Confiar neste host**.
 

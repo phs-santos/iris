@@ -12,7 +12,12 @@ const executablePath = process.env.IRIS_EXECUTABLE
 const args = executablePath ? [] : ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 
-const app = await electron.launch({ executablePath, args, env: { ...process.env, IRIS_USER_DATA: userData } })
+const app = await electron.launch({
+    executablePath,
+    args,
+    // IRIS_FAKE_MEDIA: microfone falso, sem depender de hardware nem do pedido de permissão do sistema.
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
+})
 const page = await app.firstWindow()
 await page.setViewportSize?.({ width: 1360, height: 820 }).catch(() => {})
 const step = (msg) => console.log(`✓ ${msg}`)
@@ -48,10 +53,41 @@ try {
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
     step('chamada encerrada dos dois lados')
 
+    // Transferência assistida (RF-16): 1001 liga para 1002, que consulta a URA 8000 e transfere.
+    const live = (text) => page.locator('.call:not(.ended)', { hasText: text })
+    await page.locator('.chip', { hasText: '1002' }).click()
+    await page.locator('.call:not(.ended) .pill', { hasText: 'em chamada' }).nth(1).waitFor({ timeout: 5000 })
+    const received = live('←')
+    await received.getByRole('button', { name: 'Transferir' }).click()
+    await received.getByLabel('Destino').fill('8000')
+    await received.getByRole('button', { name: 'Consultar antes' }).click()
+    const consult = live('Consulta para transferir')
+    await consult.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 5000 })
+    step('1002 pôs 1001 em espera e a URA atendeu a consulta')
+    if (shots) await page.screenshot({ path: join(shots, '4-consulta.png') })
+    await consult.getByRole('button', { name: 'Concluir transferência' }).click()
+    await page.getByText('1 chamadas').waitFor({ timeout: 5000 })
+    await page.locator('.line', { hasText: 'Agora em chamada com 8000' }).waitFor()
+    step('transferência assistida ligou 1001 com a URA e liberou 1002')
+    await live('→').getByRole('button', { name: 'Desligar' }).click()
+    await page.getByText('0 chamadas').waitFor()
+
+    // Escolha de áudio (RF-19).
+    await page.getByRole('button', { name: 'Áudio' }).click()
+    const audio = page.getByRole('dialog', { name: 'Áudio' })
+    await audio.getByRole('meter', { name: 'Nível do microfone' }).waitFor()
+    const mics = await audio.locator('select').first().locator('option').count()
+    if (mics < 2) throw new Error('Nenhum microfone listado no diálogo de áudio')
+    await audio.locator('select').first().selectOption({ index: 1 })
+    await page.locator('.line', { hasText: 'Microfone: ' }).waitFor()
+    if (shots) await page.screenshot({ path: join(shots, '5-audio.png') })
+    await audio.getByRole('button', { name: 'Pronto' }).click()
+    step('diálogo de áudio lista e troca o microfone')
+
     await page.getByRole('tab', { name: 'SIP bruto' }).click()
-    await page.locator('.line.sip', { hasText: 'INVITE sip:1002@demo.local' }).waitFor()
+    await page.locator('.line.sip', { hasText: 'INVITE sip:1002@demo.local' }).first().waitFor()
     step('log SIP bruto mostra o INVITE')
-    if (shots) await page.screenshot({ path: join(shots, '4-log-sip.png') })
+    if (shots) await page.screenshot({ path: join(shots, '6-log-sip.png') })
     console.log('Fumaça OK')
 } catch (error) {
     if (shots) await page.screenshot({ path: join(shots, 'erro.png') })

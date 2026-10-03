@@ -1,6 +1,6 @@
 // Teste de integração contra um Asterisk real (docker compose up -d).
 // Cadastra 1001 e 1002 pela tela, liga de uma para a outra com áudio WebRTC,
-// envia DTMF para a URA 8000 e confere o 486 do número ocupado.
+// envia DTMF para a URA 8000, confere o 486 do número ocupado e faz uma transferência assistida.
 // Uso: npm run build && node tests/e2e/asterisk.mjs
 import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -45,6 +45,7 @@ try {
     await page.getByText('3 contas').waitFor()
     await addAccount('PBX 1001', '1001', false, true)
     await addAccount('PBX 1002', '1002', true)
+    await addAccount('PBX 1003', '1003', true)
     if (shots) await page.screenshot({ path: join(shots, 'pbx-1-registradas.png') })
 
     await page.locator('.acc', { hasText: 'PBX 1001' }).click()
@@ -93,8 +94,53 @@ try {
         console.log('  (docker indisponível; conferência no Asterisk pulada)')
     }
     // A URA desliga sozinha depois de ler 4 dígitos.
-    await ivr.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
+    // Pelo log: o cartão encerrado some depois de alguns segundos e pode sumir antes desta conferência.
+    await page
+        .locator('.list')
+        .getByText('Chamada para 8000: Encerrada pelo outro lado')
+        .first()
+        .waitFor({ timeout: 10000 })
     step('URA encerrou a chamada')
+
+    // Transferência assistida (RF-16): 1001 liga para 1002, que consulta 1003 e transfere.
+    const live = (text) => page.locator('.call:not(.ended)', { hasText: text })
+    await page.getByLabel('Número').fill('1002')
+    await page.getByRole('button', { name: 'Ligar', exact: true }).click()
+    const atB = live(/1002\s*←\s*1001/)
+    await atB.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 25000 })
+    await atB.getByRole('button', { name: 'Transferir' }).click()
+    await atB.getByLabel('Destino').fill('1003')
+    await atB.getByRole('button', { name: 'Consultar antes' }).click()
+    const consult = live('Consulta para transferir')
+    await consult.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 25000 })
+    step('1002 pôs 1001 em espera e 1003 atendeu a consulta')
+    if (shots) await page.screenshot({ path: join(shots, 'pbx-3-consulta.png') })
+    await consult.getByRole('button', { name: 'Concluir transferência' }).click()
+    await page.locator('.list').getByText('Transferência: 200 OK').first().waitFor({ timeout: 15000 })
+    await page.getByText('2 chamadas').waitFor({ timeout: 15000 })
+    await live(/1001\s*→\s*1002/)
+        .locator('.pill', { hasText: 'em chamada' })
+        .waitFor()
+    await live(/1003\s*←\s*1002/)
+        .locator('.pill', { hasText: 'em chamada' })
+        .waitFor()
+    step('transferência assistida concluída; as pernas de 1002 caíram')
+    try {
+        const channels = execSync('docker compose exec -T asterisk asterisk -rx "core show channels concise"', {
+            encoding: 'utf8'
+        })
+        if (!/PJSIP\/1001-/.test(channels) || !/PJSIP\/1003-/.test(channels) || /PJSIP\/1002-/.test(channels))
+            throw new Error(`Canais inesperados no Asterisk depois da transferência:\n${channels}`)
+        step('Asterisk confirmou: 1001 e 1003 em ponte, 1002 fora')
+    } catch (error) {
+        if (/Canais inesperados/.test(error.message)) throw error
+        console.log('  (docker indisponível; conferência no Asterisk pulada)')
+    }
+    await live(/1001\s*→\s*1002/)
+        .getByRole('button', { name: 'Desligar' })
+        .click()
+    await page.getByText('0 chamadas').waitFor({ timeout: 15000 })
+    step('desligar 1001 encerrou também 1003')
 
     await page.getByRole('tab', { name: 'SIP bruto' }).click()
     await page.locator('.line.sip', { hasText: 'SIP/2.0 200 OK' }).first().waitFor()
@@ -103,7 +149,7 @@ try {
         .count()
     if (leaked) throw new Error('O log SIP mostrou o hash de autenticação')
     step('log SIP bruto sem hash de autenticação')
-    if (shots) await page.screenshot({ path: join(shots, 'pbx-3-log.png') })
+    if (shots) await page.screenshot({ path: join(shots, 'pbx-4-log.png') })
     console.log('Integração com Asterisk OK')
 } catch (error) {
     if (shots) await page.screenshot({ path: join(shots, 'pbx-erro.png') })

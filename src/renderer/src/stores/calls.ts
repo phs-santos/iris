@@ -30,10 +30,17 @@ export interface CallView {
     dtmfRunning: boolean
     dtmfReceived: string
     autoAnswerAt?: number
+    /** Chamada de consulta da transferência assistida aberta a partir desta (RF-16). */
+    consultId?: string
+    /** Nesta chamada de consulta: a chamada original, que está em espera. */
+    consultFor?: string
 }
 
 /** Tempo que um cartão de chamada encerrada fica visível. */
 export const ENDED_VISIBLE_MS = 6000
+
+/** Espera do PBX derrubar as pernas locais depois da assistida antes do app desligar por conta própria. */
+export const ATTENDED_CLEANUP_MS = 4000
 
 export const useCallsStore = defineStore('calls', () => {
     const calls = ref<CallView[]>([])
@@ -97,6 +104,11 @@ export const useCallsStore = defineStore('calls', () => {
             engineCalls.delete(call.id)
             dtmfAborts.get(call.id)?.abort()
             if (!c) return
+            // Desfaz o vínculo da transferência assistida se uma das pontas cair antes de concluir.
+            const original = c.consultFor ? view(c.consultFor) : undefined
+            if (original?.consultId === c.id) original.consultId = undefined
+            const consult = c.consultId ? view(c.consultId) : undefined
+            if (consult?.consultFor === c.id) consult.consultFor = undefined
             const wasEstablished = c.state === 'established'
             c.state = 'ended'
             c.endedAt = Date.now()
@@ -143,6 +155,13 @@ export const useCallsStore = defineStore('calls', () => {
         call.on('transfer', (code, reason, final) => {
             const c = v()
             if (c) c.transfer = `${code} ${reason}`.trim()
+            // Concluída a assistida, o PBX costuma derrubar as duas pernas; se não derrubar, o app desliga.
+            if (c?.consultId && final && code >= 200 && code < 300) {
+                const consultId = c.consultId
+                setTimeout(() => {
+                    for (const id of [call.id, consultId]) if (engineCalls.has(id)) void hangup(id)
+                }, ATTENDED_CLEANUP_MS)
+            }
             log.add(
                 accountId,
                 final && code >= 300 ? 'warn' : 'info',
@@ -154,7 +173,8 @@ export const useCallsStore = defineStore('calls', () => {
         return v()!
     }
 
-    async function dial(accountId: string, destination: string, headers?: string[]): Promise<void> {
+    /** Liga e devolve o id da chamada criada. */
+    async function dial(accountId: string, destination: string, headers?: string[]): Promise<string | undefined> {
         const accounts = useAccountsStore()
         const log = useLogStore()
         const engine = accounts.engineOf(accountId)
@@ -167,7 +187,7 @@ export const useCallsStore = defineStore('calls', () => {
         log.add(accountId, 'info', 'event', `Ligando para ${dest}`)
         try {
             const call = await engine.dial(dest, { headers })
-            track(accountId, call, 'dialing')
+            return track(accountId, call, 'dialing').id
         } catch (error) {
             log.add(accountId, 'error', 'event', `Não foi possível ligar para ${dest}: ${(error as Error).message}`)
             throw error
@@ -256,6 +276,54 @@ export const useCallsStore = defineStore('calls', () => {
     const transfer = (id: string, target: string): Promise<void> =>
         run(id, (call) => call.transfer(target.trim()), 'Transferência')
 
+    /** Transferência assistida, passo 1: põe a chamada em espera e liga para o destino pela mesma conta. */
+    async function startConsult(id: string, target: string): Promise<void> {
+        const c = view(id)
+        if (!c || c.state !== 'established' || c.consultId) return
+        const log = useLogStore()
+        if (!c.held) await run(id, (call) => call.setHeld(true), 'Espera')
+        log.add(c.accountId, 'info', 'event', `Consulta para transferência: ligando para ${target.trim()}`)
+        const consultId = await dial(c.accountId, target).catch(() => undefined)
+        const original = view(id)
+        const consult = consultId ? view(consultId) : undefined
+        if (!original || !consult) return
+        original.consultId = consult.id
+        consult.consultFor = original.id
+    }
+
+    /** Passo 2: liga o outro lado da chamada original com quem atendeu a consulta. */
+    async function completeTransfer(consultId: string): Promise<void> {
+        const consult = view(consultId)
+        const originalId = consult?.consultFor
+        const consultCall = engineCalls.get(consultId)
+        if (!consult || !originalId || !consultCall) return
+        const original = view(originalId)
+        if (original)
+            useLogStore().add(
+                consult.accountId,
+                'info',
+                'event',
+                `Transferência assistida: ${original.remote} → ${consult.remote}`
+            )
+        await run(originalId, (call) => call.attendedTransfer(consultCall), 'Transferência assistida')
+    }
+
+    /** Desiste da consulta: desliga quem foi consultado e retoma a chamada original. */
+    async function cancelConsult(consultId: string): Promise<void> {
+        const originalId = view(consultId)?.consultFor
+        await hangup(consultId)
+        if (originalId && view(originalId)?.held) await toggleHold(originalId)
+        if (originalId) selectedId.value = originalId
+    }
+
+    /** Aplica o microfone escolhido nas chamadas em andamento (RF-19). */
+    async function setInputDevice(deviceId: string): Promise<void> {
+        for (const c of calls.value) {
+            if (c.state === 'established')
+                await run(c.id, (call) => call.setInputDevice(deviceId), 'Troca de microfone')
+        }
+    }
+
     // Qualidade das chamadas em andamento, a cada 2 s (RF-26).
     setInterval(async () => {
         for (const c of calls.value) {
@@ -280,6 +348,10 @@ export const useCallsStore = defineStore('calls', () => {
         toggleHold,
         sendDtmf,
         stopDtmf,
-        transfer
+        transfer,
+        startConsult,
+        completeTransfer,
+        cancelConsult,
+        setInputDevice
     }
 })
