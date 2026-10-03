@@ -84,10 +84,18 @@ try {
     await page.locator('.list').getByText('DTMF enviado: 1').waitFor({ timeout: 10000 })
     step('DTMF 4321 enviado para a URA')
     // Com docker disponível, confere no log do Asterisk que a URA recebeu os dígitos.
-    await page.waitForTimeout(1500)
+    // Se faltar algum dígito, a URA só escreve no log depois dos 15 s de espera do Read.
     try {
-        const out = execSync('docker compose logs --since 60s asterisk', { encoding: 'utf8' })
-        if (!/URA recebeu 4321/.test(out)) throw new Error('A URA do Asterisk não recebeu 4321')
+        let out = ''
+        for (let i = 0; i < 20 && !/URA recebeu/.test(out); i++) {
+            await page.waitForTimeout(1000)
+            out = execSync('docker compose logs --since 60s asterisk', { encoding: 'utf8' })
+        }
+        if (!/URA recebeu 4321/.test(out)) {
+            const got = /URA recebeu (\S*)/.exec(out)?.[1]
+            console.error(out.split('\n').slice(-40).join('\n'))
+            throw new Error(`A URA do Asterisk não recebeu 4321 (recebeu "${got ?? 'nada'}")`)
+        }
         step('Asterisk confirmou: URA recebeu 4321')
     } catch (error) {
         if (/não recebeu/.test(error.message)) throw error
