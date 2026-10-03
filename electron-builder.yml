@@ -1,0 +1,24 @@
+appId: dev.sipbench.app
+productName: SIP Bench
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**
+  - package.json
+asarUnpack: []
+win:
+  target: nsis
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target: dmg
+  category: public.app-category.developer-tools
+  extendInfo:
+    NSMicrophoneUsageDescription: O SIP Bench usa o microfone nas chamadas de teste.
+linux:
+  # .deb entra quando o projeto tiver repositório e página (exigidos como metadados do pacote).
+  target:
+    - AppImage
+  category: Development

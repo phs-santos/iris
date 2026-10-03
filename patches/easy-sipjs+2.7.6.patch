@@ -1,0 +1,15 @@
+diff --git a/node_modules/easy-sipjs/dist/core/sipjs-provider.js b/node_modules/easy-sipjs/dist/core/sipjs-provider.js
+index 48d7aa9..3aaa30c 100644
+--- a/node_modules/easy-sipjs/dist/core/sipjs-provider.js
++++ b/node_modules/easy-sipjs/dist/core/sipjs-provider.js
+@@ -599,7 +599,9 @@ export class SipJSProvider {
+             viaHost: domain,
+             transportOptions: { server, traceSip: debug },
+             userAgentString,
+-            contactParams: { transport: "wss" },
++            // SIP.js usa transport=ws por padrão; com "wss" o Asterisk devolve o Contact
++            // com transport=ws e o Registerer descarta o 200 OK do REGISTER.
++            contactParams: { transport: "ws" },
+             delegate: userAgentDelegate,
+             logLevel: debug ? "log" : "error",
+             logConnector: debug

@@ -1,0 +1,39 @@
+{
+  "name": "sip-bench",
+  "productName": "SIP Bench",
+  "version": "0.0.1",
+  "description": "Softphone desktop para testes de telefonia: várias contas, vários PBX, log SIP lado a lado.",
+  "main": "out/main/index.js",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "vue-tsc --noEmit -p tsconfig.web.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run",
+    "dist": "electron-vite build && electron-builder --publish never",
+    "dist:linux": "electron-vite build && electron-builder --linux --publish never",
+    "dist:win": "electron-vite build && electron-builder --win --publish never",
+    "dist:mac": "electron-vite build && electron-builder --mac --publish never",
+    "test:e2e": "electron-vite build && node tests/e2e/smoke.mjs",
+    "test:pbx": "electron-vite build && node tests/e2e/asterisk.mjs",
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "easy-sipjs": "2.7.6",
+    "electron": "^44.5.1",
+    "electron-builder --publish never": "^26.0.0",
+    "electron-vite": "^5.0.0",
+    "patch-package": "^8.0.1",
+    "pinia": "^3.0.0",
+    "playwright-core": "^1.63.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.0.0",
+    "vitest": "^4.0.0",
+    "vue": "^3.5.0",
+    "vue-tsc": "^3.0.0"
+  }
+}
