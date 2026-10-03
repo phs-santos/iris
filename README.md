@@ -46,9 +46,9 @@ docker compose -f docker-compose.yml -f docker/compose.ports.yml up -d   # macOS
 
 No Docker Desktop (macOS e Windows) a rede do host não fica exposta, então o `docker/compose.ports.yml` mapeia as portas do WSS e do RTP e faz o ICE anunciar `127.0.0.1`.
 
-Cadastre contas com domínio `127.0.0.1`, WebSocket `wss://127.0.0.1:8089/ws`, ramais `1001` a `1003` e senha `1234`. Na primeira conexão o app recusa o certificado e oferece **Confiar neste host**.
+Cadastre contas com domínio `127.0.0.1`, WebSocket `wss://127.0.0.1:8089/ws`, ramais `1001` a `1020` e senha `1234`. Na primeira conexão o app recusa o certificado e oferece **Confiar neste host**.
 
-Números do plano de discagem: `1001`–`1003` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `486` (ocupado).
+Números do plano de discagem: `1001`–`1020` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `486` (ocupado).
 
 ## Testes
 
@@ -57,6 +57,7 @@ npm run typecheck   # TypeScript estrito
 npm test            # testes de unidade (Vitest)
 npm run test:e2e    # ponta a ponta no modo simulado (abre o app)
 npm run test:pbx    # integração com o Asterisk do docker compose
+npm run test:load   # carga: 20 contas e 4 chamadas no Asterisk, mede a resposta da interface
 ```
 
 Em Linux sem tela, rode os de ponta a ponta com `xvfb-run -a`.

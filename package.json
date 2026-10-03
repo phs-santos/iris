@@ -18,6 +18,7 @@
         "dist:mac": "electron-vite build && electron-builder --mac --publish never",
         "test:e2e": "electron-vite build && node tests/e2e/smoke.mjs",
         "test:pbx": "electron-vite build && node tests/e2e/asterisk.mjs",
+        "test:load": "electron-vite build && node tests/e2e/load.mjs",
         "postinstall": "node scripts/apply-patches.mjs",
         "format": "prettier --write .",
         "format:check": "prettier --check ."
