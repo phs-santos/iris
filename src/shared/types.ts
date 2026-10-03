@@ -77,6 +77,28 @@ export interface Settings {
     trustedHosts: string[]
     audioInputId?: string
     audioOutputId?: string
+    /** Canal de atualização (RF-35). Sem o campo, vale o estável. */
+    updateChannel?: UpdateChannel
+}
+
+/** Canais de atualização (RF-35): o beta recebe também as versões de teste (`1.2.0-beta.1`). */
+export type UpdateChannel = 'stable' | 'beta'
+
+/** Estado da atualização automática (RF-35), do processo principal para a interface. */
+export type UpdateStatus =
+    | { state: 'unsupported'; reason: string }
+    | { state: 'idle' }
+    | { state: 'checking' }
+    | { state: 'up-to-date' }
+    | { state: 'available'; version: string }
+    | { state: 'downloading'; version: string; percent: number }
+    | { state: 'ready'; version: string }
+    | { state: 'error'; message: string }
+
+export interface UpdateInfo {
+    currentVersion: string
+    channel: UpdateChannel
+    status: UpdateStatus
 }
 
 /** Formato do arquivo de exportação de contas (RF-07). */
@@ -125,6 +147,16 @@ export interface IrisApi {
         finish(code: number): void
     }
     onCertificateError(listener: (event: CertificateErrorEvent) => void): () => void
+    /** Atualização automática (RF-35). Nada é baixado sem o usuário pedir. */
+    update: {
+        info(): Promise<UpdateInfo>
+        setChannel(channel: UpdateChannel): Promise<void>
+        check(): Promise<void>
+        download(): Promise<void>
+        /** Fecha o app e instala a versão já baixada. */
+        install(): Promise<void>
+        onStatus(listener: (status: UpdateStatus) => void): () => void
+    }
     appInfo(): Promise<{ version: string; platform: string; electron: string; chrome: string }>
 }
 
@@ -143,6 +175,12 @@ export const IPC = {
     notify: 'app:notify',
     appInfo: 'app:info',
     certificateError: 'cert:error',
+    updateInfo: 'update:info',
+    updateSetChannel: 'update:set-channel',
+    updateCheck: 'update:check',
+    updateDownload: 'update:download',
+    updateInstall: 'update:install',
+    updateStatus: 'update:status',
     cliConfig: 'cli:config',
     cliPrint: 'cli:print',
     cliReport: 'cli:report',

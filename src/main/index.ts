@@ -16,6 +16,7 @@ import {
 } from './storage'
 import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
+import { isUpdateChannel, setupUpdater } from './updater'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -192,7 +193,8 @@ function registerIpc(): void {
         check(
             isPlainObject(settings) &&
                 isList(settings.trustedHosts, 200) &&
-                settings.trustedHosts.every((h) => isString(h, 255)),
+                settings.trustedHosts.every((h) => isString(h, 255)) &&
+                (settings.updateChannel === undefined || isUpdateChannel(settings.updateChannel)),
             'preferências'
         )
         await saveSettings(settings)
@@ -248,6 +250,11 @@ app.whenReady().then(async () => {
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(appIcon)
     createWindow()
     createTray()
+    await setupUpdater({
+        send: (status) => mainWindow?.webContents.send(IPC.updateStatus, status),
+        // Sem isto, fechar a janela só a esconderia (RF-33) e a instalação não começaria.
+        beforeInstall: () => (quitting = true)
+    })
 
     app.on('activate', showWindow)
 })

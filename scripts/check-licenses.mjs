@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 
 const root = join(import.meta.dirname, '..')
 /** Pacotes que entram no app instalado; o resto do package.json é ferramenta de desenvolvimento. */
-const SHIPPED = ['electron', 'vue', 'pinia', 'easy-sipjs']
+const SHIPPED = ['electron', 'electron-updater', 'vue', 'pinia', 'easy-sipjs']
 const ALLOWED = new Set([
     'MIT',
     'ISC',

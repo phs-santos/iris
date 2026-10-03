@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import type { Account, CertificateErrorEvent } from '@shared/types'
+import type { Account, CertificateErrorEvent, UpdateChannel, UpdateInfo } from '@shared/types'
 import { useAccountsStore } from './stores/accounts'
 import { useCallsStore } from './stores/calls'
 import { useLogStore } from './stores/log'
@@ -12,6 +12,7 @@ import AccountForm from './components/AccountForm.vue'
 import ImportExportDialog from './components/ImportExportDialog.vue'
 import HealthDialog from './components/HealthDialog.vue'
 import AudioDialog from './components/AudioDialog.vue'
+import UpdateDialog from './components/UpdateDialog.vue'
 import ScenariosPane from './components/ScenariosPane.vue'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
@@ -27,6 +28,10 @@ const centerTab = ref<'phone' | 'scenarios'>('phone')
 const editing = ref<Account | null>(null)
 const showImportExport = ref(false)
 const showAudio = ref(false)
+const showUpdate = ref(false)
+const update = ref<UpdateInfo | null>(null)
+// O botão da barra avisa quando há versão nova para baixar ou já baixada (RF-35).
+const updatePending = computed(() => ['available', 'ready'].includes(update.value?.status.state ?? ''))
 const healthFor = ref<string | null>(null)
 const certError = ref<CertificateErrorEvent | null>(null)
 const dialer = ref<InstanceType<typeof DialerPane> | null>(null)
@@ -60,6 +65,12 @@ async function trustHost(): Promise<void> {
     }
 }
 
+async function setUpdateChannel(channel: UpdateChannel): Promise<void> {
+    await window.iris.update.setChannel(channel)
+    update.value = await window.iris.update.info()
+    void window.iris.update.check()
+}
+
 // Atalhos de teclado (ver especificação, seção Interface).
 function onKey(event: KeyboardEvent): void {
     const mod = event.ctrlKey || event.metaKey
@@ -81,12 +92,21 @@ function onKey(event: KeyboardEvent): void {
 }
 
 let offCert: (() => void) | undefined
+let offUpdate: (() => void) | undefined
 onMounted(async () => {
     window.addEventListener('keydown', onKey)
     offCert = window.iris.onCertificateError((event) => {
         certError.value = event
         log.add(null, 'error', 'event', `Certificado TLS recusado para ${event.host}: ${event.error}`)
     })
+    offUpdate = window.iris.update.onStatus((status) => {
+        if (!update.value) return
+        const before = update.value.status.state
+        update.value = { ...update.value, status }
+        if (status.state === 'available' && before !== 'available')
+            log.add(null, 'info', 'event', `Versão ${status.version} disponível. Abra "Atualização" para baixar.`)
+    })
+    update.value = await window.iris.update.info()
     const info = await window.iris.appInfo()
     log.add(
         null,
@@ -101,6 +121,7 @@ onMounted(async () => {
 onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
     offCert?.()
+    offUpdate?.()
 })
 </script>
 
@@ -117,6 +138,9 @@ onUnmounted(() => {
             <button class="btn small" @click="accounts.unregisterAll()">Desregistrar todas</button>
             <button class="btn small" @click="showAudio = true">Áudio</button>
             <button class="btn small" @click="showImportExport = true">Importar / Exportar</button>
+            <button class="btn small" :class="{ primary: updatePending }" @click="showUpdate = true">
+                {{ updatePending ? 'Atualização disponível' : 'Atualização' }}
+            </button>
         </header>
 
         <div v-if="certError" class="banner" role="alert">
@@ -183,6 +207,12 @@ onUnmounted(() => {
         <ImportExportDialog v-if="showImportExport" @close="showImportExport = false" />
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
         <AudioDialog v-if="showAudio" @close="showAudio = false" />
+        <UpdateDialog
+            v-if="showUpdate && update"
+            :info="update"
+            @close="showUpdate = false"
+            @channel="setUpdateChannel"
+        />
     </div>
 </template>
 

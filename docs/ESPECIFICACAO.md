@@ -322,8 +322,8 @@ O próprio produto é uma ferramenta de teste, então a base dos testes é um PB
 
 **Em aberto**
 
-- [ ] Nome definitivo do produto (provisório: SIP Bench)
-- [ ] Licença: código aberto ou uso interno
-- [ ] Onde publicar instaladores e atualizações: GitHub Releases ou servidor interno
+- [x] Nome definitivo do produto: Íris
+- [x] Licença: código aberto, MIT (decidido em 3 de outubro de 2026)
+- [x] Onde publicar instaladores e atualizações: GitHub Releases (decidido em 3 de outubro de 2026)
 - [ ] Quem providencia os certificados de assinatura da Apple e da Microsoft
 - [ ] Quais PBX além do Asterisk entram nos testes automáticos

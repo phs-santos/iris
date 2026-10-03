@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC, type IrisApi, type CertificateErrorEvent } from '@shared/types'
+import { IPC, type IrisApi, type CertificateErrorEvent, type UpdateStatus } from '@shared/types'
 
 // A interface só alcança o sistema por estes canais fixos (RNF-08).
 const api: IrisApi = {
@@ -35,6 +35,18 @@ const api: IrisApi = {
         const handler = (_e: Electron.IpcRendererEvent, event: CertificateErrorEvent): void => listener(event)
         ipcRenderer.on(IPC.certificateError, handler)
         return () => ipcRenderer.removeListener(IPC.certificateError, handler)
+    },
+    update: {
+        info: () => ipcRenderer.invoke(IPC.updateInfo),
+        setChannel: (channel) => ipcRenderer.invoke(IPC.updateSetChannel, channel),
+        check: () => ipcRenderer.invoke(IPC.updateCheck),
+        download: () => ipcRenderer.invoke(IPC.updateDownload),
+        install: () => ipcRenderer.invoke(IPC.updateInstall),
+        onStatus: (listener) => {
+            const handler = (_e: Electron.IpcRendererEvent, status: UpdateStatus): void => listener(status)
+            ipcRenderer.on(IPC.updateStatus, handler)
+            return () => ipcRenderer.removeListener(IPC.updateStatus, handler)
+        }
     },
     appInfo: () => ipcRenderer.invoke(IPC.appInfo)
 }

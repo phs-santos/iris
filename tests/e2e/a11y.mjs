@@ -66,6 +66,15 @@ try {
     await scan('importar e exportar')
     await page.keyboard.press('Escape')
 
+    await page.getByRole('button', { name: 'Atualização' }).click()
+    await page.getByText('funciona só no app instalado').waitFor()
+    await scan('atualização')
+    await page.keyboard.press('Escape')
+    await page
+        .getByRole('dialog', { name: 'Atualização' })
+        .waitFor({ state: 'detached', timeout: 2000 })
+        .catch(() => problems.push('[atualização] Esc não fecha'))
+
     await page.getByRole('tab', { name: 'Cenários' }).click()
     await page.getByRole('button', { name: '+ Exemplo de URA' }).click()
     await page.getByRole('button', { name: 'Executar', exact: true }).click()

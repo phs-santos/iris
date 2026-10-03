@@ -138,3 +138,7 @@ O easy-sipjs 2.7.6 registra com `transport=wss` no Contact. O Asterisk responde 
 - Contas em `accounts.json` e preferências em `settings.json`, na pasta de dados do usuário.
 - Senhas criptografadas pelo sistema (Keychain, DPAPI ou libsecret). Sem criptografia disponível, ficam só na memória.
 - A interface roda isolada (`contextIsolation`, `sandbox`, CSP) e só fala com o sistema pelos canais de `src/preload`.
+
+## Licença
+
+[MIT](LICENSE).

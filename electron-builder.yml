@@ -26,7 +26,10 @@ nsis:
     oneClick: false
     allowToChangeInstallationDirectory: true
 mac:
-    target: dmg
+    # O .zip é o que a atualização automática do macOS baixa (RF-35); o .dmg é para instalar à mão.
+    target:
+        - dmg
+        - zip
     category: public.app-category.developer-tools
     extendInfo:
         NSMicrophoneUsageDescription: A Íris usa o microfone nas chamadas de teste.

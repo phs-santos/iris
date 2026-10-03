@@ -42,7 +42,7 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 
 **Fora do 1.0** (não faça sem o usuário pedir): RF-20 (early media), RF-27 (BLF), RF-34 (atalhos globais) e RF-36 (gravação). O RF-31 também era "depois", mas já foi feito.
 
-**Decisões em aberto na especificação** (pergunte ao usuário, não decida sozinho): licença, onde publicar instaladores e atualizações, quem providencia os certificados e quais PBX além do Asterisk entram nos testes automáticos. O nome já foi decidido: Íris.
+**Decisões em aberto na especificação** (pergunte ao usuário, não decida sozinho): quem providencia os certificados e quais PBX além do Asterisk entram nos testes automáticos. Já decidido: o nome é Íris, a licença é MIT (arquivo `LICENSE`) e os instaladores e atualizações ficam no GitHub Releases.
 
 Pendências conhecidas, que não precisam ser feitas agora:
 - RNF-05, memória: de 331 a 389 MB no macOS com tela retina, contra o limite de 300 MB. O heap JS fica em 10 MB; o peso está no processo de GPU (150 a 190 MB durante a chamada) e na memória nativa da interface. Só abrir o app já custa de 180 a 260 MB. Desligar a aceleração de GPU não resolve.
