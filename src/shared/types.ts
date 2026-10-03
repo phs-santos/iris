@@ -1,5 +1,7 @@
 // Tipos compartilhados entre o processo principal, o preload e a interface.
 
+import type { CliConfig } from './cli'
+
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
 export type DtmfMode = 'auto' | 'sip-info' | 'rtp-event'
@@ -114,6 +116,14 @@ export interface IrisApi {
         openText(): Promise<string | null>
     }
     notify(title: string, body: string): void
+    /** Modo linha de comando (RF-31): null quando o app abriu com janela. */
+    cli: {
+        config(): Promise<CliConfig | null>
+        /** Escreve uma linha no terminal; `error` vai para o stderr. */
+        print(line: string, error?: boolean): void
+        writeReport(content: string): Promise<string | null>
+        finish(code: number): void
+    }
     onCertificateError(listener: (event: CertificateErrorEvent) => void): () => void
     appInfo(): Promise<{ version: string; platform: string; electron: string; chrome: string }>
 }
@@ -132,5 +142,9 @@ export const IPC = {
     filesOpenText: 'files:open-text',
     notify: 'app:notify',
     appInfo: 'app:info',
-    certificateError: 'cert:error'
+    certificateError: 'cert:error',
+    cliConfig: 'cli:config',
+    cliPrint: 'cli:print',
+    cliReport: 'cli:report',
+    cliFinish: 'cli:finish'
 } as const

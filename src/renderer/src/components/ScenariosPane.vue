@@ -95,7 +95,7 @@ async function createIvrExample(): Promise<void> {
             { type: 'register' },
             { type: 'dial', to: '8000', call: 'c1' },
             { type: 'waitState', call: 'c1', state: 'established', timeoutMs: 10_000 },
-            { type: 'wait', ms: 1000 },
+            { type: 'wait', ms: 2000 },
             { type: 'dtmf', call: 'c1', digits: '1234' },
             { type: 'hangup', call: 'c1' }
         ]

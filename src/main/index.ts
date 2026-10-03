@@ -14,6 +14,7 @@ import {
     saveSettings,
     setSecret
 } from './storage'
+import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -26,7 +27,10 @@ if (process.env['IRIS_USER_DATA']) app.setPath('userData', process.env['IRIS_USE
 // Microfone falso do Chromium, para testes automatizados sem placa de som.
 if (process.env['IRIS_FAKE_MEDIA']) app.commandLine.appendSwitch('use-fake-device-for-media-stream')
 
-if (!app.requestSingleInstanceLock()) {
+// Linha de comando (RF-31): sem janela visível, sem bandeja e sem trava de instância única.
+const cli = prepareCli()
+
+if (!cli && !app.requestSingleInstanceLock()) {
     app.quit()
 }
 
@@ -167,7 +171,11 @@ function registerIpc(): void {
     ipcMain.handle(IPC.scenariosLoad, () => loadScenarios())
     ipcMain.handle(IPC.scenariosSave, (_e, scenarios: Scenario[]) => saveScenarios(scenarios))
     ipcMain.handle(IPC.secretsGet, (_e, id: string) => getSecret(id))
-    ipcMain.handle(IPC.secretsSet, (_e, id: string, password: string | null) => setSecret(id, password))
+    // Com --contas, as senhas do arquivo ficam só na memória desta execução.
+    ipcMain.handle(IPC.secretsSet, (_e, id: string, password: string | null) =>
+        setSecret(id, password, !cliOptions?.accountsFile)
+    )
+    if (!cli) ipcMain.handle(IPC.cliConfig, () => null)
     ipcMain.handle(IPC.secretsAvailable, () => encryptionAvailable())
     ipcMain.handle(IPC.settingsLoad, () => loadSettings())
     ipcMain.handle(IPC.settingsSave, async (_e, settings: Settings) => {
@@ -210,9 +218,14 @@ function registerIpc(): void {
 app.on('second-instance', showWindow)
 
 app.whenReady().then(async () => {
-    trustedHosts = new Set((await loadSettings()).trustedHosts)
+    trustedHosts = new Set([...(await loadSettings()).trustedHosts, ...(cliOptions?.trustHosts ?? [])])
     setupSecurity()
     registerIpc()
+    if (cli) {
+        registerCliIpc()
+        createCliWindow(join(__dirname, '../preload/index.js'))
+        return
+    }
     // Empacotado, o macOS usa o .icns do bundle; em dev o Dock mostraria o ícone do Electron.
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(appIcon)
     createWindow()

@@ -39,6 +39,8 @@ jobs:
               run: xvfb-run -a node tests/e2e/smoke.mjs
             - name: Cenários no modo simulado
               run: RUNS=5 xvfb-run -a node tests/e2e/scenarios.mjs
+            - name: Cenários pela linha de comando
+              run: xvfb-run -a node tests/e2e/cli.mjs
             - name: Subir Asterisk de teste
               run: |
                   ./docker/asterisk/gen-cert.sh
@@ -48,3 +50,5 @@ jobs:
               run: xvfb-run -a node tests/e2e/asterisk.mjs
             - name: Cenário de URA 20 vezes no Asterisk (critério do M3)
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/scenarios.mjs
+            - name: URA 20 vezes pela linha de comando no Asterisk
+              run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/cli.mjs

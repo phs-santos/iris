@@ -1,0 +1,24 @@
+{
+    "format": "iris/accounts",
+    "schemaVersion": 1,
+    "exportedAt": "2026-10-03T00:00:00.000Z",
+    "accounts": [
+        {
+            "id": "sim-1001",
+            "name": "Sim 1001",
+            "domain": "demo.local",
+            "extension": "1001",
+            "simulated": true,
+            "password": "1234"
+        },
+        {
+            "id": "sim-1002",
+            "name": "Sim 1002",
+            "domain": "demo.local",
+            "extension": "1002",
+            "simulated": true,
+            "autoAnswer": { "enabled": true, "delayMs": 200 },
+            "password": "1234"
+        }
+    ]
+}

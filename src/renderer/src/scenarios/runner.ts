@@ -65,6 +65,8 @@ export interface RunOptions {
 
 export const REGISTER_TIMEOUT_MS = 15_000
 export const TRANSFER_TIMEOUT_MS = 15_000
+/** Duração de um tom RTP (100 ms) mais o intervalo depois dele, com folga. */
+export const DTMF_SETTLE_MS = 300
 
 class StepFailure extends Error {}
 class Stopped extends Error {}
@@ -213,6 +215,9 @@ export async function runScenario(
                 if (c.state !== 'established')
                     throw new StepFailure(`A chamada está ${describeCall(c)}, não em chamada`)
                 await driver.sendDtmf(c.id, step.digits)
+                // O envio por RTP termina de tocar depois que a promessa resolve; sem esta espera,
+                // um "desligar" logo em seguida cortava o último dígito.
+                await sleep(DTMF_SETTLE_MS, signal)
                 return undefined
             }
             case 'transfer': {

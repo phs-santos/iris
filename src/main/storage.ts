@@ -80,10 +80,10 @@ export async function getSecret(accountId: string): Promise<string | null> {
     return password
 }
 
-export async function setSecret(accountId: string, password: string | null): Promise<void> {
+export async function setSecret(accountId: string, password: string | null, persist = true): Promise<void> {
     if (password === null) memorySecrets.delete(accountId)
     else memorySecrets.set(accountId, password)
-    if (!encryptionAvailable()) return
+    if (!persist || !encryptionAvailable()) return
     const secrets = (await readJson<SecretsFile>('secrets.json')) ?? {}
     if (password === null) delete secrets[accountId]
     else secrets[accountId] = safeStorage.encryptString(password).toString('base64')

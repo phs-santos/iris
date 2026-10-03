@@ -1,0 +1,40 @@
+{
+    "schemaVersion": 1,
+    "scenarios": [
+        {
+            "id": "ura",
+            "name": "URA 8000",
+            "accountId": "Sim 1001",
+            "steps": [
+                { "type": "register" },
+                { "type": "dial", "to": "8000", "call": "c1" },
+                { "type": "waitState", "call": "c1", "state": "established", "timeoutMs": 10000 },
+                { "type": "dtmf", "call": "c1", "digits": "1234" },
+                { "type": "verify", "call": "c1", "check": "log", "expected": "URA recebeu o dígito 4" },
+                { "type": "hangup", "call": "c1" }
+            ]
+        },
+        {
+            "id": "entre-contas",
+            "name": "Entre contas",
+            "accountId": "1001@demo.local",
+            "steps": [
+                { "type": "dial", "to": "1002", "call": "saida" },
+                { "type": "waitState", "call": "saida", "state": "established", "timeoutMs": 10000 },
+                { "type": "dtmf", "call": "saida", "digits": "42#" },
+                { "type": "hangup", "call": "saida" }
+            ]
+        },
+        {
+            "id": "ocupado",
+            "name": "Ocupado",
+            "accountId": "Sim 1001",
+            "steps": [
+                { "type": "register" },
+                { "type": "dial", "to": "486", "call": "c1" },
+                { "type": "waitState", "call": "c1", "state": "established", "timeoutMs": 5000 },
+                { "type": "hangup", "call": "c1" }
+            ]
+        }
+    ]
+}
