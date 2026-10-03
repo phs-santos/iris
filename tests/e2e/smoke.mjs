@@ -18,7 +18,13 @@ const app = await electron.launch({
     // IRIS_FAKE_MEDIA: microfone falso, sem depender de hardware nem do pedido de permissão do sistema.
     env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
 })
+// Erros do processo principal e da página: um canal de IPC que a interface chama antes de existir
+// não derruba nenhum passo abaixo, mas quebra o app instalado (aconteceu na 1.0.4).
+let mainErrors = ''
+app.process().stderr.on('data', (chunk) => (mainErrors += chunk))
 const page = await app.firstWindow()
+const pageErrors = []
+page.on('pageerror', (error) => pageErrors.push(String(error)))
 await page.setViewportSize?.({ width: 1360, height: 820 }).catch(() => {})
 const step = (msg) => console.log(`✓ ${msg}`)
 
@@ -88,6 +94,10 @@ try {
     await page.locator('.line.sip', { hasText: 'INVITE sip:1002@demo.local' }).first().waitFor()
     step('log SIP bruto mostra o INVITE')
     if (shots) await page.screenshot({ path: join(shots, '6-log-sip.png') })
+    if (/No handler registered|Error occurred in handler/.test(mainErrors))
+        throw new Error(`Erro de IPC no processo principal:\n${mainErrors.slice(0, 600)}`)
+    if (pageErrors.length) throw new Error(`Erros na interface:\n${pageErrors.join('\n')}`)
+    step('nenhum erro de IPC nem da interface durante o teste')
     console.log('Fumaça OK')
 } catch (error) {
     if (shots) await page.screenshot({ path: join(shots, 'erro.png') })

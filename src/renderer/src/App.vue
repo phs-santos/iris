@@ -132,7 +132,11 @@ onMounted(async () => {
         if (status.state === 'available' && before !== 'available')
             log.add(null, 'info', 'event', `Versão ${status.version} disponível. Abra "Atualização" para baixar.`)
     })
-    update.value = await window.iris.update.info()
+    // Sem esperar e sem deixar um erro daqui parar o resto: as contas não dependem da atualização.
+    void window.iris.update
+        .info()
+        .then((value) => (update.value = value))
+        .catch((error) => log.add(null, 'warn', 'event', `Atualização indisponível: ${error.message}`))
     const info = await window.iris.appInfo()
     log.add(
         null,

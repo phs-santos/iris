@@ -252,13 +252,14 @@ app.whenReady().then(async () => {
     // Empacotado, o macOS usa o .icns do bundle; em dev o Dock mostraria o ícone do Electron.
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(appIcon)
     registerAiIpc()
-    createWindow()
-    createTray()
-    await setupUpdater({
+    // Antes da janela: a interface pede o estado da atualização assim que abre.
+    setupUpdater({
         send: (status) => mainWindow?.webContents.send(IPC.updateStatus, status),
         // Sem isto, fechar a janela só a esconderia (RF-33) e a instalação não começaria.
         beforeInstall: () => (quitting = true)
     })
+    createWindow()
+    createTray()
 
     app.on('activate', showWindow)
 })

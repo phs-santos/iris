@@ -41,13 +41,52 @@ function unsupportedReason(): string | null {
     return null
 }
 
-export async function setupUpdater(options: {
-    send: (status: UpdateStatus) => void
-    beforeInstall: () => void
-}): Promise<void> {
+/**
+ * Registra os canais na hora e prepara o resto em segundo plano. A interface pede o estado logo
+ * que abre; se o canal ainda não existisse (a leitura das preferências e o codesign demoram), o
+ * pedido falharia e travaria o carregamento das contas.
+ */
+export function setupUpdater(options: { send: (status: UpdateStatus) => void; beforeInstall: () => void }): void {
+    const ready = prepare(options.send)
+
+    handle(IPC.updateInfo, async (): Promise<UpdateInfo> => {
+        const state = await ready
+        return {
+            currentVersion: app.getVersion(),
+            channel: state.channel,
+            status: state.controller?.current() ?? { state: 'unsupported', reason: state.reason ?? '' },
+            manual: state.manual
+        }
+    })
+    handle(IPC.updateSetChannel, async (_e, next: UpdateChannel) => {
+        check(isUpdateChannel(next), 'canal de atualização')
+        const state = await ready
+        state.channel = next
+        await saveSettings({ ...(await loadSettings()), updateChannel: next })
+        state.controller?.setChannel(next)
+    })
+    handle(IPC.updateCheck, async () => (await ready).controller?.check())
+    handle(IPC.updateDownload, async () => (await ready).controller?.download())
+    handle(IPC.updateOpenDownload, () => shell.openExternal(DOWNLOAD_PAGE))
+    handle(IPC.updateInstall, async () => {
+        const { controller } = await ready
+        if (controller?.current().state !== 'ready') return
+        options.beforeInstall()
+        controller.install()
+    })
+}
+
+interface UpdaterState {
+    channel: UpdateChannel
+    controller: UpdateController | null
+    reason: string | null
+    manual: boolean
+}
+
+async function prepare(send: (status: UpdateStatus) => void): Promise<UpdaterState> {
     // Quem instalou uma versão de teste (1.0.0-beta.1) continua recebendo as de teste, até escolher o estável.
     const prerelease = app.getVersion().includes('-')
-    let channel: UpdateChannel = (await loadSettings()).updateChannel ?? (prerelease ? 'beta' : 'stable')
+    const channel: UpdateChannel = (await loadSettings()).updateChannel ?? (prerelease ? 'beta' : 'stable')
     let controller: UpdateController | null = null
     let reason = unsupportedReason()
     const manual = !reason && (await adHocSigned())
@@ -56,31 +95,11 @@ export async function setupUpdater(options: {
         try {
             // O pacote é CommonJS: o `autoUpdater` é um getter que só aparece no export padrão.
             const { autoUpdater } = (await import('electron-updater')).default
-            controller = new UpdateController(autoUpdater, options.send, channel, manual)
+            controller = new UpdateController(autoUpdater, send, channel, manual)
             setTimeout(() => void controller?.check(), FIRST_CHECK_DELAY_MS)
         } catch (error) {
             reason = `O atualizador não iniciou: ${error instanceof Error ? error.message : String(error)}`
         }
     }
-
-    handle(IPC.updateInfo, (): UpdateInfo => ({
-        currentVersion: app.getVersion(),
-        channel,
-        status: controller?.current() ?? { state: 'unsupported', reason: reason ?? '' },
-        manual
-    }))
-    handle(IPC.updateSetChannel, async (_e, next: UpdateChannel) => {
-        check(isUpdateChannel(next), 'canal de atualização')
-        channel = next
-        await saveSettings({ ...(await loadSettings()), updateChannel: next })
-        controller?.setChannel(next)
-    })
-    handle(IPC.updateCheck, () => controller?.check())
-    handle(IPC.updateDownload, () => controller?.download())
-    handle(IPC.updateOpenDownload, () => shell.openExternal(DOWNLOAD_PAGE))
-    handle(IPC.updateInstall, () => {
-        if (controller?.current().state !== 'ready') return
-        options.beforeInstall()
-        controller.install()
-    })
+    return { channel, controller, reason, manual }
 }
