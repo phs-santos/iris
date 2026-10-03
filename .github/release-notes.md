@@ -5,10 +5,12 @@ Baixe só o arquivo do seu sistema:
 | Sistema | Arquivo |
 | --- | --- |
 | Windows | [Iris-Setup-VERSION.exe](https://github.com/phs-santos/iris/releases/download/vVERSION/Iris-Setup-VERSION.exe) |
-| macOS (Apple Silicon: M1 ou mais novo) | [Iris-VERSION-arm64.dmg](https://github.com/phs-santos/iris/releases/download/vVERSION/Iris-VERSION-arm64.dmg) |
-| macOS (Intel) | [Iris-VERSION.dmg](https://github.com/phs-santos/iris/releases/download/vVERSION/Iris-VERSION.dmg) |
+| macOS com chip Apple (M1 ou mais novo) | [Iris-VERSION-arm64.dmg](https://github.com/phs-santos/iris/releases/download/vVERSION/Iris-VERSION-arm64.dmg) |
+| macOS (Intel) | [Iris-VERSION-x64.dmg](https://github.com/phs-santos/iris/releases/download/vVERSION/Iris-VERSION-x64.dmg) |
 | Linux (Debian, Ubuntu, Mint) | [iris_VERSION_amd64.deb](https://github.com/phs-santos/iris/releases/download/vVERSION/iris_VERSION_amd64.deb) |
 | Linux (outras distribuições) | [Iris-VERSION.AppImage](https://github.com/phs-santos/iris/releases/download/vVERSION/Iris-VERSION.AppImage) |
+
+No Mac, veja o chip em **menu Apple → Sobre Este Mac**: "Apple M…" usa o `arm64`; "Intel" usa o `x64`.
 
 Os outros arquivos da lista abaixo não são para baixar à mão:
 

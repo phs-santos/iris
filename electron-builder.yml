@@ -34,6 +34,8 @@ nsis:
     oneClick: false
     allowToChangeInstallationDirectory: true
 mac:
+    # A arquitetura sempre no nome: sem isso o de Intel sai como "Iris-1.0.2.dmg" e parece ser o único.
+    artifactName: ${productName}-${version}-${arch}.${ext}
     # O .zip é o que a atualização automática do macOS baixa (RF-35); o .dmg é para instalar à mão.
     target:
         - target: dmg

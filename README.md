@@ -35,8 +35,8 @@ Baixe o instalador da [página de releases](https://github.com/phs-santos/iris/r
 | Sistema | Arquivo |
 | --- | --- |
 | Windows | `Iris-Setup-<versão>.exe` |
-| macOS (Apple Silicon) | `Iris-<versão>-arm64.dmg` |
-| macOS (Intel) | `Iris-<versão>.dmg` |
+| macOS com chip Apple (M1 ou mais novo) | `Iris-<versão>-arm64.dmg` |
+| macOS (Intel) | `Iris-<versão>-x64.dmg` |
 | Linux (Debian, Ubuntu, Mint) | `iris_<versão>_amd64.deb` (instale com `sudo apt install ./iris_<versão>_amd64.deb`) |
 | Linux (outras distribuições) | `Iris-<versão>.AppImage` (dê permissão de execução: `chmod +x`) |
 
