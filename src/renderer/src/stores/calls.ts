@@ -26,6 +26,8 @@ export interface CallView {
     endText?: string
     failed: boolean
     transfer?: string
+    /** Último retorno da transferência, para quem precisa do código (cenários). */
+    transferResult?: { code: number; reason: string; final: boolean }
     quality?: CallQuality | null
     dtmfRunning: boolean
     dtmfReceived: string
@@ -154,7 +156,10 @@ export const useCallsStore = defineStore('calls', () => {
         })
         call.on('transfer', (code, reason, final) => {
             const c = v()
-            if (c) c.transfer = `${code} ${reason}`.trim()
+            if (c) {
+                c.transfer = `${code} ${reason}`.trim()
+                c.transferResult = { code, reason, final }
+            }
             // Concluída a assistida, o PBX costuma derrubar as duas pernas; se não derrubar, o app desliga.
             if (c?.consultId && final && code >= 200 && code < 300) {
                 const consultId = c.consultId

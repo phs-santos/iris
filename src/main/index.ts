@@ -2,13 +2,15 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, Notification, s
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
-import { IPC, type Account, type Settings } from '@shared/types'
+import { IPC, type Account, type Scenario, type Settings } from '@shared/types'
 import {
     encryptionAvailable,
     getSecret,
     loadAccounts,
+    loadScenarios,
     loadSettings,
     saveAccounts,
+    saveScenarios,
     saveSettings,
     setSecret
 } from './storage'
@@ -162,6 +164,8 @@ app.on('certificate-error', (event, _webContents, url, error, _certificate, call
 function registerIpc(): void {
     ipcMain.handle(IPC.accountsLoad, () => loadAccounts())
     ipcMain.handle(IPC.accountsSave, (_e, accounts: Account[]) => saveAccounts(accounts))
+    ipcMain.handle(IPC.scenariosLoad, () => loadScenarios())
+    ipcMain.handle(IPC.scenariosSave, (_e, scenarios: Scenario[]) => saveScenarios(scenarios))
     ipcMain.handle(IPC.secretsGet, (_e, id: string) => getSecret(id))
     ipcMain.handle(IPC.secretsSet, (_e, id: string, password: string | null) => setSecret(id, password))
     ipcMain.handle(IPC.secretsAvailable, () => encryptionAvailable())

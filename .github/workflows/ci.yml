@@ -37,6 +37,8 @@ jobs:
             - run: npm run build
             - name: Ponta a ponta no modo simulado
               run: xvfb-run -a node tests/e2e/smoke.mjs
+            - name: Cenários no modo simulado
+              run: RUNS=5 xvfb-run -a node tests/e2e/scenarios.mjs
             - name: Subir Asterisk de teste
               run: |
                   ./docker/asterisk/gen-cert.sh
@@ -44,3 +46,5 @@ jobs:
                   sleep 8
             - name: Integração com Asterisk
               run: xvfb-run -a node tests/e2e/asterisk.mjs
+            - name: Cenário de URA 20 vezes no Asterisk (critério do M3)
+              run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/scenarios.mjs

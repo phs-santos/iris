@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import type { Account, CertificateErrorEvent } from '@shared/types'
 import { useAccountsStore } from './stores/accounts'
 import { useCallsStore } from './stores/calls'
@@ -12,6 +12,8 @@ import AccountForm from './components/AccountForm.vue'
 import ImportExportDialog from './components/ImportExportDialog.vue'
 import HealthDialog from './components/HealthDialog.vue'
 import AudioDialog from './components/AudioDialog.vue'
+import ScenariosPane from './components/ScenariosPane.vue'
+import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
 import logoMark from './assets/logo-mark.svg'
 
@@ -19,6 +21,8 @@ const accounts = useAccountsStore()
 const calls = useCallsStore()
 const log = useLogStore()
 const devices = useDevicesStore()
+const scenarios = useScenariosStore()
+const centerTab = ref<'phone' | 'scenarios'>('phone')
 
 const editing = ref<Account | null>(null)
 const showImportExport = ref(false)
@@ -62,8 +66,10 @@ function onKey(event: KeyboardEvent): void {
     if (!mod) return
     const selectedCall = calls.calls.find((c) => c.id === calls.selectedId && c.state !== 'ended')
     const key = event.key.toLowerCase()
-    if (key === 'l') dialer.value?.focus()
-    else if (key === 'enter' && calls.ringingIncoming[0]) void calls.answer(calls.ringingIncoming[0].id)
+    if (key === 'l') {
+        centerTab.value = 'phone'
+        void nextTick(() => dialer.value?.focus())
+    } else if (key === 'enter' && calls.ringingIncoming[0]) void calls.answer(calls.ringingIncoming[0].id)
     else if (key === 'e' && selectedCall) void calls.hangup(selectedCall.id)
     else if (key === 'm' && selectedCall) calls.toggleMute(selectedCall.id)
     else if (key === 'h' && selectedCall) void calls.toggleHold(selectedCall.id)
@@ -90,6 +96,7 @@ onMounted(async () => {
     )
     await devices.load()
     await accounts.load()
+    await scenarios.load()
 })
 onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
@@ -130,17 +137,43 @@ onUnmounted(() => {
             <AccountsPane @new="newAccount" @edit="(a) => (editing = a)" @health="(id) => (healthFor = id)" />
 
             <section class="center">
-                <DialerPane ref="dialer" />
-                <div class="calls-head">
-                    <span class="label">Chamadas</span>
-                    <span class="label tabular">{{ calls.active.length }} ativas</span>
+                <div class="center-tabs" role="tablist" aria-label="Área central">
+                    <button
+                        role="tab"
+                        class="ctab"
+                        :class="{ on: centerTab === 'phone' }"
+                        :aria-selected="centerTab === 'phone'"
+                        @click="centerTab = 'phone'"
+                    >
+                        Telefone
+                        <span v-if="calls.active.length" class="count tabular">{{ calls.active.length }}</span>
+                    </button>
+                    <button
+                        role="tab"
+                        class="ctab"
+                        :class="{ on: centerTab === 'scenarios' }"
+                        :aria-selected="centerTab === 'scenarios'"
+                        @click="centerTab = 'scenarios'"
+                    >
+                        Cenários
+                        <span v-if="scenarios.running" class="count run">rodando</span>
+                    </button>
                 </div>
-                <div class="calls">
-                    <CallCard v-for="call in calls.calls" :key="call.id" :call="call" />
-                    <p v-if="calls.calls.length === 0" class="empty">
-                        Nenhuma chamada. Escolha uma conta registrada e disque um número, ou use um dos atalhos acima.
-                    </p>
-                </div>
+                <template v-if="centerTab === 'phone'">
+                    <DialerPane ref="dialer" />
+                    <div class="calls-head">
+                        <span class="label">Chamadas</span>
+                        <span class="label tabular">{{ calls.active.length }} ativas</span>
+                    </div>
+                    <div class="calls">
+                        <CallCard v-for="call in calls.calls" :key="call.id" :call="call" />
+                        <p v-if="calls.calls.length === 0" class="empty">
+                            Nenhuma chamada. Escolha uma conta registrada e disque um número, ou use um dos atalhos
+                            acima.
+                        </p>
+                    </div>
+                </template>
+                <ScenariosPane v-else />
             </section>
 
             <LogPane />
@@ -211,6 +244,39 @@ onUnmounted(() => {
     min-width: 0;
     min-height: 0;
     border-right: 1px solid var(--line);
+}
+.center-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 8px 14px 0;
+    border-bottom: 1px solid var(--line);
+}
+.ctab {
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    padding: 6px 12px 8px;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+}
+.ctab.on {
+    color: var(--fg);
+    border-bottom-color: var(--accent);
+}
+.count {
+    font-size: 11px;
+    padding: 0 6px;
+    border-radius: 8px;
+    background: var(--raise);
+    color: var(--fg);
+}
+.count.run {
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .calls-head {
     display: flex;

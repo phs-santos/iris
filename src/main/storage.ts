@@ -1,7 +1,7 @@
 import { app, safeStorage } from 'electron'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import type { Account, AccountsFile, Settings } from '@shared/types'
+import type { Account, AccountsFile, Scenario, ScenariosFile, Settings } from '@shared/types'
 
 const dataDir = (): string => app.getPath('userData')
 const file = (name: string): string => join(dataDir(), name)
@@ -34,6 +34,16 @@ export async function loadAccounts(): Promise<Account[]> {
 export async function saveAccounts(accounts: Account[]): Promise<void> {
     const data: AccountsFile = { schemaVersion: 1, accounts }
     await writeJson('accounts.json', data)
+}
+
+export async function loadScenarios(): Promise<Scenario[]> {
+    const data = await readJson<ScenariosFile>('scenarios.json')
+    return Array.isArray(data?.scenarios) ? data.scenarios : []
+}
+
+export async function saveScenarios(scenarios: Scenario[]): Promise<void> {
+    const data: ScenariosFile = { schemaVersion: 1, scenarios }
+    await writeJson('scenarios.json', data)
 }
 
 const defaultSettings: Settings = { schemaVersion: 1, trustedHosts: [] }

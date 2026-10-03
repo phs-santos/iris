@@ -1,0 +1,570 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import type { Scenario, ScenarioStep, ScenarioStepType } from '@shared/types'
+import { useAccountsStore } from '@renderer/stores/accounts'
+import { useCallsStore } from '@renderer/stores/calls'
+import { useScenariosStore } from '@renderer/stores/scenarios'
+import {
+    CALL_STATES,
+    CHECKS,
+    STEP_TYPES,
+    lastCallAlias,
+    newScenario,
+    newStep,
+    validateScenario
+} from '@renderer/lib/scenarios'
+import { reportToText, type StepResult } from '@renderer/scenarios/runner'
+
+const accounts = useAccountsStore()
+const calls = useCallsStore()
+const store = useScenariosStore()
+
+const repeat = ref(20)
+const addType = ref<ScenarioStepType>('dial')
+const saved = ref('')
+
+const scenario = computed(() => store.selected)
+const errors = computed(() => (scenario.value ? validateScenario(scenario.value) : []))
+const ready = computed(() => Boolean(scenario.value?.accountId) && errors.value.every((e) => !e))
+
+/** Apelidos de chamada criados antes de cada passo, para as listas de escolha. */
+function aliasesBefore(index: number): string[] {
+    const list: string[] = []
+    for (const step of scenario.value?.steps.slice(0, index) ?? []) {
+        if ((step.type === 'dial' || step.type === 'answer') && step.call.trim() && !list.includes(step.call))
+            list.push(step.call)
+    }
+    return list
+}
+
+// Salva sozinho, um pouco depois da última edição.
+let timer: ReturnType<typeof setTimeout> | undefined
+watch(
+    () => JSON.stringify(scenario.value),
+    (now, before) => {
+        if (!before || !now || store.running) return
+        const id = scenario.value?.id
+        if (before && JSON.parse(before)?.id !== id) return
+        clearTimeout(timer)
+        timer = setTimeout(async () => {
+            await store.persist()
+            saved.value = 'salvo'
+            setTimeout(() => (saved.value = ''), 1500)
+        }, 400)
+    }
+)
+watch(
+    () => store.selectedId,
+    () => store.resetResults()
+)
+
+function addStep(): void {
+    const s = scenario.value
+    if (!s) return
+    s.steps.push(newStep(addType.value, lastCallAlias(s.steps)))
+}
+
+function move(index: number, delta: number): void {
+    const steps = scenario.value?.steps
+    if (!steps) return
+    const target = index + delta
+    if (target < 0 || target >= steps.length) return
+    const [step] = steps.splice(index, 1)
+    steps.splice(target, 0, step)
+    store.resetResults()
+}
+
+function removeStep(index: number): void {
+    scenario.value?.steps.splice(index, 1)
+    store.resetResults()
+}
+
+function changeType(index: number, type: ScenarioStepType): void {
+    const steps = scenario.value?.steps
+    if (!steps) return
+    steps[index] = newStep(type, lastCallAlias(steps, index))
+}
+
+/** Exemplo pronto: URA do PBX simulado ou do Asterisk de teste. */
+async function createIvrExample(): Promise<void> {
+    const created = await store.create()
+    const s: Scenario = newScenario(created.accountId, {
+        id: created.id,
+        name: 'URA 8000: atende e recebe DTMF',
+        steps: [
+            { type: 'register' },
+            { type: 'dial', to: '8000', call: 'c1' },
+            { type: 'waitState', call: 'c1', state: 'established', timeoutMs: 10_000 },
+            { type: 'wait', ms: 1000 },
+            { type: 'dtmf', call: 'c1', digits: '1234' },
+            { type: 'hangup', call: 'c1' }
+        ]
+    })
+    Object.assign(created, s)
+    await store.persist()
+}
+
+async function remove(): Promise<void> {
+    const s = scenario.value
+    if (!s || !confirm(`Excluir o cenário "${s.name}"?`)) return
+    await store.remove(s.id)
+}
+
+const statusMark = (r?: StepResult): { text: string; cls: string } => {
+    switch (r?.status) {
+        case 'running':
+            return { text: '…', cls: 'run' }
+        case 'passed':
+            return { text: `✓ ${r.ms} ms`, cls: 'ok' }
+        case 'failed':
+            return { text: `✗ ${r.ms} ms`, cls: 'bad' }
+        case 'skipped':
+            return { text: '–', cls: 'skip' }
+        default:
+            return { text: '', cls: '' }
+    }
+}
+
+const summary = computed(() => {
+    const run = store.lastRun
+    if (!run || store.batch) return null
+    return run.passed ? `Passou em ${run.ms} ms` : `Falhou no passo ${(run.failedAt ?? 0) + 1} (${run.ms} ms)`
+})
+
+async function exportReport(format: 'txt' | 'json'): Promise<void> {
+    const report = store.report
+    if (!report) return
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+    const content = format === 'txt' ? reportToText(report) : JSON.stringify(report, null, 2)
+    const path = await window.iris.files.saveText(`iris-cenario-${stamp}.${format}`, content)
+    if (path) saved.value = `relatório salvo em ${path}`
+}
+
+const accountOptions = computed(() =>
+    accounts.accounts.map((a) => ({ id: a.id, label: `${a.name} · ${a.extension}@${a.domain}` }))
+)
+const field = (step: ScenarioStep) => step as Record<string, any>
+/** Passos que podem usar outra conta além da de origem. */
+const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || type === 'dial' || type === 'answer'
+</script>
+
+<template>
+    <div class="scenarios">
+        <div class="bar">
+            <select
+                v-if="store.scenarios.length"
+                v-model="store.selectedId"
+                class="input pick"
+                aria-label="Cenário"
+                :disabled="store.running"
+            >
+                <option v-for="s in store.scenarios" :key="s.id" :value="s.id">{{ s.name }}</option>
+            </select>
+            <span v-else class="muted">Nenhum cenário ainda</span>
+            <button class="btn small" :disabled="store.running" @click="store.create()">+ Novo</button>
+            <button class="btn small" :disabled="store.running" @click="createIvrExample">+ Exemplo de URA</button>
+            <template v-if="scenario">
+                <button class="btn small" :disabled="store.running" @click="store.duplicate(scenario.id)">
+                    Duplicar
+                </button>
+                <button class="btn small" :disabled="store.running" @click="remove">Excluir</button>
+            </template>
+            <span class="note">{{ saved }}</span>
+        </div>
+
+        <p v-if="!scenario" class="empty">
+            Um cenário é um roteiro de passos (registrar, discar, aguardar estado, DTMF, transferir, verificar) que a
+            Íris executa sozinha e marca como passou ou falhou. Comece pelo exemplo de URA.
+        </p>
+
+        <template v-else>
+            <fieldset class="head" :disabled="store.running">
+                <label>
+                    <span class="label">Nome</span>
+                    <input v-model="scenario.name" class="input" aria-label="Nome do cenário" />
+                </label>
+                <label>
+                    <span class="label">Conta de origem</span>
+                    <select v-model="scenario.accountId" class="input" aria-label="Conta de origem">
+                        <option value="" disabled>Escolha a conta</option>
+                        <option v-for="a in accountOptions" :key="a.id" :value="a.id">{{ a.label }}</option>
+                    </select>
+                </label>
+            </fieldset>
+
+            <ol class="steps">
+                <li v-for="(step, i) in scenario.steps" :key="i" class="step" :class="statusMark(store.live[i]).cls">
+                    <fieldset class="row" :disabled="store.running">
+                        <span class="num tabular">{{ i + 1 }}</span>
+                        <div class="params">
+                            <select
+                                class="input type"
+                                :value="step.type"
+                                :aria-label="`Tipo do passo ${i + 1}`"
+                                @change="changeType(i, ($event.target as HTMLSelectElement).value as ScenarioStepType)"
+                            >
+                                <option v-for="t in STEP_TYPES" :key="t.type" :value="t.type">{{ t.label }}</option>
+                            </select>
+
+                            <template v-if="hasAccount(step.type)">
+                                <select
+                                    v-model="field(step).account"
+                                    class="input acct"
+                                    :aria-label="`Conta do passo ${i + 1}`"
+                                >
+                                    <option :value="undefined">conta de origem</option>
+                                    <option v-for="a in accountOptions" :key="a.id" :value="a.id">{{ a.label }}</option>
+                                </select>
+                            </template>
+
+                            <template v-if="step.type === 'dial' || step.type === 'transfer'">
+                                <input
+                                    v-model="step.to"
+                                    class="input mono short"
+                                    placeholder="número"
+                                    :aria-label="`Número do passo ${i + 1}`"
+                                />
+                            </template>
+                            <template v-if="step.type === 'dial' || step.type === 'answer'">
+                                <span class="muted">como</span>
+                                <input
+                                    v-model="step.call"
+                                    class="input mono tiny"
+                                    :aria-label="`Apelido da chamada do passo ${i + 1}`"
+                                />
+                            </template>
+
+                            <template
+                                v-if="
+                                    ['waitState', 'dtmf', 'transfer', 'hangup'].includes(step.type) ||
+                                    (step.type === 'verify' && step.check !== 'log')
+                                "
+                            >
+                                <select
+                                    v-model="field(step).call"
+                                    class="input tiny"
+                                    :aria-label="`Chamada do passo ${i + 1}`"
+                                >
+                                    <option v-for="a in aliasesBefore(i)" :key="a" :value="a">{{ a }}</option>
+                                    <option
+                                        v-if="!aliasesBefore(i).includes(field(step).call)"
+                                        :value="field(step).call"
+                                    >
+                                        {{ field(step).call || '?' }}
+                                    </option>
+                                </select>
+                            </template>
+
+                            <template v-if="step.type === 'waitState'">
+                                <select
+                                    v-model="step.state"
+                                    class="input"
+                                    :aria-label="`Estado esperado do passo ${i + 1}`"
+                                >
+                                    <option v-for="s in CALL_STATES" :key="s.state" :value="s.state">
+                                        {{ s.label }}
+                                    </option>
+                                </select>
+                            </template>
+                            <template v-if="step.type === 'dtmf'">
+                                <input
+                                    v-model="step.digits"
+                                    class="input mono short"
+                                    placeholder="1,w2,4321#"
+                                    :aria-label="`Dígitos do passo ${i + 1}`"
+                                />
+                            </template>
+                            <template v-if="step.type === 'verify'">
+                                <select
+                                    v-model="step.check"
+                                    class="input"
+                                    :aria-label="`Verificação do passo ${i + 1}`"
+                                >
+                                    <option v-for="c in CHECKS" :key="c.check" :value="c.check">{{ c.label }}</option>
+                                </select>
+                                <input
+                                    v-model="step.expected"
+                                    class="input mono short"
+                                    :placeholder="CHECKS.find((c) => c.check === step.check)?.hint"
+                                    :aria-label="`Valor esperado do passo ${i + 1}`"
+                                />
+                            </template>
+                            <template v-if="step.type === 'wait'">
+                                <input
+                                    class="input mono tiny"
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    :value="step.ms / 1000"
+                                    :aria-label="`Segundos do passo ${i + 1}`"
+                                    @input="
+                                        step.ms = Math.round(Number(($event.target as HTMLInputElement).value) * 1000)
+                                    "
+                                />
+                                <span class="muted">s</span>
+                            </template>
+                            <template v-if="step.type === 'waitState' || step.type === 'answer'">
+                                <span class="muted">até</span>
+                                <input
+                                    class="input mono tiny"
+                                    type="number"
+                                    min="1"
+                                    :value="step.timeoutMs / 1000"
+                                    :aria-label="`Tempo limite do passo ${i + 1}`"
+                                    @input="
+                                        step.timeoutMs = Math.round(
+                                            Number(($event.target as HTMLInputElement).value) * 1000
+                                        )
+                                    "
+                                />
+                                <span class="muted">s</span>
+                            </template>
+                        </div>
+                        <div class="side">
+                            <span class="mark mono tabular" :data-testid="`resultado-${i + 1}`">
+                                {{ statusMark(store.live[i]).text }}
+                            </span>
+                            <button class="btn small ghost" aria-label="Subir" :disabled="i === 0" @click="move(i, -1)">
+                                ↑
+                            </button>
+                            <button
+                                class="btn small ghost"
+                                aria-label="Descer"
+                                :disabled="i === scenario.steps.length - 1"
+                                @click="move(i, 1)"
+                            >
+                                ↓
+                            </button>
+                            <button class="btn small ghost" aria-label="Remover passo" @click="removeStep(i)">✕</button>
+                        </div>
+                    </fieldset>
+                    <p v-if="store.live[i]?.message" class="msg" :class="statusMark(store.live[i]).cls">
+                        {{ store.live[i].message }}
+                    </p>
+                    <p v-else-if="errors[i]" class="msg warn">{{ errors[i] }}</p>
+                </li>
+            </ol>
+
+            <fieldset class="add" :disabled="store.running">
+                <select v-model="addType" class="input" aria-label="Tipo do novo passo">
+                    <option v-for="t in STEP_TYPES" :key="t.type" :value="t.type">{{ t.label }}</option>
+                </select>
+                <button class="btn small" @click="addStep">+ Passo</button>
+            </fieldset>
+
+            <div class="run">
+                <template v-if="!store.running">
+                    <button class="btn primary" :disabled="!ready" @click="store.run(scenario.id)">Executar</button>
+                    <span class="muted">ou</span>
+                    <input
+                        v-model.number="repeat"
+                        class="input mono tiny"
+                        type="number"
+                        min="2"
+                        max="500"
+                        aria-label="Quantidade de execuções"
+                    />
+                    <button class="btn" :disabled="!ready || repeat < 2" @click="store.run(scenario.id, repeat)">
+                        Repetir {{ repeat }}×
+                    </button>
+                </template>
+                <button v-else class="btn stop" @click="store.stop()">Parar</button>
+                <span v-if="store.batch" class="mono tabular progress">
+                    {{ store.batch.done }}/{{ store.batch.total }} · {{ store.batch.passed }} passaram
+                </span>
+                <span v-else-if="summary" class="mono" :class="store.lastRun?.passed ? 'ok' : 'bad'">{{
+                    summary
+                }}</span>
+                <span class="spacer"></span>
+                <span class="muted tabular">{{ calls.active.length }} chamadas ativas</span>
+            </div>
+            <p v-if="!ready && !store.running" class="hint">
+                {{ !scenario.accountId ? 'Escolha a conta de origem.' : 'Corrija os passos marcados para executar.' }}
+            </p>
+
+            <section v-if="store.report && store.report.runs > 1" class="report" aria-label="Relatório">
+                <div class="figures">
+                    <span
+                        ><b class="tabular">{{ store.report.successRate }}%</b> de sucesso</span
+                    >
+                    <span class="tabular">{{ store.report.passed }}/{{ store.report.runs }} passaram</span>
+                    <span class="tabular">média {{ store.report.avgMs }} ms · p95 {{ store.report.p95Ms }} ms</span>
+                </div>
+                <ul v-if="store.report.failures.length" class="failures">
+                    <li v-for="f in store.report.failures" :key="f.step">
+                        passo {{ f.step }} ({{ f.description }}): {{ f.count }}× · {{ f.lastMessage }}
+                    </li>
+                </ul>
+                <div class="exports">
+                    <button class="btn small" @click="exportReport('txt')">Relatório .txt</button>
+                    <button class="btn small" @click="exportReport('json')">Relatório .json</button>
+                </div>
+            </section>
+        </template>
+    </div>
+</template>
+
+<style scoped>
+.scenarios {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 12px 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.bar,
+.run,
+.add,
+.figures,
+.exports {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+fieldset {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+}
+.pick {
+    min-width: 200px;
+    flex: 1;
+}
+.head {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.head label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.step {
+    border: 1px solid var(--line);
+    border-left-width: 3px;
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: var(--panel);
+}
+.step.ok {
+    border-left-color: var(--ok);
+}
+.step.bad {
+    border-left-color: var(--bad);
+}
+.step.run {
+    border-left-color: var(--accent);
+}
+.step.skip {
+    opacity: 0.6;
+}
+.row {
+    display: grid;
+    grid-template-columns: 18px 1fr auto;
+    align-items: start;
+    gap: 6px;
+}
+.params {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+.params .input {
+    width: auto;
+}
+.side {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+.num {
+    padding-top: 6px;
+}
+.acct {
+    max-width: 190px;
+}
+.num {
+    width: 18px;
+    color: var(--faint);
+    text-align: right;
+}
+.params .type {
+    width: 150px;
+}
+.add .input {
+    width: 180px;
+}
+.params .short {
+    width: 110px;
+}
+.params .tiny,
+.run .tiny {
+    width: 64px;
+}
+.spacer {
+    flex: 1;
+}
+.mark {
+    min-width: 70px;
+    text-align: right;
+    font-size: 12px;
+}
+.ok {
+    color: var(--ok);
+}
+.bad {
+    color: var(--bad);
+}
+.run .progress,
+.muted,
+.note,
+.hint {
+    color: var(--muted);
+    font-size: 12px;
+}
+.msg {
+    margin: 4px 0 0 24px;
+    font-size: 12px;
+    color: var(--muted);
+}
+.msg.bad {
+    color: var(--bad);
+}
+.msg.warn {
+    color: var(--warn);
+}
+.empty {
+    color: var(--muted);
+    line-height: 1.6;
+}
+.report {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: var(--panel-2);
+}
+.failures {
+    margin: 0;
+    padding-left: 18px;
+    color: var(--bad);
+    font-size: 12px;
+}
+</style>

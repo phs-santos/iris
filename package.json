@@ -17,6 +17,7 @@
         "dist:win": "electron-vite build && electron-builder --win --publish never",
         "dist:mac": "electron-vite build && electron-builder --mac --publish never",
         "test:e2e": "electron-vite build && node tests/e2e/smoke.mjs",
+        "test:scenarios": "electron-vite build && node tests/e2e/scenarios.mjs",
         "test:pbx": "electron-vite build && node tests/e2e/asterisk.mjs",
         "test:load": "electron-vite build && node tests/e2e/load.mjs",
         "postinstall": "node scripts/apply-patches.mjs",

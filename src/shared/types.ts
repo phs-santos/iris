@@ -37,6 +37,38 @@ export interface AccountsFile {
     accounts: Account[]
 }
 
+// ─── Cenários (RF-28 a RF-30) ──────────────────────────────────────────────
+// Cada chamada aberta por um passo ganha um apelido ("c1"); os passos seguintes se referem a ela por ele.
+
+export type ScenarioCallState = 'ringing' | 'early' | 'established' | 'held' | 'ended'
+export type ScenarioCheck = 'code' | 'dtmfReceived' | 'log'
+
+export type ScenarioStep =
+    | { type: 'register'; account?: string }
+    | { type: 'dial'; account?: string; to: string; call: string }
+    | { type: 'answer'; account?: string; call: string; timeoutMs: number }
+    | { type: 'wait'; ms: number }
+    | { type: 'waitState'; call: string; state: ScenarioCallState; timeoutMs: number }
+    | { type: 'dtmf'; call: string; digits: string }
+    | { type: 'transfer'; call: string; to: string }
+    | { type: 'hangup'; call: string }
+    | { type: 'verify'; call: string; check: ScenarioCheck; expected: string }
+
+export type ScenarioStepType = ScenarioStep['type']
+
+export interface Scenario {
+    id: string
+    name: string
+    /** Conta de origem: usada pelos passos que não escolhem outra. */
+    accountId: string
+    steps: ScenarioStep[]
+}
+
+export interface ScenariosFile {
+    schemaVersion: 1
+    scenarios: Scenario[]
+}
+
 export interface Settings {
     schemaVersion: 1
     /** Hosts cujo certificado TLS inválido o usuário aceitou explicitamente (RF-37). */
@@ -64,6 +96,10 @@ export interface IrisApi {
         load(): Promise<Account[]>
         save(accounts: Account[]): Promise<void>
     }
+    scenarios: {
+        load(): Promise<Scenario[]>
+        save(scenarios: Scenario[]): Promise<void>
+    }
     secrets: {
         get(accountId: string): Promise<string | null>
         set(accountId: string, password: string | null): Promise<void>
@@ -85,6 +121,8 @@ export interface IrisApi {
 export const IPC = {
     accountsLoad: 'accounts:load',
     accountsSave: 'accounts:save',
+    scenariosLoad: 'scenarios:load',
+    scenariosSave: 'scenarios:save',
     secretsGet: 'secrets:get',
     secretsSet: 'secrets:set',
     secretsAvailable: 'secrets:available',
