@@ -30,7 +30,7 @@ Recursos (RNF-05): a CPU ociosa com 10 contas registradas fica em 0,1%, abaixo d
 
 ## Instalar
 
-Baixe o instalador da [página de releases](https://github.com/phs-santos/iris/releases/latest):
+Baixe o instalador da [página de releases](https://github.com/phs-santos/iris/releases/latest). Pegue só o arquivo do seu sistema; o "Source code (zip)" que aparece na lista é o código do projeto, não o app.
 
 | Sistema | Arquivo |
 | --- | --- |
