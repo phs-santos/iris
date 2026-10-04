@@ -420,6 +420,30 @@ export const GUIDE: GuideSection[] = [
         ]
     },
     {
+        id: 'historico',
+        title: 'Histórico de chamadas',
+        summary: 'O que aconteceu com cada chamada, depois que o cartão dela sumiu da tela.',
+        blocks: [
+            {
+                type: 'p',
+                text: 'A aba **Histórico**, ao lado de Telefone e Cenários, lista as chamadas encerradas, da mais nova para a mais antiga: o número, a conta, a hora, quanto tempo durou a conversa e como terminou, com o código SIP quando houve falha (por exemplo `486 Busy Here`).'
+            },
+            {
+                type: 'list',
+                items: [
+                    '**Ligar de novo** disca o mesmo número pela mesma conta e volta para a aba Telefone. Fica apagado se a conta não está registrada.',
+                    '**Fluxo SIP** abre o diagrama das chamadas daquela conta. O diagrama vem do log, que só existe enquanto o app está aberto: para chamadas de antes de fechar o app, a lista continua, mas o diagrama não.',
+                    '**Limpar histórico** apaga tudo, depois de confirmar.'
+                ]
+            },
+            {
+                type: 'note',
+                kind: 'dica',
+                text: 'O histórico guarda as 500 chamadas mais recentes em `history.json`, na pasta de dados. Chamadas feitas por cenários também entram.'
+            }
+        ]
+    },
+    {
         id: 'transferencia',
         title: 'Transferência',
         summary: 'Cega, para passar a chamada adiante na hora; assistida, para falar com o destino antes.',
@@ -959,6 +983,7 @@ export const GUIDE: GuideSection[] = [
                         '`senhas.json`, cifrado com uma chave própria (`chave-local.bin`); os dois só podem ser lidos pela sua conta do sistema'
                     ],
                     ['Cenários', '`scenarios.json`'],
+                    ['Histórico de chamadas', '`history.json`, com as 500 mais recentes'],
                     ['Preferências', '`settings.json`: áudio, canal de atualização, hosts confiáveis, opções da IA'],
                     ['Log das contas (eventos e SIP)', 'Só na memória, até o app fechar ou você salvar'],
                     [

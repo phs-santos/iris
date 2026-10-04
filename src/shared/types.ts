@@ -4,6 +4,7 @@ import type { AiModel, AiRequest, AiResult, AiSettings, AiStatus } from './ai'
 import type { CliConfig } from './cli'
 import type { Appearance, Profile } from './appearance'
 import type { TrayCounts } from './tray'
+import type { HistoryEntry } from './history'
 import type { AccountTransport, SipTransportKind } from './sip-target'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
@@ -227,6 +228,11 @@ export interface IrisApi {
         load(): Promise<Scenario[]>
         save(scenarios: Scenario[]): Promise<void>
     }
+    /** Histórico de chamadas (RF-40). */
+    history: {
+        load(): Promise<HistoryEntry[]>
+        save(entries: HistoryEntry[]): Promise<void>
+    }
     secrets: {
         get(accountId: string): Promise<string | null>
         set(accountId: string, password: string | null): Promise<void>
@@ -305,6 +311,8 @@ export const IPC = {
     accountsSave: 'accounts:save',
     scenariosLoad: 'scenarios:load',
     scenariosSave: 'scenarios:save',
+    historyLoad: 'history:load',
+    historySave: 'history:save',
     secretsGet: 'secrets:get',
     secretsSet: 'secrets:set',
     secretsStatus: 'secrets:status',

@@ -59,6 +59,26 @@ try {
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
     step('chamada encerrada dos dois lados')
 
+    // Histórico (RF-40): as duas pontas da chamada ficam na lista e no arquivo.
+    await page.getByRole('tab', { name: 'Histórico' }).click()
+    const history = page.locator('.history .entry')
+    await history.filter({ hasText: '1002' }).filter({ hasText: 'Suporte 1001' }).first().waitFor()
+    await history.filter({ hasText: '1001' }).filter({ hasText: 'Vendas 1002' }).first().waitFor()
+    const calls = JSON.parse(readFileSync(join(userData, 'history.json'), 'utf8')).entries
+    if (calls.length !== 2 || !calls.every((e) => e.answered && e.durationMs > 0))
+        throw new Error(`histórico gravado errado: ${JSON.stringify(calls)}`)
+    await page.getByRole('button', { name: 'Ligar de novo para 1002' }).click()
+    await page
+        .locator('.call', { hasText: /1001\s*→\s*1002/ })
+        .locator('.pill', { hasText: 'em chamada' })
+        .waitFor({ timeout: 8000 })
+    await page
+        .locator('.call', { hasText: /1001\s*→\s*1002/ })
+        .getByRole('button', { name: 'Desligar' })
+        .click()
+    await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
+    step('histórico lista a chamada, grava em history.json e liga de novo')
+
     // Transferência assistida (RF-16): 1001 liga para 1002, que consulta a URA 8000 e transfere.
     const live = (text) => page.locator('.call:not(.ended)', { hasText: text })
     await page.locator('.chip', { hasText: '1002' }).click()
