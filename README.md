@@ -4,18 +4,20 @@ Na mitologia grega, Íris é a mensageira dos deuses, que leva recados entre o c
 
 Softphone desktop para testar telefonia: registra várias contas de vários PBX ao mesmo tempo, liga entre elas e mostra o SIP de cada uma na mesma janela. Feito com Electron, Vue 3 e [easy-sipjs](https://www.npmjs.com/package/easy-sipjs).
 
+**O que o PBX precisa ter:** para chamadas, SIP sobre WebSocket seguro (WSS) com áudio WebRTC. Num PBX que só fala SIP puro (UDP, TCP ou TLS), a Íris hoje registra o ramal, mede a saúde e mostra o SIP; as chamadas por SIP puro estão em construção (RF-39).
+
 A especificação completa (requisitos, arquitetura e plano de entrega) está em [docs/ESPECIFICACAO.md](docs/ESPECIFICACAO.md), e o conceito visual em [docs/CONCEITO.html](docs/CONCEITO.html). Os dois usam o nome antigo do projeto, SIP Bench.
 
 ## Estado atual
 
-Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)** e **M3 (cenários)** concluídos:
+Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)** e **M3 (cenários)** concluídos. O **M4 (acabamento)** está em andamento: faltam a assinatura dos instaladores (RNF-17), o teste de uso com três pessoas (RNF-11) e o checklist com FreeSWITCH e Kamailio (RNF-02).
 
 | Requisito | O que já funciona |
 | --- | --- |
 | RF-01, 02, 03, 04 | Cadastro de contas, agrupamento por PBX, registrar uma ou todas, estado com código SIP do erro |
 | RF-05, 06 | Testar conexão antes de salvar; registrar ao abrir o app |
 | RF-07 | Importar e exportar contas em JSON, sem senhas por padrão |
-| RF-08 | Reconexão e renovação de registro (do easy-sipjs) |
+| RF-08, RNF-06 | Renovação de registro e reconexão com espera crescente (2 s a 1 min) e limite de tentativas em Configurações → Conexão. Vale também para a primeira conexão que falha; senha errada não é tentada de novo |
 | RF-09 a RF-14 | Discar, receber, auto-atender, várias chamadas, mudo, espera, DTMF com sequência e pausas |
 | RF-15, 16, 17, 18 | Transferência cega e assistida (consulta, concluir ou voltar) com progresso; cabeçalhos SIP extras no INVITE |
 | RF-19 | Escolha de microfone e alto-falante, com medidor e som de teste, aplicada também às chamadas em andamento |
@@ -24,9 +26,14 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-24, 25, 26 | Saúde da conta, diagnóstico de microfone e TURN, qualidade da chamada |
 | RF-28, 29, 30 | Cenários: editor de passos (registrar, discar, atender, esperar, aguardar estado, DTMF, transferir, desligar, verificar), resultado de cada passo com tempo, repetição N vezes com relatório .txt/.json |
 | RF-31 | Cenários pela linha de comando, sem janela: resultado de cada passo no terminal, relatório e código de saída 1 quando algum passo falha |
-| RF-32, 33, 37 | Modo simulado, ícone na bandeja, aceite de certificado autoassinado por host |
+| RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
-| RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Ainda falta o teste com um release publicado |
+| RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
+| RF-39 (entrega 1 de 3) | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde e mostra o SIP bruto. Chamadas ficam para as entregas 2 e 3 |
+| RNF-13 | Textos da interface em arquivos de tradução (`src/renderer/src/i18n`), em português e prontos para inglês |
+| RNF-14 | Log interno do app em arquivo rotativo (5 × 10 MB) em `logs/` na pasta de dados |
+| RNF-15 | Lint (ESLint) e cobertura da camada de domínio no CI, com mínimo de 70% |
+| RNF-01, RNF-04 | O CI abre o app empacotado nos três sistemas e mede a abertura e o registro |
 
 Recursos (RNF-05): a CPU ociosa com 10 contas registradas fica em 0,1%, abaixo do limite de 2%. A memória com 10 contas e 1 chamada ficou entre 331 e 389 MB no macOS com tela retina e em 350 MB no Linux do CI, acima do limite de 300 MB; é uma pendência conhecida.
 
@@ -110,11 +117,15 @@ Cadastre contas com domínio `127.0.0.1`, WebSocket `wss://127.0.0.1:8089/ws`, r
 
 Números do plano de discagem: `1001`–`1020` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `486` (ocupado).
 
+Para SIP puro (RF-39), o mesmo Asterisk atende em UDP e TCP na porta `5060` e em TLS na `5061`, com os ramais `2001` a `2005` (senha `1234`). Na conta, escolha o transporte e use o domínio `127.0.0.1`.
+
 ## Testes
 
 ```bash
 npm run typecheck   # TypeScript estrito
+npm run lint        # ESLint: defeitos e regras de arquitetura (sem eval, sem v-html, SIP só pelo SipEngine)
 npm test            # testes de unidade (Vitest)
+npm run test:coverage   # os mesmos, com cobertura da camada de domínio (mínimo de 70%)
 npm run test:e2e    # ponta a ponta no modo simulado (abre o app)
 npm run test:scenarios   # cenários: executa, força falha, repete 20× e exporta relatório
 npm run test:cli    # linha de comando: códigos de saída 0, 1 e 2
@@ -122,7 +133,11 @@ npm run test:senhas # senhas cifradas em arquivo local e migração do cofre do 
 npm run test:ai     # ajuda da IA com uma OpenRouter falsa: máscara, chave cifrada e resposta na tela
 npm run test:a11y   # acessibilidade: axe (WCAG A/AA) em todas as telas e atalhos de teclado
 npm run licenses    # licenças das bibliotecas que vão dentro do app
+npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
+npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
+npm run test:sip    # SIP puro: registro por UDP, TCP e TLS no Asterisk (RF-39)
+npm run test:reconexao  # derruba o contêiner do PBX e confere que as contas voltam sozinhas (RNF-06)
 npm run test:load   # carga: 20 contas e 4 chamadas no Asterisk, mede a resposta da interface
 npm run test:resources   # recursos: RAM com 10 contas e 1 chamada e CPU ociosa, no Asterisk (RNF-05)
 ```
@@ -147,11 +162,15 @@ O botão **Modo Telefone** na barra de cima troca a Bancada por uma janela estre
 
 O botão **Configurações** na barra de cima (ou **Ctrl+,**, no macOS **Cmd+,**) abre uma tela única com Perfil (seu nome e a conta principal), Aparência (seis paletas de cor ou a sua própria cor, e o tamanho da interface), Áudio, Ajuda da IA, Certificados aceitos, Importar e exportar e Atualização.
 
+## Tradução
+
+Os componentes não têm texto fixo (RNF-13): pedem cada texto pelo nome a `$t()` no modelo ou `t()` no script. Os textos em português ficam em `src/renderer/src/i18n/pt-BR.ts`, um grupo por componente, e o guia em `guide.pt-BR.ts`. Para outro idioma, copie os dois arquivos, traduza os valores e registre o catálogo em `i18n/index.ts`. `npm run lint` reprova texto fixo num componente (`scripts/check-i18n.mjs`). As linhas do log de eventos, as mensagens do processo principal e o modo de linha de comando ainda estão só em português.
+
 ## Guia de uso
 
 O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 23 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
 
-O texto fica em `src/renderer/src/guide/content.ts`. As capturas são geradas do próprio app: depois de mudar a interface, rode `npm run guide:shots`.
+O texto fica em `src/renderer/src/i18n/guide.pt-BR.ts`. As capturas são geradas do próprio app: depois de mudar a interface, rode `npm run guide:shots`.
 
 ## Ajuda da IA
 
@@ -185,7 +204,8 @@ Versão com hífen (`1.2.0-beta.1`) sai marcada como pré-lançamento e chega s�
 ## Estrutura
 
 ```
-src/main/       processo principal: janela, bandeja, arquivos, senhas, certificados
+src/main/       processo principal: janela, bandeja, arquivos, senhas, certificados, log interno
+  sip/          motor próprio de SIP puro: mensagens, digest, transporte e user-agent (RF-39)
 src/preload/    ponte com canais fixos de IPC (window.iris)
 src/shared/     tipos usados pelos três processos
 src/renderer/   interface Vue
@@ -195,8 +215,9 @@ src/renderer/   interface Vue
 tests/          unidade (Vitest) e ponta a ponta (Playwright)
 docker/         Asterisk de teste
 patches/        correção aplicada ao easy-sipjs no npm install
-build/          ícone do app: icon.svg (fonte) e icon.png 1024 px, usado pelo electron-builder
-resources/      icon.png 512 px para a janela e o Dock em dev
+build/          ícone do app: icon.svg (fonte), tray.svg (marca de uma cor só) e icon.png 1024 px, usado pelo electron-builder
+resources/      icon.png 512 px para a janela e o Dock em dev, e tray-<estado>.png para a bandeja
+                (os PNG saem dos SVG com `npm run icons`)
 ```
 
 ## Correção no easy-sipjs
@@ -207,6 +228,8 @@ O easy-sipjs 2.7.6 registra com `transport=wss` no Contact. O Asterisk responde 
 
 - Contas em `accounts.json` e preferências em `settings.json`, na pasta de dados do usuário.
 - Senhas em `senhas.json`, cifradas com AES-256-GCM por uma chave própria (`chave-local.bin`), os dois legíveis só pela sua conta. O cofre do sistema não é usado, para o macOS não pedir a senha de login. Trate a pasta de dados como confidencial.
+- Um arquivo de dados estragado nunca é sobrescrito: vai para o lado (`accounts.json.corrompido-<data>`), a tela avisa e o app abre.
+- O log interno do app fica em `logs/iris.log` na pasta de dados (5 arquivos de 10 MB). Guarda só falhas do próprio app, sem SIP e sem senha; é o primeiro lugar para olhar quando algo não abre.
 - A interface roda isolada (`contextIsolation`, `sandbox`, CSP) e só fala com o sistema pelos canais de `src/preload`.
 
 ## Licença
