@@ -1,5 +1,5 @@
-// Motor próprio, primeira entrega (RF-39): contas por SIP puro registram no Asterisk por UDP, TCP e
-// TLS, medem a Saúde por OPTIONS, mostram o SIP bruto e desregistram.
+// Motor próprio (RF-39): contas por SIP puro registram no Asterisk por UDP, TCP e TLS, medem a Saúde
+// por OPTIONS, mostram o SIP bruto, ligam e recebem chamadas com áudio G.711 e DTMF, e desregistram.
 // Uso: docker compose up -d && npm run build && node tests/e2e/sip-puro.mjs
 import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -14,15 +14,16 @@ const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 const contacts = () => execSync(`docker exec ${CONTAINER} asterisk -rx "pjsip show contacts"`).toString()
 
+// Com IRIS_APP, roda contra o app empacotado (o pacote de diagnóstico do test:pacote).
 const app = await electron.launch({
-    args,
+    ...(process.env.IRIS_APP ? { executablePath: process.env.IRIS_APP, args: args.slice(1) } : { args }),
     env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
 })
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)
 const account = (name) => page.locator('.acc', { hasText: name })
 
-async function addAccount(name, ext, transport, password = '1234') {
+async function addAccount(name, ext, transport, password = '1234', autoAnswer = false) {
     await page.getByRole('button', { name: '+ Nova' }).click()
     const form = page.locator('form.dialog')
     await form.getByRole('textbox', { name: 'Nome' }).fill(name)
@@ -32,7 +33,21 @@ async function addAccount(name, ext, transport, password = '1234') {
     await form.getByLabel('Transporte').selectOption({ label: `SIP por ${transport}` })
     if (await form.getByRole('textbox', { name: 'WebSocket (WSS)' }).count())
         throw new Error('o campo do WebSocket continua na tela de uma conta de SIP puro')
+    if (autoAnswer) await form.getByText('Auto-atender após').locator('input[type=checkbox]').check()
     await form.getByRole('button', { name: 'Salvar e registrar' }).click()
+}
+
+const call = (text) => page.locator('.call', { hasText: text })
+async function dial(from, number) {
+    await account(from).locator('.row').click()
+    await page.getByLabel('Número').fill(number)
+    await page.getByRole('button', { name: 'Ligar', exact: true }).click()
+}
+/** A linha de qualidade só aparece quando chegam pacotes RTP: prova que o áudio está vindo. */
+async function expectAudio(card, what) {
+    const quality = card.locator('.quality')
+    await quality.filter({ hasText: /PCM[UA]/ }).waitFor({ timeout: 15000 })
+    step(`${what}: ${(await quality.textContent()).trim().replace(/\s+/g, ' ')}`)
 }
 
 async function expectContact(ext, present) {
@@ -52,7 +67,7 @@ try {
     await expectContact('2001', true)
     step('2001 registrou por UDP e o Asterisk tem o contato')
 
-    await addAccount('Puro TCP', '2002', 'TCP')
+    await addAccount('Puro TCP', '2002', 'TCP', '1234', true)
     await account('Puro TCP').locator('.dot.registered').waitFor({ timeout: 15000 })
     await expectContact('2002', true)
     step('2002 registrou por TCP')
@@ -92,6 +107,97 @@ try {
     if (/response="[0-9a-f]{16,}"/.test(text)) throw new Error('a resposta do desafio apareceu no log (RNF-10)')
     step('SIP bruto mostra REGISTER e 200 OK, sem a resposta do desafio')
 
+    // ─── Chamadas (segunda entrega) ───
+    await page.getByRole('tab', { name: 'Eventos' }).click()
+    await dial('Puro UDP', '600')
+    const echo = call(/2001\s*→\s*600/)
+    await echo.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await expectAudio(echo, 'chamada para o eco atendida, com áudio voltando')
+    await echo.getByRole('button', { name: 'Mudo' }).click()
+    await echo.getByRole('button', { name: 'Desligar' }).click()
+    await echo.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
+    step('desligar encerra a chamada (BYE)')
+
+    await dial('Puro UDP', '486')
+    await call('486 Busy Here').waitFor({ timeout: 20000 })
+    step('número ocupado: 486 no cartão')
+
+    await dial('Puro UDP', '8000')
+    const ivr = call(/2001\s*→\s*8000/)
+    await ivr.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await ivr.getByRole('button', { name: 'DTMF' }).click()
+    await ivr.getByLabel('Sequência DTMF').fill('w1 4321')
+    await ivr.getByRole('button', { name: 'Enviar' }).click()
+    let out = ''
+    for (let i = 0; i < 25 && !/URA recebeu/.test(out); i++) {
+        await page.waitForTimeout(1000)
+        out = execSync('docker compose logs --since 40s asterisk', { encoding: 'utf8' })
+    }
+    if (!/URA recebeu 4321/.test(out))
+        throw new Error(`a URA não recebeu 4321 por RTP (recebeu "${/URA recebeu (\S*)/.exec(out)?.[1] ?? 'nada'}")`)
+    await page
+        .locator('.list')
+        .getByText('Chamada para 8000: Encerrada pelo outro lado')
+        .first()
+        .waitFor({ timeout: 15000 })
+    step('DTMF por RTP: a URA recebeu 4321 e desligou')
+
+    // Entre duas contas de SIP puro: UDP liga, TCP atende sozinha.
+    await dial('Puro UDP', '2002')
+    const caller = call(/2001\s*→\s*2002/)
+    const callee = call(/2002\s*←\s*2001/)
+    await callee.waitFor({ timeout: 20000 })
+    await caller.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await callee.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await expectAudio(caller, 'chamada entre duas contas de SIP puro, áudio em quem ligou')
+    await expectAudio(callee, 'e em quem atendeu')
+    await callee.getByRole('button', { name: 'Desligar' }).click()
+    await caller.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
+    step('quem atendeu desligou e o outro lado encerrou')
+
+    // SIP puro com WebRTC: o Asterisk faz a ponte entre o RTP simples e o DTLS-SRTP. O ramal 1021 só
+    // fala G.711, porque o Asterisk de teste não converte Opus.
+    await page.getByRole('button', { name: '+ Nova' }).click()
+    const web = page.locator('form.dialog')
+    await web.getByRole('textbox', { name: 'Nome' }).fill('Web 1021')
+    await web.getByRole('textbox', { name: 'Ramal' }).fill('1021')
+    await web.getByRole('textbox', { name: 'Domínio SIP' }).fill(HOST)
+    await web.getByLabel('Senha').fill('1234')
+    await web.getByRole('textbox', { name: 'WebSocket (WSS)' }).fill(process.env.PBX_WS ?? `wss://${HOST}:8089/ws`)
+    await web.getByText('Auto-atender após').locator('input[type=checkbox]').check()
+    await web.getByRole('button', { name: 'Salvar e registrar' }).click()
+    await account('Web 1021').locator('.dot.registered').waitFor({ timeout: 15000 })
+    await dial('Puro UDP', '1021')
+    const toWeb = call(/2001\s*→\s*1021/)
+    const atWeb = call(/1021\s*←\s*2001/)
+    await toWeb.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 25000 })
+    await atWeb.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 25000 })
+    await expectAudio(toWeb, 'SIP puro ligou para um ramal WebRTC, áudio no lado do SIP puro')
+    await atWeb.locator('.quality').waitFor({ timeout: 15000 })
+    step('e o lado WebRTC também mede o áudio')
+    await toWeb.getByRole('button', { name: 'Desligar' }).click()
+    await atWeb.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
+    await page.waitForTimeout(500)
+
+    // Quem liga desiste antes de atender (CANCEL); depois, quem recebe recusa (486).
+    await dial('Puro UDP', '2003')
+    const ringing = page.getByRole('region', { name: /Chamada recebida de/ })
+    await ringing.waitFor({ timeout: 20000 })
+    await call(/2001\s*→\s*2003/)
+        .getByRole('button', { name: 'Desligar' })
+        .click()
+    await ringing.waitFor({ state: 'detached', timeout: 10000 })
+    step('desistir antes de atender cancela a chamada no outro lado')
+    await page.waitForTimeout(1000)
+    await dial('Puro UDP', '2003')
+    await ringing.getByRole('button', { name: 'Recusar' }).click({ timeout: 20000 })
+    await page
+        .locator('.list')
+        .getByText(/Chamada para 2003: .*(486|603|480)/)
+        .first()
+        .waitFor({ timeout: 15000 })
+    step('recusar devolve ocupado para quem ligou')
+
     await account('Puro UDP').getByRole('button', { name: 'Desregistrar' }).click()
     await expectContact('2001', false)
     step('Desregistrar tira o contato do Asterisk')
@@ -108,6 +214,14 @@ try {
 } finally {
     await app.close().catch(() => {})
     rmSync(userData, { recursive: true, force: true })
+    // Um teste que para no meio deixa canais presos no Asterisk, e a execução seguinte falha por isso.
+    if (failed) {
+        try {
+            execSync(`docker exec ${CONTAINER} asterisk -rx "channel request hangup all"`, { stdio: 'pipe' })
+        } catch {
+            // sem Docker: nada a limpar
+        }
+    }
 }
 if (failed) process.exit(1)
 console.log('SIP puro OK')

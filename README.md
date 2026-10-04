@@ -4,7 +4,7 @@ Na mitologia grega, Íris é a mensageira dos deuses, que leva recados entre o c
 
 Softphone desktop para testar telefonia: registra várias contas de vários PBX ao mesmo tempo, liga entre elas e mostra o SIP de cada uma na mesma janela. Feito com Electron, Vue 3 e [easy-sipjs](https://www.npmjs.com/package/easy-sipjs).
 
-**O que o PBX precisa ter:** para chamadas, SIP sobre WebSocket seguro (WSS) com áudio WebRTC. Num PBX que só fala SIP puro (UDP, TCP ou TLS), a Íris hoje registra o ramal, mede a saúde e mostra o SIP; as chamadas por SIP puro estão em construção (RF-39).
+**O que o PBX precisa ter:** SIP sobre WebSocket seguro (WSS) com áudio WebRTC, que é o modo completo; ou SIP puro por UDP, TCP ou TLS com áudio G.711, pelo motor próprio da Íris (RF-39). Em SIP puro a conta registra, liga, recebe e manda DTMF; espera, transferência e SRTP ainda não existem.
 
 A especificação completa (requisitos, arquitetura e plano de entrega) está em [docs/ESPECIFICACAO.md](docs/ESPECIFICACAO.md), e o conceito visual em [docs/CONCEITO.html](docs/CONCEITO.html). Os dois usam o nome antigo do projeto, SIP Bench.
 
@@ -29,7 +29,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
-| RF-39 (entrega 1 de 3) | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde e mostra o SIP bruto. Chamadas ficam para as entregas 2 e 3 |
+| RF-39 (entregas 1 e 2 de 3) | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde, liga e recebe chamadas com áudio G.711, DTMF por RTP ou SIP INFO, mudo e qualidade (perda e jitter). Espera, transferência, SRTP e RTCP ficam para a entrega 3 |
 | RNF-13 | Textos da interface em arquivos de tradução (`src/renderer/src/i18n`), em português e prontos para inglês |
 | RNF-14 | Log interno do app em arquivo rotativo (5 × 10 MB) em `logs/` na pasta de dados |
 | RNF-15 | Lint (ESLint) e cobertura da camada de domínio no CI, com mínimo de 70% |
@@ -117,7 +117,7 @@ Cadastre contas com domínio `127.0.0.1`, WebSocket `wss://127.0.0.1:8089/ws`, r
 
 Números do plano de discagem: `1001`–`1020` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `486` (ocupado).
 
-Para SIP puro (RF-39), o mesmo Asterisk atende em UDP e TCP na porta `5060` e em TLS na `5061`, com os ramais `2001` a `2005` (senha `1234`). Na conta, escolha o transporte e use o domínio `127.0.0.1`.
+Para SIP puro (RF-39), o mesmo Asterisk atende em UDP e TCP na porta `5060` e em TLS na `5061`, com os ramais `2001` a `2005` (senha `1234`). Na conta, escolha o transporte e use o domínio `127.0.0.1`. O ramal `1021` é WebRTC só com G.711, para ligar entre SIP puro e WebRTC: esta imagem do Asterisk não converte Opus, e os ramais `1001` a `1020` preferem Opus. Depois de mudar um arquivo de `docker/asterisk`, recrie o contêiner (`docker compose … up -d --force-recreate`): no Docker Desktop, o contêiner pode continuar vendo o arquivo antigo.
 
 ## Testes
 
@@ -136,7 +136,7 @@ npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
 npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
-npm run test:sip    # SIP puro: registro por UDP, TCP e TLS no Asterisk (RF-39)
+npm run test:sip    # SIP puro no Asterisk: registro por UDP, TCP e TLS, chamadas com áudio, DTMF, cancelar e recusar (RF-39)
 npm run test:reconexao  # derruba o contêiner do PBX e confere que as contas voltam sozinhas (RNF-06)
 npm run test:load   # carga: 20 contas e 4 chamadas no Asterisk, mede a resposta da interface
 npm run test:resources   # recursos: RAM com 10 contas e 1 chamada e CPU ociosa, no Asterisk (RNF-05)
@@ -205,7 +205,7 @@ Versão com hífen (`1.2.0-beta.1`) sai marcada como pré-lançamento e chega s�
 
 ```
 src/main/       processo principal: janela, bandeja, arquivos, senhas, certificados, log interno
-  sip/          motor próprio de SIP puro: mensagens, digest, transporte e user-agent (RF-39)
+  sip/          motor próprio de SIP puro: mensagens, digest, transporte, user-agent, chamada, SDP, RTP e G.711 (RF-39)
 src/preload/    ponte com canais fixos de IPC (window.iris)
 src/shared/     tipos usados pelos três processos
 src/renderer/   interface Vue
