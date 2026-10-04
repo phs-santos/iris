@@ -14,6 +14,7 @@ import {
     type SipEngine
 } from './engine'
 import { audioOutput } from './audio'
+import { SILENCE_DB } from '@shared/audio'
 
 /**
  * Silêncio de verdade (200 ms, 8 kHz, 8 bits) para desligar o toque próprio de cada SipClient; o app
@@ -56,6 +57,7 @@ class EasySipCall implements EngineCall {
     private endedLocally = false
     private failure?: { code?: number; reason?: string }
     private finished = false
+    private meter?: { ctx: AudioContext; analyser: AnalyserNode; stream: MediaStream }
 
     constructor(
         private client: SipClient,
@@ -126,6 +128,7 @@ class EasySipCall implements EngineCall {
     private finish(end: CallEvents['ended'][0]): void {
         if (this.finished) return
         this.finished = true
+        void this.meter?.ctx.close().catch(() => undefined)
         this.audio.srcObject = null
         this.audio.remove()
         this.emitter.emit('ended', end)
@@ -185,6 +188,28 @@ class EasySipCall implements EngineCall {
 
     async setInputDevice(deviceId: string): Promise<void> {
         await this.session?.setAudioInput(deviceId || 'default')
+    }
+
+    /** Volume do áudio que chega, medido no elemento da chamada (RF-41). */
+    async audioLevel(): Promise<number | null> {
+        const stream = this.audio.srcObject
+        if (!(stream instanceof MediaStream) || stream.getAudioTracks().length === 0) return null
+        if (!this.meter || this.meter.stream !== stream) {
+            void this.meter?.ctx.close().catch(() => undefined)
+            const ctx = new AudioContext()
+            const analyser = ctx.createAnalyser()
+            analyser.fftSize = 2048
+            ctx.createMediaStreamSource(stream).connect(analyser)
+            this.meter = { ctx, analyser, stream }
+            // O analisador só tem amostras depois de alguns instantes.
+            await new Promise((done) => setTimeout(done, 120))
+        }
+        const data = new Float32Array(this.meter.analyser.fftSize)
+        this.meter.analyser.getFloatTimeDomainData(data)
+        let sum = 0
+        for (const sample of data) sum += sample * sample
+        const rms = Math.sqrt(sum / data.length)
+        return rms > 0 ? Math.max(SILENCE_DB, Math.round(20 * Math.log10(rms))) : SILENCE_DB
     }
 
     async quality(): Promise<CallQuality | null> {

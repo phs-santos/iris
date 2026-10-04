@@ -150,6 +150,16 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                 >
                     {{ call.held ? $t('callCard.retomar') : $t('callCard.espera') }}
                 </button>
+                <button
+                    v-if="call.canRecord"
+                    class="btn"
+                    :class="{ on: call.recording }"
+                    :disabled="!established"
+                    :title="call.recording ?? $t('callCard.gravar_dica')"
+                    @click="calls.toggleRecording(call.id)"
+                >
+                    {{ call.recording ? $t('callCard.parar_gravacao') : $t('callCard.gravar') }}
+                </button>
                 <button class="btn" :class="{ on: showDtmf }" :disabled="!established" @click="showDtmf = !showDtmf">
                     {{ $t('callCard.dtmf') }}
                 </button>

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MockEngine, MOCK_TIMING, resetMockNetwork } from '@renderer/sip/mock-engine'
 import type { CallEnd, EngineCall, RegStatus } from '@renderer/sip/engine'
 import { newAccount } from '@renderer/lib/accounts'
+import { levelDb, SILENCE_DB, toneSamples } from '@shared/audio'
 
 const make = (extension: string, password = '1234', domain = 'demo.local'): MockEngine =>
     new MockEngine(newAccount({ name: extension, extension, domain, simulated: true, rawSipLog: true }), password)
@@ -55,6 +56,39 @@ describe('MockEngine', () => {
 
         await out.hangup()
         expect(inEnd).toEqual({ by: 'remote' })
+    })
+
+    it('simula o áudio: voz dos dois lados, silêncio em mudo e em espera, e o volume de um tom tocado (RF-41)', async () => {
+        const a = make('1001')
+        const b = make('1002')
+        await registered(a)
+        await registered(b)
+        let incoming: EngineCall | undefined
+        b.on('incoming', (call) => (incoming = call))
+        const out = await a.dial('1002')
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
+        expect(await out.audioLevel()).toBe(SILENCE_DB)
+        await incoming!.answer()
+        expect(await out.audioLevel()).toBe(-30)
+        expect(await incoming!.audioLevel()).toBe(-30)
+
+        // Mudo de um lado: só o outro lado deixa de ouvir.
+        incoming!.setMuted(true)
+        expect(await out.audioLevel()).toBe(SILENCE_DB)
+        expect(await incoming!.audioLevel()).toBe(-30)
+        incoming!.setMuted(false)
+
+        // Um tom tocado por A chega em B com o volume do tom, enquanto durar.
+        const tone = toneSamples(440, 300)
+        const playing = out.playAudio!(tone)
+        expect(await incoming!.audioLevel()).toBe(levelDb(tone))
+        await vi.advanceTimersByTimeAsync(300)
+        await playing
+        expect(await incoming!.audioLevel()).toBe(-30)
+
+        await out.setHeld(true)
+        expect(await out.audioLevel()).toBe(SILENCE_DB)
+        expect(await incoming!.audioLevel()).toBe(SILENCE_DB)
     })
 
     it('entrega o DTMF enviado ao outro lado', async () => {

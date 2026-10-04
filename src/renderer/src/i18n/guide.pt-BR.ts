@@ -369,6 +369,11 @@ export const GUIDE: GuideSection[] = [
         title: 'Durante a chamada',
         summary: 'Mudo, espera, DTMF e os números de qualidade do áudio.',
         blocks: [
+            {
+                type: 'note',
+                kind: 'atenção',
+                text: 'Em chamadas de **SIP puro** aparece também o botão **Gravar**: ele grava os dois lados num arquivo WAV (o seu lado no canal esquerdo, o outro no direito) na pasta `gravacoes` dos dados da Íris, e o log mostra o caminho. A gravação para sozinha quando a chamada termina. Avise quem está do outro lado antes de gravar: em muitos lugares isso é exigido por lei.'
+            },
             { type: 'image', name: 'dtmf', alt: 'Cartão de chamada com o painel de DTMF aberto' },
             { type: 'h', text: 'O que o cartão mostra' },
             {
@@ -984,6 +989,10 @@ export const GUIDE: GuideSection[] = [
                     ],
                     ['Cenários', '`scenarios.json`'],
                     ['Histórico de chamadas', '`history.json`, com as 500 mais recentes'],
+                    [
+                        'Gravações de chamadas',
+                        'Pasta `gravacoes`: um arquivo WAV por gravação, sem cifra. Só existem se você clicar em Gravar'
+                    ],
                     ['Preferências', '`settings.json`: áudio, canal de atualização, hosts confiáveis, opções da IA'],
                     ['Log das contas (eventos e SIP)', 'Só na memória, até o app fechar ou você salvar'],
                     [

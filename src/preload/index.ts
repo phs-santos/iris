@@ -71,6 +71,8 @@ const api: IrisApi = {
         dial: (engineId, destination, headers) => ipcRenderer.invoke(IPC.sipDial, engineId, destination, headers),
         callAction: (engineId, callId, action) => ipcRenderer.invoke(IPC.sipCallAction, engineId, callId, action),
         callStats: (engineId, callId) => ipcRenderer.invoke(IPC.sipCallStats, engineId, callId),
+        callLevel: (engineId, callId) => ipcRenderer.invoke(IPC.sipCallLevel, engineId, callId),
+        record: (engineId, callId, on) => ipcRenderer.invoke(IPC.sipRecord, engineId, callId, on),
         sendAudio: (engineId, callId, pcm) => ipcRenderer.send(IPC.sipAudio, engineId, callId, pcm),
         onEvent: (listener) => {
             const handler = (_e: Electron.IpcRendererEvent, event: NativeSipEvent): void => listener(event)
