@@ -12,6 +12,12 @@ const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 const launch = () => electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
 const step = (msg) => console.log(`✓ ${msg}`)
+// Prazo do teste inteiro: um travamento vira falha com mensagem, e não um CI parado por horas.
+const deadline = setTimeout(() => {
+    console.error('✗ o teste do monitor passou de 3 minutos')
+    process.exit(1)
+}, 180_000)
+deadline.unref()
 
 // Servidor local que faz o papel do webhook.
 const received = []
@@ -89,6 +95,8 @@ try {
     console.error(`✗ ${error.message}`)
 } finally {
     await app?.close().catch(() => {})
+    // Sem fechar as conexões abertas, o servidor do webhook segura o Node depois do fim.
+    server.closeAllConnections()
     server.close()
     rmSync(userData, { recursive: true, force: true })
 }
