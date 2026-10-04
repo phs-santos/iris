@@ -20,7 +20,10 @@ describe('parseCliArgs (RF-31)', () => {
             '--report=r.json',
             '--trust-host',
             'pbx',
-            '--midia-falsa'
+            '--midia-falsa',
+            '--conta',
+            '1001@pbx',
+            '--account=Vendas'
         ])
         expect(r).toEqual({
             options: {
@@ -28,6 +31,7 @@ describe('parseCliArgs (RF-31)', () => {
                 all: false,
                 runs: 20,
                 report: 'r.json',
+                origins: ['1001@pbx', 'Vendas'],
                 trustHosts: ['pbx'],
                 fakeMedia: true,
                 help: false

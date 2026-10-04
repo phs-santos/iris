@@ -4,7 +4,7 @@ import type { Account, AccountsExport } from '@shared/types'
 import { createEngine, type HealthReport, type RegStatus, type SipEngine } from '@renderer/sip'
 import { useLogStore } from './log'
 import { useCallsStore } from './calls'
-import { describeStatus, newAccount, normalizeImported, sampleAccounts } from '@renderer/lib/accounts'
+import { describeStatus, newAccount, normalizeImported, parseAccountsCsv, sampleAccounts } from '@renderer/lib/accounts'
 import { reconnectDelay, shouldReconnect } from '@shared/reconnect'
 import { usePreferencesStore } from './preferences'
 
@@ -246,6 +246,17 @@ export const useAccountsStore = defineStore('accounts', () => {
         return items.length
     }
 
+    /** Cria contas a partir de uma planilha em CSV (RF-48). Nada é criado se alguma linha estiver errada. */
+    async function importCsv(text: string): Promise<number> {
+        const items = parseAccountsCsv(text)
+        for (const { account, password } of items) {
+            accounts.value.push(account)
+            await window.iris.secrets.set(account.id, password)
+        }
+        await persist()
+        return items.length
+    }
+
     return {
         accounts,
         runtime,
@@ -272,6 +283,7 @@ export const useAccountsStore = defineStore('accounts', () => {
         engineOf,
         exportJson,
         importJson,
+        importCsv,
         newAccount
     }
 })

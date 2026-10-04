@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Scenario } from '@shared/types'
 import { resetMockNetwork } from '@renderer/sip/mock-engine'
-import { buildReport, reportToText, runScenario } from '@renderer/scenarios/runner'
+import { buildReport, reportsToJUnit, reportToText, runScenario } from '@renderer/scenarios/runner'
 import { lastCallAlias, newScenario, newStep, normalizeScenarios, validateScenario } from '@renderer/lib/scenarios'
 import { mockDriver } from './helpers/mock-driver'
 
@@ -212,6 +212,28 @@ describe('Cenários: execução no PBX simulado (RF-29, RF-30)', () => {
         ])
     })
 
+    it('variáveis (RF-48): {ramal}, {dominio} e {nome} vêm da conta de origem', async () => {
+        const scenario: Scenario = {
+            id: 'v',
+            name: 'Variáveis',
+            accountId: 'b',
+            steps: [
+                { type: 'register' },
+                { type: 'register', account: 'a' },
+                // 1002 liga para 1001 trocando o último dígito do próprio ramal: aqui, texto fixo mais variável.
+                { type: 'dial', to: '8000', call: 'c1' },
+                { type: 'waitState', call: 'c1', state: 'established', timeoutMs: 5000 },
+                { type: 'dtmf', call: 'c1', digits: '{ramal}' },
+                { type: 'verify', call: 'c1', check: 'log', expected: 'URA recebeu o dígito 2' },
+                { type: 'verify', call: 'c1', check: 'log', expected: '{nome} {dominio} {desconhecida}' }
+            ]
+        }
+        const result = await run(scenario, two())
+        expect(result.failedAt).toBe(6)
+        // O texto esperado já aparece com as variáveis trocadas; a que não existe fica como está.
+        expect(result.steps[6]!.message).toBe('"Conta 1002 demo.local {desconhecida}" não apareceu no log')
+    })
+
     it('transferência cega espera a resposta final do PBX', async () => {
         const driver = mockDriver([{ id: 'a', extension: '1001' }])
         const scenario: Scenario = {
@@ -265,6 +287,32 @@ describe('Cenários: execução no PBX simulado (RF-29, RF-30)', () => {
         const text = reportToText(report)
         expect(text).toContain('taxa de sucesso: 80%')
         expect(text).toContain('2. Discar 8000 de Conta 1001 (c1)')
+    })
+
+    it('relatório JUnit (RF-49): cada execução é um teste e a falha leva o passo e a mensagem', async () => {
+        const good = buildReport(ivr(), [await run(ivr()), await run(ivr())], () => 'Conta 1001')
+        const busy: Scenario = {
+            id: 'o',
+            name: 'Ocupado & "aspas" <x>',
+            accountId: 'a',
+            steps: [
+                { type: 'register' },
+                { type: 'dial', to: '486', call: 'c1' },
+                { type: 'waitState', call: 'c1', state: 'established', timeoutMs: 3000 }
+            ]
+        }
+        const bad = buildReport(busy, [await run(busy)], () => 'Conta 1001')
+        const junit = reportsToJUnit([good, bad])
+        expect(junit).toMatch(
+            /^<\?xml version="1.0" encoding="UTF-8"\?>\n<testsuites name="Íris" tests="3" failures="1" time="[\d.]+">/
+        )
+        expect(junit).toContain('<testsuite name="URA 8000" tests="2" failures="0"')
+        expect(junit).toMatch(/<testcase classname="URA 8000" name="execução 2" time="[\d.]+" \/>/)
+        expect(junit).toContain('<testsuite name="Ocupado &amp; &quot;aspas&quot; &lt;x&gt;" tests="1" failures="1"')
+        expect(junit).toMatch(
+            /<failure message="passo 3 \(Aguardar c1 em chamada\): Esperava em chamada, mas a chamada terminou: .*486.*Busy Here">/
+        )
+        expect(junit.trimEnd().endsWith('</testsuites>')).toBe(true)
     })
 
     it('para no meio quando interrompido', async () => {

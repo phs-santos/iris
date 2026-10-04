@@ -50,6 +50,10 @@ export function storeDriver(): ScenarioDriver {
         loadWav: (path) => window.iris.audio.loadWav(path),
         logSince: (since, accountId) =>
             log.entries.filter((e) => e.ts >= since && (!accountId || e.accountId === accountId)).map((e) => e.text),
-        accountName: (id) => accounts.nameOf(id)
+        accountName: (id) => accounts.nameOf(id),
+        accountInfo: (id) => {
+            const account = accounts.byId(id)
+            return account && { name: account.name, extension: account.extension, domain: account.domain }
+        }
     }
 }
