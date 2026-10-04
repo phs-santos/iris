@@ -6,8 +6,16 @@ import { randomBytes } from 'node:crypto'
 import { digestAuthorization, parseChallenge, type DigestChallenge } from './digest'
 import { addressOf, cseqOf, header, headerParams, headers, type SipRequest, type SipResponse } from './message'
 import { RtpSession, type RtpStats } from './rtp'
-import { answerDirection, buildSdp, parseSdp, SdpError, type MediaDirection, type RemoteMedia } from './sdp'
-import type { G711 } from './g711'
+import {
+    answerDirection,
+    buildSdp,
+    DTMF48_PAYLOAD,
+    parseSdp,
+    SdpError,
+    type MediaDirection,
+    type RemoteMedia
+} from './sdp'
+import type { AudioCodec } from './codec'
 import { newSrtpKey } from './srtp'
 import { levelDb, SILENCE_DB } from '@shared/audio'
 import { FRAME_SAMPLES } from './rtp'
@@ -82,7 +90,10 @@ export class SipCall {
     private challenge?: { value: DigestChallenge; proxy: boolean; count: number }
     private rtp: RtpSession
     private rtpPort = 0
-    private codecs: G711[] = ['PCMU', 'PCMA']
+    /** G.711 primeiro: o Opus só entra quando é o que o outro lado tem (RF-47). */
+    private codecs: AudioCodec[] = ['PCMU', 'PCMA', 'opus']
+    /** Depois de negociar, os números de payload do outro lado, para a resposta usar os mesmos. */
+    private negotiated?: { opusPayload?: number; dtmfPayload?: number; dtmf48Payload?: number }
     private sdpVersion = 1
     private readonly sdpSession = Date.now()
     private remoteHeld = false
@@ -209,7 +220,10 @@ export class SipCall {
             address: this.host.mediaAddress(),
             port: this.rtpPort,
             codecs,
-            dtmfPayload: DTMF_PAYLOAD,
+            // Antes de negociar (oferta), os nossos números; depois, os do outro lado.
+            dtmfPayload: this.negotiated ? this.negotiated.dtmfPayload : DTMF_PAYLOAD,
+            opusPayload: this.negotiated?.opusPayload,
+            dtmf48Payload: this.negotiated ? this.negotiated.dtmf48Payload : DTMF48_PAYLOAD,
             direction,
             sessionId: this.sdpSession,
             version: this.sdpVersion++,
@@ -232,9 +246,15 @@ export class SipCall {
             port: media.port,
             codec: media.codec,
             payload: media.payload,
-            dtmfPayload: media.dtmfPayload
+            dtmfPayload: media.dtmfPayload,
+            dtmfRate: media.dtmfRate
         })
         this.codecs = [media.codec]
+        this.negotiated = {
+            opusPayload: media.codec === 'opus' ? media.payload : undefined,
+            dtmfPayload: media.dtmfRate === 8000 ? media.dtmfPayload : undefined,
+            dtmf48Payload: media.dtmfRate === 48000 ? media.dtmfPayload : undefined
+        }
         // "sendonly" ou "inactive" do outro lado: ele nos pôs em espera.
         const held = media.direction === 'sendonly' || media.direction === 'inactive'
         if (!answer && held !== this.remoteHeld) {

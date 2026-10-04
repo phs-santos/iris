@@ -46,7 +46,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'O que a central precisa ter' },
             {
                 type: 'p',
-                text: 'A Íris fala com a central de dois jeitos. O mais completo é **SIP sobre WebSocket seguro (WSS)** com áudio **WebRTC**: Asterisk (PJSIP com `transport` WSS), FreeSWITCH e Kamailio fazem isso. O outro é **SIP puro por UDP, TCP ou TLS**, para centrais sem WebSocket: a conta registra, liga e recebe chamadas com áudio **G.711** e DTMF. Em SIP puro o áudio só é cifrado se a conta exigir SRTP.'
+                text: 'A Íris fala com a central de dois jeitos. O mais completo é **SIP sobre WebSocket seguro (WSS)** com áudio **WebRTC**: Asterisk (PJSIP com `transport` WSS), FreeSWITCH e Kamailio fazem isso. O outro é **SIP puro por UDP, TCP ou TLS**, para centrais sem WebSocket: a conta registra, liga e recebe chamadas com áudio **G.711** ou **Opus** e DTMF. Em SIP puro o áudio só é cifrado se a conta exigir SRTP.'
             },
             {
                 type: 'note',
@@ -247,7 +247,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'Contas por SIP puro (UDP, TCP ou TLS)' },
             {
                 type: 'p',
-                text: 'Servem para centrais que não têm WebSocket. A conta **registra**, renova o registro sozinha, **liga e recebe chamadas** com áudio G.711 (PCMU ou PCMA), manda e recebe **DTMF** (por RTP ou SIP INFO), tem **mudo**, **espera** e **transferência** cega e assistida, mede a **Saúde** e a qualidade (perda, variação do atraso e tempo de ida e volta) e mostra o **SIP bruto** e o **Fluxo SIP**.'
+                text: 'Servem para centrais que não têm WebSocket. A conta **registra**, renova o registro sozinha, **liga e recebe chamadas** com áudio G.711 (PCMU ou PCMA) ou Opus, manda e recebe **DTMF** (por RTP ou SIP INFO), tem **mudo**, **espera** e **transferência** cega e assistida, mede a **Saúde** e a qualidade (perda, variação do atraso e tempo de ida e volta) e mostra o **SIP bruto** e o **Fluxo SIP**.'
             },
             {
                 type: 'list',
@@ -258,7 +258,7 @@ export const GUIDE: GuideSection[] = [
                     'O áudio vai por **RTP sem cifra**, a não ser que você marque **Exigir áudio cifrado (SRTP)** na conta. Com essa opção, a Íris oferece SRTP ao ligar e recusa (`488`) quem liga sem ele; na linha de qualidade aparece `(SRTP)` ao lado do codec. Uma chamada recebida que já venha com SRTP é atendida com cifra mesmo sem a opção.',
                     'A chave do SRTP vai dentro da sinalização (SDES). Para ela não passar em claro, use o transporte **TLS** junto.',
                     'Com SRTP, o tempo de ida e volta (RTT) fica em 0: ele vem do RTCP, que a Íris só troca sem cifra.',
-                    'A central precisa aceitar **G.711**. Uma central que só oferece Opus ou G.729 para o ramal recusa a chamada com `488`.',
+                    'A central precisa aceitar **G.711** ou **Opus**. A Íris prefere o G.711 e usa o Opus quando é o que a central tem. O Opus sai em banda estreita (8 kHz), a mesma qualidade do G.711. Uma central que só oferece G.729 ou G.722 recusa a chamada com `488`.',
                     'Na primeira vez, o firewall do sistema pode perguntar se a Íris pode usar a rede. Permita: sem isso o áudio não chega.'
                 ]
             },

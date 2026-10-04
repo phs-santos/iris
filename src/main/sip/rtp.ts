@@ -4,7 +4,7 @@
 
 import { createSocket, type Socket } from 'node:dgram'
 import { randomBytes } from 'node:crypto'
-import { decodeG711, encodeG711, type G711 } from './g711'
+import { createCodec, type AudioCodec, type CodecInstance } from './codec'
 import { SrtpContext } from './srtp'
 
 export const FRAME_SAMPLES = 160
@@ -76,9 +76,11 @@ export interface RtpStats {
 export interface RtpRemote {
     address: string
     port: number
-    codec: G711
+    codec: AudioCodec
     payload: number
     dtmfPayload?: number
+    /** Relógio do telephone-event: 48000 quando acompanha o Opus. */
+    dtmfRate?: 8000 | 48000
 }
 
 export interface RtpEvents {
@@ -91,6 +93,7 @@ export class RtpSession {
     private socket!: Socket
     private rtcp!: Socket
     private remote?: RtpRemote
+    private codec?: CodecInstance
     private rtcpRemote?: { address: string; port: number }
     private srtpOut?: SrtpContext
     private srtpIn?: SrtpContext
@@ -158,6 +161,11 @@ export class RtpSession {
     }
 
     setRemote(remote: RtpRemote): void {
+        // O codec guarda estado (no Opus): só é trocado quando muda de fato.
+        if (this.codec?.name !== remote.codec) {
+            this.codec?.close()
+            this.codec = createCodec(remote.codec)
+        }
         this.remote = { ...remote }
         this.rtcpRemote = { address: remote.address, port: remote.port + 1 }
     }
@@ -184,7 +192,11 @@ export class RtpSession {
         this.count(packet)
         if (packet.payloadType === remote.dtmfPayload) return this.receiveDtmf(packet)
         if (packet.payloadType !== remote.payload || !this.receiveAudio) return
-        this.events.audio(decodeG711(remote.codec, packet.payload))
+        try {
+            this.events.audio(this.codec!.decode(packet.payload))
+        } catch {
+            // Pacote que o codec não entende (corrompido): fica um buraco de 20 ms.
+        }
     }
 
     private count(packet: RtpPacket): void {
@@ -195,13 +207,15 @@ export class RtpSession {
             if (gap > 1 && gap < 3000) this.stats.packetsLost += gap - 1
             if (gap > 0 && gap < 3000) this.highest = packet.sequence
         } else this.highest = packet.sequence
-        const transit = Date.now() * 8 - packet.timestamp
+        // Em unidades do relógio do codec: 8 por milissegundo no G.711, 48 no Opus.
+        const perMs = 8 * (this.codec?.clockScale ?? 1)
+        const transit = Date.now() * perMs - packet.timestamp
         if (this.transit !== undefined && packet.payloadType === this.remote?.payload) {
             const delta = Math.abs(transit - this.transit)
             this.jitter += (delta - this.jitter) / 16
         }
         this.transit = transit
-        this.stats.jitterMs = Math.round(this.jitter / 8)
+        this.stats.jitterMs = Math.round(this.jitter / perMs)
     }
 
     /** O mesmo dígito chega em vários pacotes; o que marca o fim (bit E) vale uma vez por timestamp. */
@@ -228,11 +242,12 @@ export class RtpSession {
     /** 20 ms do microfone. O relógio do RTP anda mesmo quando nada é mandado. */
     sendPcm(pcm: Int16Array): void {
         const remote = this.remote
-        if (remote && this.sendAudio && !this.sendingDtmf) {
-            this.send(remote.payload, encodeG711(remote.codec, pcm), this.markNext)
+        const codec = this.codec
+        if (remote && codec && this.sendAudio && !this.sendingDtmf) {
+            this.send(remote.payload, codec.encode(pcm), this.markNext)
             this.markNext = false
         } else this.markNext = true
-        this.timestamp = (this.timestamp + pcm.length) >>> 0
+        this.timestamp = (this.timestamp + pcm.length * (codec?.clockScale ?? 1)) >>> 0
     }
 
     /** Dígito por RTP (RFC 4733): pacotes a cada 20 ms com a duração crescendo e três de fim. */
@@ -244,12 +259,14 @@ export class RtpSession {
         const run = this.dtmfQueue.then(async () => {
             this.sendingDtmf = true
             const start = this.timestamp
+            // A duração vai no relógio do telephone-event negociado.
+            const scale = this.remote?.dtmfRate === 48000 ? 6 : 1
             const wait = (): Promise<void> => new Promise((done) => setTimeout(done, 20))
             const packet = (duration: number, end: boolean): Buffer => {
                 const body = Buffer.alloc(4)
                 body[0] = event
                 body[1] = (end ? 0x80 : 0) | DTMF_VOLUME
-                body.writeUInt16BE(duration, 2)
+                body.writeUInt16BE(duration * scale, 2)
                 return body
             }
             for (let duration = FRAME_SAMPLES; duration <= DTMF_SAMPLES; duration += FRAME_SAMPLES) {
@@ -261,7 +278,8 @@ export class RtpSession {
             for (let i = 0; i < 4; i++) await wait()
             // Sem microfone (ou em mudo total) o relógio não andou: o próximo dígito precisa de outro
             // timestamp, senão o outro lado o toma por repetição deste.
-            if (this.timestamp === start) this.timestamp = (start + DTMF_SAMPLES + 4 * FRAME_SAMPLES) >>> 0
+            if (this.timestamp === start)
+                this.timestamp = (start + (DTMF_SAMPLES + 4 * FRAME_SAMPLES) * (this.codec?.clockScale ?? 1)) >>> 0
             this.sendingDtmf = false
         })
         this.dtmfQueue = run.catch(() => {
@@ -352,6 +370,7 @@ export class RtpSession {
         if (this.closed) return
         this.closed = true
         clearInterval(this.rtcpTimer)
+        this.codec?.close()
         this.closeSockets()
     }
 

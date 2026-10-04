@@ -1,7 +1,7 @@
-// SDP (RFC 4566) do motor próprio: só áudio, G.711 e telephone-event. Monta a nossa descrição e lê
+// SDP (RFC 4566) do motor próprio: só áudio, com G.711, Opus e telephone-event. Monta a nossa descrição e lê
 // a do outro lado: para onde mandar o RTP, com qual codec e em que sentido.
 
-import type { G711 } from './g711'
+import type { AudioCodec } from './codec'
 import { isSrtpKey, SRTP_SUITE } from './srtp'
 
 export type MediaDirection = 'sendrecv' | 'sendonly' | 'recvonly' | 'inactive'
@@ -10,9 +10,12 @@ export interface LocalMedia {
     address: string
     port: number
     /** Codecs na ordem de preferência; numa resposta, só o escolhido. */
-    codecs: G711[]
-    /** Payload do telephone-event (DTMF, RFC 4733). */
-    dtmfPayload: number
+    codecs: AudioCodec[]
+    /** Payload do telephone-event (DTMF, RFC 4733) a 8000 Hz; ausente se o outro lado não ofereceu. */
+    dtmfPayload?: number
+    /** Payload do Opus e do telephone-event a 48000 Hz que o acompanha. Numa resposta, os números de quem ofereceu. */
+    opusPayload?: number
+    dtmf48Payload?: number
     direction: MediaDirection
     sessionId: number
     version: number
@@ -23,10 +26,12 @@ export interface LocalMedia {
 export interface RemoteMedia {
     address: string
     port: number
-    codec: G711
+    codec: AudioCodec
     payload: number
     /** undefined quando o outro lado não aceita DTMF por RTP. */
     dtmfPayload?: number
+    /** Relógio do telephone-event escolhido: 48000 quando acompanha o Opus, 8000 no resto. */
+    dtmfRate: 8000 | 48000
     /** O sentido do ponto de vista de quem mandou o SDP. */
     direction: MediaDirection
     /** O outro lado cifra o áudio com esta chave (SRTP por SDES). */
@@ -35,11 +40,22 @@ export interface RemoteMedia {
 
 export class SdpError extends Error {}
 
-const PAYLOAD: Record<G711, number> = { PCMU: 0, PCMA: 8 }
+export const OPUS_PAYLOAD = 111
+export const DTMF48_PAYLOAD = 110
 
 export function buildSdp(media: LocalMedia): string {
     const family = media.address.includes(':') ? 'IP6' : 'IP4'
-    const payloads = [...media.codecs.map((c) => PAYLOAD[c]), media.dtmfPayload]
+    const opus = media.codecs.includes('opus')
+    const payloadOf = (codec: AudioCodec): number =>
+        codec === 'PCMU' ? 0 : codec === 'PCMA' ? 8 : (media.opusPayload ?? OPUS_PAYLOAD)
+    // Numa oferta vão os dois telephone-event; numa resposta, só o que o outro lado ofereceu.
+    const dtmf8 = media.dtmfPayload
+    const dtmf48 = opus ? media.dtmf48Payload : undefined
+    const payloads = [
+        ...media.codecs.map(payloadOf),
+        ...(dtmf8 === undefined ? [] : [dtmf8]),
+        ...(dtmf48 === undefined ? [] : [dtmf48])
+    ]
     return [
         'v=0',
         `o=iris ${media.sessionId} ${media.version} IN ${family} ${media.address}`,
@@ -48,16 +64,16 @@ export function buildSdp(media: LocalMedia): string {
         't=0 0',
         `m=audio ${media.port} ${media.crypto ? 'RTP/SAVP' : 'RTP/AVP'} ${payloads.join(' ')}`,
         ...(media.crypto ? [`a=crypto:${media.crypto.tag} ${SRTP_SUITE} inline:${media.crypto.key}`] : []),
-        ...media.codecs.map((c) => `a=rtpmap:${PAYLOAD[c]} ${c}/8000`),
-        `a=rtpmap:${media.dtmfPayload} telephone-event/8000`,
-        `a=fmtp:${media.dtmfPayload} 0-16`,
+        ...media.codecs.map((c) => `a=rtpmap:${payloadOf(c)} ${c === 'opus' ? 'opus/48000/2' : `${c}/8000`}`),
+        ...(dtmf8 === undefined ? [] : [`a=rtpmap:${dtmf8} telephone-event/8000`, `a=fmtp:${dtmf8} 0-16`]),
+        ...(dtmf48 === undefined ? [] : [`a=rtpmap:${dtmf48} telephone-event/48000`, `a=fmtp:${dtmf48} 0-16`]),
         'a=ptime:20',
         `a=${media.direction}`,
         ''
     ].join('\r\n')
 }
 
-/** Lê o primeiro áudio do SDP. Lança SdpError se não houver G.711 em comum ou cifra que a Íris fale. */
+/** Lê o primeiro áudio do SDP. Lança SdpError se não houver codec em comum ou cifra que a Íris fale. */
 export function parseSdp(text: string): RemoteMedia {
     const lines = text.split(/\r?\n/).map((line) => line.trim())
     const start = lines.findIndex((line) => line.startsWith('m=audio '))
@@ -87,16 +103,23 @@ export function parseSdp(text: string): RemoteMedia {
         const map = /^a=rtpmap:(\d+) ([^/\s]+)\/(\d+)/.exec(line)
         if (map) names.set(Number(map[1]), `${map[2]!.toUpperCase()}/${map[3]}`)
     }
-    let codec: { name: G711; payload: number } | undefined
-    let dtmfPayload: number | undefined
+    let codec: { name: AudioCodec; payload: number } | undefined
+    let dtmf8: number | undefined
+    let dtmf48: number | undefined
     for (const format of formats.map(Number)) {
         // Os payloads 0 e 8 são fixos e podem vir sem rtpmap.
         const name = names.get(format) ?? (format === 0 ? 'PCMU/8000' : format === 8 ? 'PCMA/8000' : '')
+        // Vale a ordem de preferência de quem mandou o SDP.
         if (!codec && (name === 'PCMU/8000' || name === 'PCMA/8000'))
-            codec = { name: name.slice(0, 4) as G711, payload: format }
-        if (name === 'TELEPHONE-EVENT/8000') dtmfPayload ??= format
+            codec = { name: name.slice(0, 4) as AudioCodec, payload: format }
+        if (!codec && name === 'OPUS/48000') codec = { name: 'opus', payload: format }
+        if (name === 'TELEPHONE-EVENT/8000') dtmf8 ??= format
+        if (name === 'TELEPHONE-EVENT/48000') dtmf48 ??= format
     }
-    if (!codec) throw new SdpError('Nenhum codec em comum: a Íris fala G.711 (PCMU e PCMA)')
+    if (!codec) throw new SdpError('Nenhum codec em comum: a Íris fala G.711 (PCMU e PCMA) e Opus')
+    // Com Opus, o DTMF usa o telephone-event do mesmo relógio (48000), se o outro lado ofereceu.
+    const dtmfRate = codec.name === 'opus' && dtmf48 !== undefined ? 48000 : 8000
+    const dtmfPayload = dtmfRate === 48000 ? dtmf48 : dtmf8
 
     const directions: MediaDirection[] = ['sendrecv', 'sendonly', 'recvonly', 'inactive']
     const all = [...lines.slice(0, start), ...section]
@@ -109,6 +132,7 @@ export function parseSdp(text: string): RemoteMedia {
         codec: codec.name,
         payload: codec.payload,
         dtmfPayload,
+        dtmfRate,
         direction,
         crypto: secure
     }
