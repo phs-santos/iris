@@ -9,16 +9,15 @@ import DialerPane from './components/DialerPane.vue'
 import CallCard from './components/CallCard.vue'
 import LogPane from './components/LogPane.vue'
 import AccountForm from './components/AccountForm.vue'
-import ImportExportDialog from './components/ImportExportDialog.vue'
 import HealthDialog from './components/HealthDialog.vue'
-import AudioDialog from './components/AudioDialog.vue'
-import UpdateDialog from './components/UpdateDialog.vue'
+import SettingsDialog from './components/settings/SettingsDialog.vue'
 import AiDialog from './components/AiDialog.vue'
 import GuideDialog from './components/GuideDialog.vue'
 import { useAiStore } from './stores/ai'
 import ScenariosPane from './components/ScenariosPane.vue'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
+import { usePreferencesStore, type SettingsSection } from './stores/preferences'
 import logoMark from './assets/logo-mark.svg'
 
 const accounts = useAccountsStore()
@@ -27,12 +26,12 @@ const log = useLogStore()
 const devices = useDevicesStore()
 const scenarios = useScenariosStore()
 const ai = useAiStore()
+const prefs = usePreferencesStore()
 const centerTab = ref<'phone' | 'scenarios'>('phone')
 
 const editing = ref<Account | null>(null)
-const showImportExport = ref(false)
-const showAudio = ref(false)
-const showUpdate = ref(false)
+/** Seção aberta da tela de Configurações; null com a tela fechada. */
+const settingsAt = ref<SettingsSection | null>(null)
 const showGuide = ref(false)
 const update = ref<UpdateInfo | null>(null)
 // O botão da barra avisa quando há versão nova para baixar ou já baixada (RF-35).
@@ -47,7 +46,7 @@ const registeredCount = computed(
 )
 
 function newAccount(): void {
-    editing.value = accounts.newAccount()
+    editing.value = accounts.newAccount({ displayName: prefs.profile.name ?? '' })
 }
 
 async function trustHost(): Promise<void> {
@@ -72,7 +71,7 @@ async function trustHost(): Promise<void> {
 
 /** Abre a tela já procurando: o resultado guardado pode ser de horas atrás (ex.: erro de quando não havia rede). */
 function openUpdate(): void {
-    showUpdate.value = true
+    settingsAt.value = 'update'
     if (['idle', 'up-to-date', 'error'].includes(update.value?.status.state ?? '')) void window.iris.update.check()
 }
 
@@ -90,6 +89,10 @@ function onKey(event: KeyboardEvent): void {
     }
     const mod = event.ctrlKey || event.metaKey
     if (!mod) return
+    if (event.key === ',') {
+        settingsAt.value ??= 'profile'
+        return event.preventDefault()
+    }
     const selectedCall = calls.calls.find((c) => c.id === calls.selectedId && c.state !== 'ended')
     const key = event.key.toLowerCase()
     if (key === 'l') {
@@ -144,11 +147,14 @@ onMounted(async () => {
         'event',
         `Íris ${info.version} · Electron ${info.electron} · Chromium ${info.chrome} · ${info.platform}`
     )
+    await prefs.load()
     await devices.load()
     // As contas leem as senhas: a interface aparece antes, com um aviso se demorar.
     await firstPaint()
     setTimeout(() => (vaultSlow.value = true), VAULT_NOTICE_DELAY_MS)
     await accounts.load()
+    const main = prefs.profile.mainAccountId
+    if (main && accounts.accounts.some((a) => a.id === main)) accounts.selectedId = main
     await scenarios.load()
 })
 onUnmounted(() => {
@@ -169,12 +175,11 @@ onUnmounted(() => {
             <span class="spacer"></span>
             <button class="btn small" @click="accounts.registerAll()">Registrar todas</button>
             <button class="btn small" @click="accounts.unregisterAll()">Desregistrar todas</button>
-            <button class="btn small" @click="showAudio = true">Áudio</button>
-            <button class="btn small" @click="showImportExport = true">Importar / Exportar</button>
-            <button class="btn small" :class="{ primary: updatePending }" @click="openUpdate">
-                {{ updatePending ? 'Atualização disponível' : 'Atualização' }}
-            </button>
+            <button v-if="updatePending" class="btn small primary" @click="openUpdate">Atualização disponível</button>
             <button class="btn small" @click="showGuide = true">Guia</button>
+            <button class="btn small" title="Configurações (Ctrl/Cmd+,)" @click="settingsAt = 'profile'">
+                Configurações
+            </button>
         </header>
 
         <div v-if="certError" class="banner" role="alert">
@@ -243,15 +248,14 @@ onUnmounted(() => {
         </main>
 
         <AccountForm v-if="editing" :account="editing" @close="editing = null" />
-        <ImportExportDialog v-if="showImportExport" @close="showImportExport = false" />
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
-        <AudioDialog v-if="showAudio" @close="showAudio = false" />
         <GuideDialog v-if="showGuide" @close="showGuide = false" />
         <AiDialog v-if="ai.ask" :ask="ai.ask" @close="ai.ask = null" />
-        <UpdateDialog
-            v-if="showUpdate && update"
-            :info="update"
-            @close="showUpdate = false"
+        <SettingsDialog
+            v-if="settingsAt"
+            :section="settingsAt"
+            :update="update"
+            @close="settingsAt = null"
             @channel="setUpdateChannel"
         />
     </div>

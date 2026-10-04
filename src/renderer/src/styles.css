@@ -9,7 +9,10 @@
     --muted: #8597a9;
     /* Cinza mais claro com contraste AA (4,5:1) sobre o fundo e os painéis. */
     --faint: #7f8f9f;
+    /* Cor de destaque: a pessoa escolhe em Configurações › Aparência; a tela troca as duas. */
     --accent: #4f8ff7;
+    /* Mais escura que --accent, para o texto branco dos botões principais ter contraste AA. */
+    --accent-strong: #2f6fd6;
     --ok: #3fcf86;
     --warn: #f0b13e;
     --bad: #f0675e;
@@ -95,9 +98,8 @@ textarea {
     font-size: 12px;
 }
 .btn.primary {
-    /* Mais escuro que --accent para o texto branco ter contraste AA. */
-    background: #2f6fd6;
-    border-color: #2f6fd6;
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
     color: #fff;
 }
 .btn.go {
@@ -269,4 +271,54 @@ textarea.input {
     border-radius: 6px;
     border: 2px solid transparent;
     background-clip: padding-box;
+}
+
+/* Configurações: cada seção é uma lista de linhas "explicação à esquerda, controle à direita". */
+.set-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.set-head h3 {
+    margin: 0;
+    font-size: 15px;
+}
+.set-head p,
+.set-hint {
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+.set-group {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+.set-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+}
+.set-row:last-child {
+    border-bottom: 0;
+}
+.set-row .what {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.set-row .what small {
+    color: var(--muted);
+    font-size: 12px;
+}
+.set-row .control {
+    width: 240px;
+    flex: none;
+}
+.set-section .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }

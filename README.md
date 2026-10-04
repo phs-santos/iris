@@ -133,9 +133,13 @@ npm run dist:mac     # .dmg e .zip (rodar no macOS)
 
 Os instaladores ainda não são assinados (RNF-17). O `.dmg` e o `.zip` saem para Apple Silicon e para Intel.
 
+## Configurações
+
+O botão **Configurações** na barra de cima (ou **Ctrl+,**, no macOS **Cmd+,**) abre uma tela única com Perfil (seu nome e a conta principal), Aparência (seis paletas de cor ou a sua própria cor, e o tamanho da interface), Áudio, Ajuda da IA, Certificados aceitos, Importar e exportar e Atualização.
+
 ## Guia de uso
 
-O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 21 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
+O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 22 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
 
 O texto fica em `src/renderer/src/guide/content.ts`. As capturas são geradas do próprio app: depois de mudar a interface, rode `npm run guide:shots`.
 
@@ -152,7 +156,7 @@ A Íris pode pedir a um modelo de IA que explique o log. É opcional e só funci
 
 ## Atualização automática
 
-O app instalado procura versões novas nos releases de [phs-santos/iris](https://github.com/phs-santos/iris/releases), 15 s depois de abrir e quando você clica em **Atualização → Procurar atualização**.
+O app instalado procura versões novas nos releases de [phs-santos/iris](https://github.com/phs-santos/iris/releases), 15 s depois de abrir e quando você clica em **Configurações → Atualização → Procurar atualização**.
 
 - Nada é baixado sozinho: o app avisa que há versão nova e espera você clicar em **Baixar**. Depois de baixada, ela entra ao reiniciar.
 - **Canais:** o estável recebe só os releases normais. O beta recebe também os marcados como pré-lançamento no GitHub, com versão do tipo `1.2.0-beta.1`.

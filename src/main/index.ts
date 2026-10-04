@@ -19,6 +19,7 @@ import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
 import { isUpdateChannel, setupUpdater } from './updater'
 import { AI_SECRET_PREFIX, registerAiIpc } from './ai'
+import { isAppearance, isProfile } from '@shared/appearance'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -199,7 +200,9 @@ function registerIpc(): void {
             isPlainObject(settings) &&
                 isList(settings.trustedHosts, 200) &&
                 settings.trustedHosts.every((h) => isString(h, 255)) &&
-                (settings.updateChannel === undefined || isUpdateChannel(settings.updateChannel)),
+                (settings.updateChannel === undefined || isUpdateChannel(settings.updateChannel)) &&
+                isProfile(settings.profile) &&
+                isAppearance(settings.appearance),
             'preferências'
         )
         await saveSettings(settings)

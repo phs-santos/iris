@@ -63,30 +63,29 @@ try {
         .waitFor({ state: 'detached', timeout: 2000 })
         .catch(() => problems.push('[fluxo SIP] Esc não fecha'))
 
-    await page.getByRole('button', { name: 'Áudio' }).click()
-    await scan('diálogo de áudio')
+    // Configurações: cada seção passa pela varredura; as setas trocam de seção (RNF-12).
+    await page.keyboard.press('ControlOrMeta+,')
+    const settings = page.getByRole('dialog', { name: 'Configurações' })
+    await settings.waitFor({ timeout: 2000 }).catch(() => problems.push('[configurações] Ctrl/Cmd+, não abre'))
+    for (const name of ['Perfil', 'Aparência', 'Áudio', 'Ajuda da IA', 'Certificados', 'Importar e exportar']) {
+        await settings.getByRole('tab', { name }).click()
+        await scan(`configurações › ${name}`)
+    }
+    await settings.getByRole('tab', { name: 'Perfil' }).click()
+    await page.keyboard.press('ArrowDown')
+    if ((await settings.getByRole('tab', { name: 'Aparência' }).getAttribute('aria-selected')) !== 'true')
+        problems.push('[configurações] seta para baixo não troca de seção')
+    await settings.getByRole('tab', { name: 'Atualização' }).click()
+    await page.getByText('funciona só no app instalado').waitFor()
+    await scan('configurações › atualização')
     await page.keyboard.press('Escape')
-    await page
-        .getByRole('dialog', { name: 'Áudio' })
+    await settings
         .waitFor({ state: 'detached', timeout: 2000 })
-        .catch(() => problems.push('[áudio] Esc não fecha'))
+        .catch(() => problems.push('[configurações] Esc não fecha'))
 
     await page.getByRole('button', { name: 'Saúde' }).first().click()
     await scan('saúde da conta')
     await page.keyboard.press('Escape')
-
-    await page.getByRole('button', { name: 'Importar / Exportar' }).click()
-    await scan('importar e exportar')
-    await page.keyboard.press('Escape')
-
-    await page.getByRole('button', { name: 'Atualização' }).click()
-    await page.getByText('funciona só no app instalado').waitFor()
-    await scan('atualização')
-    await page.keyboard.press('Escape')
-    await page
-        .getByRole('dialog', { name: 'Atualização' })
-        .waitFor({ state: 'detached', timeout: 2000 })
-        .catch(() => problems.push('[atualização] Esc não fecha'))
 
     await page.getByRole('button', { name: 'Explicar com IA' }).last().click()
     await page.getByLabel('Chave da OpenRouter').waitFor()

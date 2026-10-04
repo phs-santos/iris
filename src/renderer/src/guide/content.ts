@@ -105,7 +105,7 @@ export const GUIDE: GuideSection[] = [
                     [
                         'Barra de cima',
                         'Resumo (contas, PBX, registradas, chamadas) e os botões gerais',
-                        'Ver o estado de tudo de relance e abrir Áudio, Importar / Exportar, Atualização e este Guia'
+                        'Ver o estado de tudo de relance e abrir este Guia e as Configurações'
                     ],
                     [
                         'Esquerda: Contas',
@@ -135,10 +135,9 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     '**Registrar todas**: registra as contas que ainda não estão registradas. Útil depois de abrir o app ou de a rede voltar.',
                     '**Desregistrar todas**: tira todos os ramais do ar de uma vez, por exemplo antes de mexer na central.',
-                    '**Áudio**: escolhe microfone e alto-falante.',
-                    '**Importar / Exportar**: leva as contas para outra máquina.',
-                    '**Atualização**: mostra a versão e procura uma nova.',
-                    '**Guia**: abre esta tela. A tecla **F1** também abre.'
+                    '**Atualização disponível**: aparece só quando há versão nova. Veja "Atualização".',
+                    '**Guia**: abre esta tela. A tecla **F1** também abre.',
+                    '**Configurações**: perfil, cores, áudio, IA, certificados, importar e exportar e atualização. O atalho é **Ctrl+,** (no macOS, **Cmd+,**).'
                 ]
             },
             {
@@ -507,11 +506,53 @@ export const GUIDE: GuideSection[] = [
         ]
     },
     {
+        id: 'configuracoes',
+        title: 'Configurações',
+        summary: 'Seu perfil, as cores da Íris e as preferências gerais, numa tela só.',
+        blocks: [
+            { type: 'image', name: 'configuracoes', alt: 'Tela de Configurações aberta em Aparência' },
+            {
+                type: 'p',
+                text: 'Abra pelo botão **Configurações** da barra de cima ou com **Ctrl+,** (no macOS, **Cmd+,**). As seções ficam à esquerda; as setas para cima e para baixo trocam de seção. Tudo é salvo na hora.'
+            },
+            {
+                type: 'table',
+                head: ['Seção', 'O que tem'],
+                rows: [
+                    [
+                        'Perfil',
+                        'Seu nome, que já vem como nome de exibição nas contas novas, e a conta principal, que fica escolhida no discador ao abrir'
+                    ],
+                    [
+                        'Aparência',
+                        'A cor de destaque (seis paletas prontas ou a sua própria cor) e o tamanho da interface'
+                    ],
+                    ['Áudio', 'Microfone e alto-falante. Veja "Áudio"'],
+                    ['Ajuda da IA', 'A chave da OpenRouter, o modelo padrão e a máscara. Veja "Ajuda da IA"'],
+                    ['Certificados', 'Os PBX com certificado autoassinado que você aceitou, com a opção de remover'],
+                    ['Importar e exportar', 'Levar as contas para outra máquina. Veja "Importar e exportar contas"'],
+                    ['Atualização', 'A versão instalada e a busca por versão nova. Veja "Atualização"']
+                ]
+            },
+            { type: 'h', text: 'Cor de destaque' },
+            {
+                type: 'p',
+                text: 'A cor aparece nos botões principais, nas abas e no contorno do foco do teclado. Clique numa das bolinhas para usar uma paleta pronta, ou no **+** para escolher qualquer cor. Os botões escurecem a cor o quanto for preciso para o texto branco continuar legível.'
+            },
+            {
+                type: 'note',
+                kind: 'dica',
+                text: 'As paletas prontas evitam verde, amarelo e vermelho, porque essas cores já dizem o estado das contas e das chamadas. Se a cor que você escolher ficar apagada contra o fundo escuro, a tela avisa.'
+            }
+        ]
+    },
+    {
         id: 'audio',
         title: 'Áudio',
         summary: 'Escolher microfone e alto-falante e conferir se os dois funcionam.',
         blocks: [
-            { type: 'image', name: 'audio', alt: 'Janela de áudio com microfone, medidor e alto-falante' },
+            { type: 'p', text: 'Fica em **Configurações › Áudio**.' },
+            { type: 'image', name: 'audio', alt: 'Seção de áudio com microfone, medidor e alto-falante' },
             {
                 type: 'list',
                 items: [
@@ -527,7 +568,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'note',
                 kind: 'atenção',
-                text: 'No macOS e no Windows, o sistema pede permissão de microfone na primeira vez. Se você negou, libere nas configurações de privacidade do sistema e abra a janela de Áudio de novo.'
+                text: 'No macOS e no Windows, o sistema pede permissão de microfone na primeira vez. Se você negou, libere nas configurações de privacidade do sistema e abra Configurações › Áudio de novo.'
             }
         ]
     },
@@ -642,7 +683,8 @@ export const GUIDE: GuideSection[] = [
         title: 'Importar e exportar contas',
         summary: 'Levar as contas para outra máquina ou passar para um colega.',
         blocks: [
-            { type: 'image', name: 'importar', alt: 'Janela de importar e exportar contas' },
+            { type: 'p', text: 'Fica em **Configurações › Importar e exportar**.' },
+            { type: 'image', name: 'importar', alt: 'Seção de importar e exportar contas' },
             { type: 'h', text: 'Exportar' },
             {
                 type: 'p',
@@ -738,12 +780,13 @@ export const GUIDE: GuideSection[] = [
         title: 'Atualização',
         summary: 'Como a Íris procura, baixa e instala versões novas.',
         blocks: [
-            { type: 'image', name: 'atualizacao', alt: 'Janela de atualização' },
+            { type: 'p', text: 'Fica em **Configurações › Atualização**.' },
+            { type: 'image', name: 'atualizacao', alt: 'Seção de atualização' },
             {
                 type: 'list',
                 items: [
-                    'O app instalado procura versão nova pouco depois de abrir e quando você abre a janela **Atualização**.',
-                    '**Nada é baixado sozinho.** Quando há versão nova, o botão da barra vira "Atualização disponível" e você decide clicar em **Baixar**.',
+                    'O app instalado procura versão nova pouco depois de abrir e quando você abre **Configurações › Atualização**.',
+                    '**Nada é baixado sozinho.** Quando há versão nova, aparece o botão "Atualização disponível" na barra e você decide clicar em **Baixar**.',
                     'Depois de baixada, a versão entra quando o app reinicia. **Reiniciar e instalar** faz isso na hora e fica desligado enquanto houver chamada ativa.'
                 ]
             },
@@ -890,7 +933,7 @@ export const GUIDE: GuideSection[] = [
                     [
                         'A chamada conecta, mas não tem áudio',
                         'NAT sem TURN, ou microfone sem permissão',
-                        'Rode Saúde. Cadastre um TURN em Avançado. Confira a janela de Áudio'
+                        'Rode Saúde. Cadastre um TURN em Avançado. Confira Configurações › Áudio'
                     ],
                     [
                         'A URA não reconhece os dígitos',

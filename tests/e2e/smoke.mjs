@@ -79,16 +79,27 @@ try {
     await page.getByText('0 chamadas').waitFor()
 
     // Escolha de áudio (RF-19).
-    await page.getByRole('button', { name: 'Áudio' }).click()
-    const audio = page.getByRole('dialog', { name: 'Áudio' })
+    await page.getByRole('button', { name: 'Configurações' }).click()
+    const audio = page.getByRole('dialog', { name: 'Configurações' })
+    await audio.getByRole('tab', { name: 'Áudio' }).click()
     await audio.getByRole('meter', { name: 'Nível do microfone' }).waitFor()
     const mics = await audio.locator('select').first().locator('option').count()
     if (mics < 2) throw new Error('Nenhum microfone listado no diálogo de áudio')
     await audio.locator('select').first().selectOption({ index: 1 })
     await page.locator('.line', { hasText: 'Microfone: ' }).waitFor()
     if (shots) await page.screenshot({ path: join(shots, '5-audio.png') })
-    await audio.getByRole('button', { name: 'Pronto' }).click()
-    step('diálogo de áudio lista e troca o microfone')
+    step('Configurações › Áudio lista e troca o microfone')
+
+    // Paleta de cores: vale na hora e fica salva.
+    await audio.getByRole('tab', { name: 'Aparência' }).click()
+    await audio.getByRole('radio', { name: 'Violeta' }).click()
+    const accent = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent'))
+    if ((await accent()).trim() !== '#c084fc') throw new Error(`Cor de destaque não mudou: ${await accent()}`)
+    const saved = await page.evaluate(() => window.iris.settings.load())
+    if (saved.appearance?.accent !== '#c084fc') throw new Error('Cor de destaque não foi salva')
+    await audio.getByRole('radio', { name: 'Azul' }).click()
+    await audio.getByRole('button', { name: 'Fechar' }).click()
+    step('Configurações › Aparência troca e salva a cor de destaque')
 
     await page.getByRole('tab', { name: 'SIP bruto' }).click()
     await page.locator('.line.sip', { hasText: 'INVITE sip:1002@demo.local' }).first().waitFor()

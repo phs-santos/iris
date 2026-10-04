@@ -49,6 +49,9 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 
 **Ideias conversadas, ainda sem requisito** (não faça sem o usuário pedir): criador de URA que exporta o plano de discagem e gera os cenários de teste; modo Telefone (tela simples de celular); a lista de melhorias de experiência de uso (erros em português, primeiro uso guiado, chamada recebida em destaque, tela única de Preferências).
 
+**Redesenho da interface, pedido pelo usuário em 04/10/2026.** Ordem aprovada: (1) Configurações, (2) modo Telefone, (3) Bancada mais limpa, (4) tema claro e ícones. O app continua abrindo na Bancada; Recentes e Contatos ficam para depois. Proposta com mockups: https://claude.ai/artifact/7khNUxzfDUEz7szws4AT46
+- **(1) Configurações: feito e publicado na 1.2.0.** Tela única (`components/settings/`) com Perfil, Aparência (6 paletas e cor própria, regras em `src/shared/appearance.ts`), Áudio, Ajuda da IA, Certificados, Importar e exportar e Atualização; abre pelo botão do topo ou Ctrl/Cmd+,. Os campos novos `profile` e `appearance` do settings.json são opcionais, então arquivos antigos continuam valendo.
+
 **Fora do 1.0** (não faça sem o usuário pedir): RF-20 (early media), RF-27 (BLF), RF-34 (atalhos globais) e RF-36 (gravação). O RF-31 também era "depois", mas já foi feito.
 
 **Decisões em aberto na especificação** (pergunte ao usuário, não decida sozinho): quem providencia os certificados e quais PBX além do Asterisk entram nos testes automáticos. Já decidido: o nome é Íris, a licença é MIT (arquivo `LICENSE`) e os instaladores e atualizações ficam no GitHub Releases.
@@ -67,7 +70,7 @@ Pendências conhecidas, que não precisam ser feitas agora:
 
 ## Releases
 
-- O repositório é público: `github.com/phs-santos/iris`. A versão pública atual é a 1.1.0 (a 1.0.3 trouxe IA, guia e avisos do Windows; a 1.0.5, o aviso de atualização manual no macOS; a 1.0.6, as senhas em arquivo local; a 1.1.0, o Fluxo SIP e a migração de senhas sem perda). A 1.0.4 foi recolhida: tinha um erro de IPC que impedia as contas de carregar; a primeira foi a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
+- O repositório é público: `github.com/phs-santos/iris`. A versão pública atual é a 1.2.0 (a 1.0.3 trouxe IA, guia e avisos do Windows; a 1.0.5, o aviso de atualização manual no macOS; a 1.0.6, as senhas em arquivo local; a 1.1.0, o Fluxo SIP e a migração de senhas sem perda; a 1.2.0, a tela de Configurações com perfil e paletas de cor). A 1.0.4 foi recolhida: tinha um erro de IPC que impedia as contas de carregar; a primeira foi a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
 - Uma tag `v` + versão dispara `.github/workflows/release.yml`, que gera os instaladores dos três sistemas e cria um release **em rascunho**. Publicar o rascunho é com o usuário. O passo a passo está no README, em "Atualização automática".
 - Dar push na `main` e criar tag só com autorização do usuário para aquele release.
 

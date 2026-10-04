@@ -2,6 +2,7 @@
 
 import type { AiModel, AiRequest, AiResult, AiSettings, AiStatus } from './ai'
 import type { CliConfig } from './cli'
+import type { Appearance, Profile } from './appearance'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
@@ -82,6 +83,9 @@ export interface Settings {
     updateChannel?: UpdateChannel
     /** Ajuda da IA para ler o log (RF-38). */
     ai?: AiSettings
+    /** Tela de Configurações: quem usa e como a interface aparece. */
+    profile?: Profile
+    appearance?: Appearance
 }
 
 /** Canais de atualização (RF-35): o beta recebe também as versões de teste (`1.2.0-beta.1`). */

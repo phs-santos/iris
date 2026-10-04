@@ -113,7 +113,8 @@ try {
     await app.evaluate(({ dialog }, file) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] })
     }, importFile)
-    await page.getByRole('button', { name: 'Importar / Exportar' }).click()
+    await page.getByRole('button', { name: 'Configurações' }).click()
+    await page.getByRole('tab', { name: 'Importar e exportar' }).click()
     await page.getByRole('button', { name: 'Escolher arquivo' }).click()
     await page.getByText('10 contas importadas').waitFor()
     await page.getByRole('button', { name: 'Fechar' }).click()

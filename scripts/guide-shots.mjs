@@ -123,15 +123,16 @@ try {
     await shot('saude', dialog())
     await close()
 
-    await page.getByRole('button', { name: 'Áudio' }).click()
+    // Configurações: cada seção vira uma captura da tela inteira.
+    await page.getByRole('button', { name: 'Configurações' }).click()
+    await dialog().getByRole('tab', { name: 'Aparência' }).click()
+    await shot('configuracoes', dialog())
+    await dialog().getByRole('tab', { name: 'Áudio' }).click()
+    await dialog().getByRole('meter', { name: 'Nível do microfone' }).waitFor()
     await shot('audio', dialog())
-    await close()
-
-    await page.getByRole('button', { name: 'Importar / Exportar' }).click()
+    await dialog().getByRole('tab', { name: 'Importar e exportar' }).click()
     await shot('importar', dialog())
-    await close()
-
-    await page.getByRole('button', { name: 'Atualização' }).click()
+    await dialog().getByRole('tab', { name: 'Atualização' }).click()
     await shot('atualizacao', dialog())
     await close()
 
