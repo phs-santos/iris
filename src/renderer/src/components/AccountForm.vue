@@ -226,6 +226,9 @@ async function save(register: boolean): Promise<void> {
                         />
                         {{ $t('accountForm.ms') }}
                     </label>
+                    <label v-if="native" class="check">
+                        <input v-model="form.srtp" type="checkbox" /> {{ $t('accountForm.audio_cifrado') }}
+                    </label>
                     <label class="check">
                         <input v-model="form.rawSipLog" type="checkbox" />
                         {{ $t('accountForm.mostrar_sip_bruto_no_log') }}

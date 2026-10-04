@@ -24,7 +24,7 @@ const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)
 const account = (name) => page.locator('.acc', { hasText: name })
 
-async function addAccount(name, ext, transport, password = '1234', autoAnswer = false) {
+async function addAccount(name, ext, transport, password = '1234', autoAnswer = false, srtp = false) {
     await page.getByRole('button', { name: '+ Nova' }).click()
     const form = page.locator('form.dialog')
     await form.getByRole('textbox', { name: 'Nome' }).fill(name)
@@ -35,6 +35,7 @@ async function addAccount(name, ext, transport, password = '1234', autoAnswer = 
     if (await form.getByRole('textbox', { name: 'WebSocket (WSS)' }).count())
         throw new Error('o campo do WebSocket continua na tela de uma conta de SIP puro')
     if (autoAnswer) await form.getByText('Auto-atender após').locator('input[type=checkbox]').check()
+    if (srtp) await form.getByText('Exigir áudio cifrado (SRTP)').locator('input[type=checkbox]').check()
     await form.getByRole('button', { name: 'Salvar e registrar' }).click()
 }
 
@@ -199,6 +200,39 @@ try {
     step('transferência assistida: as duas chamadas de quem transferiu caíram e o outro lado ficou com o destino')
     await joined.getByRole('button', { name: 'Desligar' }).click()
     await joined.waitFor({ state: 'detached', timeout: 10000 })
+    await page.waitForTimeout(500)
+
+    // ─── Áudio cifrado (SRTP) ───
+    await addAccount('Puro SRTP', '2005', 'TLS', '1234', false, true)
+    await account('Puro SRTP').locator('.dot.registered').waitFor({ timeout: 15000 })
+    await dial('Puro SRTP', '600')
+    const secure = live(/2005\s*→\s*600/)
+    await secure.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await secure
+        .locator('.quality')
+        .filter({ hasText: /PCM[UA] \(SRTP\)/ })
+        .waitFor({ timeout: 15000 })
+    step(`áudio cifrado com o eco: ${(await secure.locator('.quality').textContent()).trim().replace(/\s+/g, ' ')}`)
+    await secure.getByRole('button', { name: 'Desligar' }).click()
+    await secure.waitFor({ state: 'detached', timeout: 10000 })
+    // Chamada recebida com cifra: o Asterisk oferece SRTP ao 2005 e fala sem cifra com o 2001.
+    await dial('Puro UDP', '2005')
+    await page
+        .getByRole('region', { name: /Chamada recebida de/ })
+        .getByRole('button', { name: 'Atender' })
+        .click({ timeout: 20000 })
+    const answered = live(/2005\s*←\s*2001/)
+    await answered
+        .locator('.quality')
+        .filter({ hasText: /PCM[UA] \(SRTP\)/ })
+        .waitFor({ timeout: 15000 })
+    await live(/2001\s*→\s*2005/)
+        .locator('.quality')
+        .filter({ hasText: /PCM[UA]$/ })
+        .waitFor({ timeout: 15000 })
+    step('chamada recebida com cifra: SRTP de um lado, RTP comum do outro, com áudio nos dois')
+    await answered.getByRole('button', { name: 'Desligar' }).click()
+    await answered.waitFor({ state: 'detached', timeout: 10000 })
     await page.waitForTimeout(500)
 
     // SIP puro com WebRTC: o Asterisk faz a ponte entre o RTP simples e o DTLS-SRTP. O ramal 1021 só

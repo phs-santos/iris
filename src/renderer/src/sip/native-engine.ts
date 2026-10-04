@@ -8,11 +8,12 @@ import { NativeAudio } from './native-audio'
 
 let nextEngine = 1
 
-/** Nota de 0 a 100 a partir da perda e da variação do atraso; sem RTCP ainda, não há tempo de ida e volta. */
-function qualityOf(lossPercent: number, jitterMs: number, codec: string): CallQuality {
-    const score = Math.max(0, Math.round(100 - lossPercent * 4 - Math.max(0, jitterMs - 10) * 0.8))
+/** Nota de 0 a 100 a partir da perda, da variação do atraso e do tempo de ida e volta (quando o RTCP mede). */
+function qualityOf(lossPercent: number, jitterMs: number, rttMs: number, codec: string): CallQuality {
+    const delay = Math.max(0, jitterMs - 10) * 0.8 + Math.max(0, rttMs - 150) * 0.1
+    const score = Math.max(0, Math.round(100 - lossPercent * 4 - delay))
     const level = score >= 85 ? 'excellent' : score >= 70 ? 'good' : score >= 50 ? 'warning' : 'bad'
-    return { score, level, jitterMs, packetLossPercent: Math.round(lossPercent * 10) / 10, rttMs: 0, codec }
+    return { score, level, jitterMs, packetLossPercent: Math.round(lossPercent * 10) / 10, rttMs, codec }
 }
 
 /** Chamada do motor próprio: o SIP e o RTP ficam no processo principal; aqui, os comandos e o áudio. */
@@ -110,7 +111,8 @@ class NativeSipCall implements EngineCall {
         const stats = await window.iris.sip.callStats(this.engineId, this.id).catch(() => null)
         if (!stats || stats.packetsReceived === 0) return null
         const expected = stats.packetsReceived + stats.packetsLost
-        return qualityOf((stats.packetsLost / expected) * 100, stats.jitterMs, stats.codec)
+        const codec = stats.secure ? `${stats.codec} (SRTP)` : stats.codec
+        return qualityOf((stats.packetsLost / expected) * 100, stats.jitterMs, stats.rttMs ?? 0, codec)
     }
 }
 
@@ -180,7 +182,8 @@ export class NativeSipEngine implements SipEngine {
                     authUser: account.authUsername?.trim() || undefined,
                     displayName: account.displayName?.trim() || undefined,
                     transport: account.transport as SipTransportKind,
-                    server: account.sipServer?.trim() || undefined
+                    server: account.sipServer?.trim() || undefined,
+                    srtp: account.srtp || undefined
                 },
                 this.password
             )

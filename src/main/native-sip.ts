@@ -47,7 +47,8 @@ function isConfig(v: unknown): v is NativeSipConfig {
         isOptionalText(v.server, 255) &&
         parseSipServer(v.server as string | undefined, v.domain, v.transport) !== null &&
         (v.authUser === undefined || v.authUser === '' || isSipUser(v.authUser)) &&
-        isOptionalText(v.displayName, 120)
+        isOptionalText(v.displayName, 120) &&
+        (v.srtp === undefined || typeof v.srtp === 'boolean')
     )
 }
 
@@ -102,6 +103,7 @@ export function registerNativeSipIpc(options: Options): void {
                 host: target.host,
                 port: target.port,
                 trusted: options.isTrustedHost(target.host),
+                srtp: config.srtp,
                 userAgent: `Iris/${app.getVersion()}`
             },
             createTransport,

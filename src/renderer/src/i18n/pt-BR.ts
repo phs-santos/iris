@@ -74,6 +74,7 @@ export const ptBR = {
         iris_electron_chromium: 'Íris {version} · Electron {electron} · Chromium {chrome} · {platform}'
     },
     accountForm: {
+        audio_cifrado: 'Exigir áudio cifrado (SRTP)',
         fechar: 'Fechar',
         nome: 'Nome',
         suporte_1001: 'Suporte 1001',
@@ -86,7 +87,8 @@ export const ptBR = {
         sip_por_udp: 'SIP por UDP',
         sip_por_tcp: 'SIP por TCP',
         sip_por_tls: 'SIP por TLS',
-        sip_puro_sem_webrtc_por: 'SIP puro, sem WebRTC: áudio G.711 sem cifra, com DTMF, espera e transferência.',
+        sip_puro_sem_webrtc_por:
+            'SIP puro, sem WebRTC: áudio G.711, com DTMF, espera e transferência. O áudio só é cifrado se você exigir SRTP.',
         servidor_sip_host_e_porta: 'Servidor SIP (host e porta)',
         websocket_wss: 'WebSocket (WSS)',
         wss_pbx_empresa_com_8089: 'wss://pbx.empresa.com:8089/ws',

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { decodeG711, encodeG711 } from '../src/main/sip/g711'
 import { buildRtp, parseRtp, RtpSession } from '../src/main/sip/rtp'
 import { answerDirection, buildSdp, parseSdp, SdpError } from '../src/main/sip/sdp'
+import { deriveKey, newSrtpKey, SrtpContext } from '../src/main/sip/srtp'
 
 const sine = (samples: number, amplitude = 12000): Int16Array =>
     Int16Array.from({ length: samples }, (_, i) => Math.round(amplitude * Math.sin((2 * Math.PI * 440 * i) / 8000)))
@@ -74,8 +75,21 @@ describe('SDP (RF-39)', () => {
         expect(media.dtmfPayload).toBeUndefined()
     })
 
-    it('recusa SRTP, falta de áudio e falta de codec em comum', () => {
-        expect(() => parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/SAVP 0\r\n')).toThrow(SdpError)
+    it('áudio cifrado: a chave vai e volta na linha a=crypto', () => {
+        const key = newSrtpKey()
+        const sdp = buildSdp({ ...local, crypto: { tag: 1, key } })
+        expect(sdp).toContain('m=audio 20000 RTP/SAVP 0 8 101')
+        expect(sdp).toContain(`a=crypto:1 AES_CM_128_HMAC_SHA1_80 inline:${key}`)
+        expect(parseSdp(sdp).crypto).toEqual({ tag: 1, key })
+        // Pega a primeira cifra que a Íris fala, e ignora a chave quando o áudio é RTP comum.
+        const offer = `v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/SAVP 0\r\na=crypto:1 AES_256_CM_HMAC_SHA1_80 inline:${key}\r\na=crypto:2 AES_CM_128_HMAC_SHA1_80 inline:${key}|2^31\r\n`
+        expect(parseSdp(offer).crypto).toEqual({ tag: 2, key })
+        expect(parseSdp(offer.replace('RTP/SAVP', 'RTP/AVP')).crypto).toBeUndefined()
+    })
+
+    it('recusa cifra desconhecida, falta de áudio e falta de codec em comum', () => {
+        expect(() => parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/SAVP 0\r\n')).toThrow(/cifra em comum/)
+        expect(() => parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 UDP/TLS/RTP/SAVPF 0\r\n')).toThrow(SdpError)
         expect(() => parseSdp('v=0\r\nm=video 4000 RTP/AVP 96\r\n')).toThrow(/não ofereceu áudio/)
         expect(() =>
             parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/AVP 111\r\na=rtpmap:111 opus/48000/2\r\n')
@@ -150,6 +164,127 @@ describe('RTP (RF-39)', () => {
             await expect(session.sendDtmf('1')).rejects.toThrow(/não aceita DTMF por RTP/)
         } finally {
             session.close()
+        }
+    })
+})
+
+describe('SRTP (RF-39)', () => {
+    const hex = (text: string): Buffer => Buffer.from(text, 'hex')
+
+    it('deriva as chaves de sessão como no exemplo da RFC 3711 (apêndice B.3)', () => {
+        const key = hex('E1F97A0D3E018BE0D64FA32C06DE4139')
+        const salt = hex('0EC675AD498AFEEBB6960B3AABE6')
+        expect(deriveKey(key, salt, 0x00, 16).toString('hex').toUpperCase()).toBe('C61E7A93744F39EE10734AFE3FF7A087')
+        expect(deriveKey(key, salt, 0x02, 14).toString('hex').toUpperCase()).toBe('30CBBC08863D8C85D49DB34A9AE1')
+        expect(deriveKey(key, salt, 0x01, 20).toString('hex').toUpperCase()).toBe(
+            'CEBE321F6FF7716B6FD4AB49AF256A156D38BAA4'
+        )
+    })
+
+    const packet = (sequence: number, payload = 'voz em G.711'): Buffer =>
+        buildRtp({
+            payloadType: 0,
+            marker: false,
+            sequence,
+            timestamp: sequence * 160,
+            ssrc: 0x1234abcd,
+            payload: Buffer.from(payload)
+        })
+
+    it('cifra a carga, mantém o cabeçalho e desfaz do outro lado', () => {
+        const key = newSrtpKey()
+        const [sender, receiver] = [new SrtpContext(key), new SrtpContext(key)]
+        const plain = packet(100)
+        const secret = sender.protect(plain)
+        expect(secret).toHaveLength(plain.length + 10)
+        expect(secret.subarray(0, 12)).toEqual(plain.subarray(0, 12))
+        expect(secret.subarray(12, plain.length)).not.toEqual(plain.subarray(12))
+        expect(receiver.unprotect(secret)).toEqual(plain)
+    })
+
+    it('recusa pacote adulterado, chave errada e pacote curto demais', () => {
+        const sender = new SrtpContext(newSrtpKey())
+        const secret = sender.protect(packet(1))
+        const tampered = Buffer.from(secret)
+        tampered[14] = tampered[14]! ^ 1
+        const key = newSrtpKey()
+        expect(new SrtpContext(key).unprotect(secret)).toBeNull()
+        const receiver = new SrtpContext(key)
+        expect(receiver.unprotect(new SrtpContext(key).protect(packet(1)))).not.toBeNull()
+        expect(receiver.unprotect(tampered)).toBeNull()
+        expect(receiver.unprotect(Buffer.alloc(8))).toBeNull()
+        expect(() => new SrtpContext('curta')).toThrow(/tamanho errado/)
+    })
+
+    it('continua conferindo depois que o número de sequência dá a volta', () => {
+        const key = newSrtpKey()
+        const [sender, receiver] = [new SrtpContext(key), new SrtpContext(key)]
+        for (const sequence of [65533, 65534, 65535, 0, 1, 2]) {
+            const plain = packet(sequence, `pacote ${sequence}`)
+            expect(receiver.unprotect(sender.protect(plain))).toEqual(plain)
+        }
+        // Um atrasado, de antes da volta, ainda confere.
+        const late = new SrtpContext(key)
+        const before = late.protect(packet(65535, 'atrasado'))
+        for (const sequence of [0, 1]) late.protect(packet(sequence))
+        const fresh = new SrtpContext(key)
+        for (const sequence of [65534, 0, 1]) fresh.unprotect(sender.protect(packet(sequence)))
+        expect(late.unprotect(before)).not.toBeNull()
+    })
+
+    it('duas sessões RTP com cifra se entendem, e sem a chave certa o áudio é descartado', async () => {
+        const heard: Int16Array[] = []
+        const a = new RtpSession({ audio: () => undefined, dtmf: () => undefined })
+        const b = new RtpSession({ audio: (pcm) => heard.push(pcm), dtmf: () => undefined })
+        try {
+            const [, portB] = [await a.open(), await b.open()]
+            const [keyA, keyB] = [newSrtpKey(), newSrtpKey()]
+            const remote = { address: '127.0.0.1', codec: 'PCMA' as const, payload: 8, dtmfPayload: 101 }
+            a.setRemote({ ...remote, port: portB })
+            b.setRemote({ ...remote, port: 9 })
+            a.setCrypto({ local: keyA, remote: keyB })
+            b.setCrypto({ local: keyB, remote: keyA })
+            for (let i = 0; i < 3; i++) a.sendPcm(sine(160))
+            await new Promise((done) => setTimeout(done, 50))
+            expect(heard).toHaveLength(3)
+
+            b.setCrypto({ local: keyB, remote: newSrtpKey() })
+            a.sendPcm(sine(160))
+            await new Promise((done) => setTimeout(done, 50))
+            expect(heard).toHaveLength(3)
+        } finally {
+            a.close()
+            b.close()
+        }
+    })
+})
+
+describe('RTCP (RF-39)', () => {
+    it('mede o tempo de ida e volta com os relatórios dos dois lados', async () => {
+        const quiet = { audio: () => undefined, dtmf: () => undefined }
+        const [a, b] = [new RtpSession(quiet), new RtpSession(quiet)]
+        const report = (session: RtpSession): void => (session as unknown as { sendRtcp(): void }).sendRtcp()
+        const pause = (): Promise<void> => new Promise((done) => setTimeout(done, 40))
+        try {
+            const [portA, portB] = [await a.open(), await b.open()]
+            const remote = { address: '127.0.0.1', codec: 'PCMU' as const, payload: 0 }
+            a.setRemote({ ...remote, port: portB })
+            b.setRemote({ ...remote, port: portA })
+            a.sendPcm(sine(160))
+            b.sendPcm(sine(160))
+            await pause()
+            expect(a.getStats().rttMs).toBeUndefined()
+            // A manda o relatório; B responde dizendo qual relatório viu e quanto tempo o segurou.
+            report(a)
+            await pause()
+            report(b)
+            await pause()
+            const rtt = a.getStats().rttMs
+            expect(rtt).toBeDefined()
+            expect(rtt!).toBeLessThan(50)
+        } finally {
+            a.close()
+            b.close()
         }
     })
 })

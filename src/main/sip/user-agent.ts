@@ -32,6 +32,8 @@ export interface UserAgentConfig {
     port: number
     /** TLS: o usuário aceitou o certificado inválido deste host. */
     trusted?: boolean
+    /** Exige áudio cifrado (SRTP) nas chamadas. */
+    srtp?: boolean
     /** Validade pedida no registro, em segundos. */
     expires?: number
     userAgent?: string
@@ -454,6 +456,7 @@ export class SipUserAgent {
             authUser: authUser || user,
             password,
             displayName,
+            srtp: Boolean(this.config.srtp),
             reliable: this.transport?.reliable ?? true,
             contactUri: () => `sip:${user}@${bracket(contact().host)}:${contact().port};transport=${transport}`,
             mediaAddress: () => contact().host,
