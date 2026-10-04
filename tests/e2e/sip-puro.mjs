@@ -100,7 +100,21 @@ try {
     await health.getByRole('button', { name: 'Fechar' }).first().click()
     step('Saúde: transporte conectado e OPTIONS respondido')
 
+    // Diagnóstico de rede (RF-46): numa conta TLS, a Saúde mostra o certificado que o PBX apresenta.
+    await account('Puro TLS').locator('.row').click()
+    await account('Puro TLS')
+        .getByRole('button', { name: /Mais ações|⋯/ })
+        .click()
+    await page.getByRole('menuitem', { name: 'Saúde' }).click()
+    const net = page.getByRole('dialog')
+    await net.getByText(/Certificado TLS não confiável: localhost/).waitFor({ timeout: 15000 })
+    await net.getByText(/vale até .* nomes: localhost, 127\.0\.0\.1/).waitFor({ timeout: 5000 })
+    await net.getByText('STUN: sem servidor na conta').waitFor({ timeout: 5000 })
+    await net.getByRole('button', { name: 'Fechar' }).first().click()
+    step('Saúde mostra o certificado TLS do PBX: autoassinado, com validade e nomes')
+
     // Pedido SIP manual (RF-45): um OPTIONS pela conta registrada mostra a resposta do PBX.
+    await account('Puro UDP').locator('.row').click()
     await account('Puro UDP')
         .getByRole('button', { name: /Mais ações|⋯/ })
         .click()

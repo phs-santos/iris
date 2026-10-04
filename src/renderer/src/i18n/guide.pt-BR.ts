@@ -576,6 +576,15 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'p',
                 text: '✓ é aprovado, ✗ é reprovado e ! é um aviso. **Verificar de novo** repete tudo; **Copiar relatório** leva o resultado em texto, pronto para colar num chamado.'
+            },
+            { type: 'h', text: 'Rede' },
+            {
+                type: 'list',
+                items: [
+                    '**DNS**: se o domínio da conta tem registros SRV de SIP (`_sip._udp`, `_sip._tcp`, `_sips._tcp`), a Saúde lista para onde eles apontam, com porta, prioridade e peso. A Íris ainda não segue esses registros ao conectar: ela usa o nome e a porta da conta. Se os dois não batem, a lista mostra onde o PBX espera o ramal.',
+                    '**Certificado TLS**: em contas `wss://` e de SIP por TLS, mostra para quem o certificado foi emitido, por quem, até quando vale e para quais nomes. "Não confiável" com o motivo (autoassinado, vencido, nome diferente) é um aviso: se você já aceitou o host, a conta funciona mesmo assim.',
+                    '**STUN**: se a conta tem um servidor `stun:` no campo STUN / TURN, mostra com que endereço e porta a sua rede aparece do lado de fora. Compare com o endereço que o PBX vê nas mensagens SIP (`received` e `rport` no Via) para entender um NAT. Sem servidor na conta, o teste não roda: a Íris não consulta um servidor que você não escolheu.'
+                ]
             }
         ]
     },

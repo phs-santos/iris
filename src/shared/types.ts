@@ -6,6 +6,7 @@ import type { Appearance, Profile } from './appearance'
 import type { TrayCounts } from './tray'
 import type { HistoryEntry } from './history'
 import type { MonitorSettings, WebhookPayload } from './monitor'
+import type { NetDiagRequest, NetDiagResult } from './net-diag'
 import type { AccountTransport, SipTransportKind } from './sip-target'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
@@ -289,6 +290,10 @@ export interface IrisApi {
         loadWav(path: string): Promise<Int16Array>
     }
     notify(title: string, body: string): void
+    /** Diagnóstico de rede da Saúde (RF-46): DNS SRV, certificado TLS e STUN. */
+    net: {
+        diagnose(request: NetDiagRequest): Promise<NetDiagResult>
+    }
     /** Monitor (RF-43): o POST do webhook sai do processo principal; devolve o código HTTP da resposta. */
     monitor: {
         webhook(url: string, payload: WebhookPayload): Promise<number>
@@ -375,6 +380,7 @@ export const IPC = {
     audioLoadWav: 'audio:load-wav',
     notify: 'app:notify',
     monitorWebhook: 'monitor:webhook',
+    netDiagnose: 'net:diagnose',
     tray: 'app:tray',
     logError: 'app:log-error',
     appInfo: 'app:info',

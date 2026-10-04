@@ -29,6 +29,8 @@ import { HISTORY_LIMIT, isHistoryEntry, type HistoryEntry } from '@shared/histor
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
+import { diagnoseNetwork } from './net-diag'
+import { isNetDiagRequest, type NetDiagRequest } from '@shared/net-diag'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -301,6 +303,11 @@ function registerIpc(): void {
         } finally {
             clearTimeout(timer)
         }
+    })
+
+    handle(IPC.netDiagnose, (_e, request: NetDiagRequest) => {
+        check(isNetDiagRequest(request), 'diagnóstico de rede')
+        return diagnoseNetwork(request)
     })
 
     on(IPC.tray, (_e, counts: unknown) => {

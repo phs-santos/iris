@@ -5,6 +5,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { describeStatus } from '@renderer/lib/accounts'
 import { isNativeAccount } from '@renderer/sip'
+import type { Account } from '@shared/types'
+import { firstStunServer } from '@shared/net-diag'
+import { parseSipServer, type SipTransportKind } from '@shared/sip-target'
 
 type Check = { ok: boolean | null; text: string; hint?: string }
 
@@ -17,6 +20,60 @@ const account = computed(() => accounts.byId(props.accountId))
 const checks = ref<Check[]>([])
 const running = ref(false)
 const checkedAt = ref('')
+
+/** Rede (RF-46): o que o DNS diz do domínio, o certificado do PBX e o endereço visto de fora. */
+async function network(a: Account, list: Check[]): Promise<void> {
+    const native = isNativeAccount(a)
+    const target = native ? parseSipServer(a.sipServer, a.domain, a.transport as SipTransportKind) : null
+    let tls: { host: string; port: number } | undefined
+    if (native && a.transport === 'tls' && target) tls = target
+    else if (!native && a.wssUrl.startsWith('wss://')) {
+        try {
+            const url = new URL(a.wssUrl)
+            tls = { host: url.hostname, port: Number(url.port) || 443 }
+        } catch {
+            // endereço inválido: a verificação do transporte já avisa
+        }
+    }
+    const stun = firstStunServer(a.iceServers)
+    const result = await window.iris.net.diagnose({ domain: a.domain.trim(), tls, stun }).catch(() => null)
+    if (!result) return
+
+    if (result.srvError) list.push({ ok: null, text: t('healthDialog.srv_erro', { error: result.srvError }) })
+    else if (result.srv?.length)
+        list.push({
+            ok: true,
+            text: t('healthDialog.srv_encontrados', { domain: a.domain }),
+            hint: result.srv.map((r) => `${r.service} → ${r.target}:${r.port} (${r.priority}/${r.weight})`).join(' · ')
+        })
+    else if (result.srv) list.push({ ok: null, text: t('healthDialog.srv_nenhum', { domain: a.domain }) })
+
+    if (result.tlsError) list.push({ ok: false, text: t('healthDialog.tls_erro', { error: result.tlsError }) })
+    else if (result.tls) {
+        const c = result.tls
+        const until = new Date(c.validTo)
+        list.push({
+            // Certificado não confiável é aviso, não erro: o usuário pode ter aceitado o host (RF-37).
+            ok: c.trusted ? true : null,
+            text: c.trusted
+                ? t('healthDialog.tls_confiavel', { subject: c.subject })
+                : t('healthDialog.tls_nao_confiavel', { subject: c.subject, problem: c.problem ?? '' }),
+            hint: t('healthDialog.tls_detalhes', {
+                issuer: c.issuer,
+                until: Number.isNaN(until.getTime()) ? c.validTo : until.toLocaleDateString(),
+                names: c.names.join(', ') || '—'
+            })
+        })
+    }
+
+    if (result.stunError) list.push({ ok: false, text: t('healthDialog.stun_erro', { error: result.stunError }) })
+    else if (result.stun)
+        list.push({
+            ok: true,
+            text: t('healthDialog.stun_endereco', { address: result.stun.address, port: result.stun.port })
+        })
+    else if (native) list.push({ ok: null, text: t('healthDialog.stun_sem_servidor') })
+}
 
 /** Verificações de ambiente e da conta (RF-24 e RF-25). */
 async function run(): Promise<void> {
@@ -73,7 +130,9 @@ async function run(): Promise<void> {
     const outputs = devices.filter((d) => d.kind === 'audiooutput').length
     list.push({ ok: outputs > 0, text: t('healthDialog.saidas_de_audio_encontradas', { outputs }) })
 
-    if (!a.simulated) {
+    if (!a.simulated) await network(a, list)
+
+    if (!a.simulated && !isNativeAccount(a)) {
         const hasTurn = /turns?:/i.test(a.iceServers)
         list.push({
             ok: hasTurn ? true : null,

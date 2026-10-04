@@ -4,6 +4,9 @@ import { buildRtp, parseRtp, RtpSession } from '../src/main/sip/rtp'
 import { answerDirection, buildSdp, parseSdp, SdpError } from '../src/main/sip/sdp'
 import { deriveKey, newSrtpKey, SrtpContext } from '../src/main/sip/srtp'
 import { PacketCapture, udpPacket } from '../src/main/sip/pcap'
+import { createSocket } from 'node:dgram'
+import { stunQuery } from '../src/main/net-diag'
+import { buildStunRequest, firstStunServer, isNetDiagRequest, parseStunResponse } from '../src/shared/net-diag'
 
 const sine = (samples: number, amplitude = 12000): Int16Array =>
     Int16Array.from({ length: samples }, (_, i) => Math.round(amplitude * Math.sin((2 * Math.PI * 440 * i) / 8000)))
@@ -344,5 +347,62 @@ describe('captura em PCAP (RF-44)', () => {
         for (let i = 0; i < 20; i++) capture.add(local, pbx, Buffer.alloc(172), true, i)
         expect(capture.count).toBe(5)
         expect(capture.toPcap(true).readUInt32LE(24 + 4)).toBe(15 * 1000)
+    })
+})
+
+describe('diagnóstico de rede (RF-46)', () => {
+    const id = Uint8Array.from({ length: 12 }, (_, i) => i + 1)
+    /** Resposta de binding com o endereço 203.0.113.7:40000, no formato novo (XOR) ou no antigo. */
+    const response = (xor: boolean, transaction = id): Uint8Array => {
+        const out = new Uint8Array(32)
+        const view = new DataView(out.buffer)
+        view.setUint16(0, 0x0101)
+        view.setUint16(2, 12)
+        view.setUint32(4, 0x2112a442)
+        out.set(transaction, 8)
+        view.setUint16(20, xor ? 0x0020 : 0x0001)
+        view.setUint16(22, 8)
+        out[25] = 1
+        view.setUint16(26, xor ? 40000 ^ 0x2112 : 40000)
+        view.setUint32(28, xor ? (0xcb007107 ^ 0x2112a442) >>> 0 : 0xcb007107)
+        return out
+    }
+
+    it('monta o pedido STUN e lê o endereço da resposta, nos dois formatos', () => {
+        const request = buildStunRequest(id)
+        expect(request).toHaveLength(20)
+        expect([...request.subarray(0, 8)]).toEqual([0, 1, 0, 0, 0x21, 0x12, 0xa4, 0x42])
+        expect([...request.subarray(8)]).toEqual([...id])
+        expect(parseStunResponse(response(true), id)).toEqual({ address: '203.0.113.7', port: 40000 })
+        expect(parseStunResponse(response(false), id)).toEqual({ address: '203.0.113.7', port: 40000 })
+        // Resposta de outro pedido, pedido no lugar de resposta e lixo são ignorados.
+        expect(parseStunResponse(response(true), new Uint8Array(12))).toBeNull()
+        expect(parseStunResponse(buildStunRequest(id), id)).toBeNull()
+        expect(parseStunResponse(new Uint8Array(5), id)).toBeNull()
+    })
+
+    it('pergunta a um servidor STUN de verdade (local) e recebe o endereço', async () => {
+        const server = createSocket('udp4')
+        await new Promise<void>((ok) => server.bind(0, '127.0.0.1', ok))
+        server.on('message', (data, from) => server.send(response(true, data.subarray(8, 20)), from.port, from.address))
+        try {
+            expect(await stunQuery('127.0.0.1', server.address().port)).toEqual({ address: '203.0.113.7', port: 40000 })
+        } finally {
+            server.close()
+        }
+    })
+
+    it('acha o servidor STUN da conta e confere o pedido que vem da interface', () => {
+        expect(firstStunServer('turn:t.exemplo:3478, stun:stun.exemplo.com:19302')).toEqual({
+            host: 'stun.exemplo.com',
+            port: 19302
+        })
+        expect(firstStunServer('stun:stun.exemplo.com')).toEqual({ host: 'stun.exemplo.com', port: 3478 })
+        expect(firstStunServer('turn:t.exemplo:3478')).toBeUndefined()
+        expect(isNetDiagRequest({ domain: 'pbx.exemplo.com', tls: { host: 'pbx.exemplo.com', port: 5061 } })).toBe(true)
+        expect(isNetDiagRequest({ domain: '' })).toBe(true)
+        expect(isNetDiagRequest({ domain: 'a b' })).toBe(false)
+        expect(isNetDiagRequest({ domain: 'x', stun: { host: 'x', port: 0 } })).toBe(false)
+        expect(isNetDiagRequest({ domain: 'x', tls: { host: 'a/b', port: 443 } })).toBe(false)
     })
 })
