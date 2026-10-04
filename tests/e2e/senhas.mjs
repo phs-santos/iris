@@ -8,6 +8,8 @@ import { join } from 'node:path'
 const userData = mkdtempSync(join(tmpdir(), 'iris-senhas-'))
 const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
+// O Linux do CI não tem cofre do sistema; o armazenamento básico do Chromium basta para fabricar o formato antigo.
+if (process.platform === 'linux') args.push('--password-store=basic')
 const launch = () => electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
 const step = (msg) => console.log(`✓ ${msg}`)
 const fail = (msg) => {
