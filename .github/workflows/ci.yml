@@ -111,6 +111,8 @@ jobs:
               run: xvfb-run -a node tests/e2e/sip-puro.mjs
             - name: Verificação de áudio nos cenários, pela linha de comando (RF-41)
               run: xvfb-run -a node tests/e2e/audio.mjs
+            - name: Carga por SIP puro, 50 chamadas simultâneas (RF-42)
+              run: xvfb-run -a node tests/e2e/carga-sip.mjs
             # Por último: este teste para e religa o contêiner do PBX.
             - name: Reconexão derrubando o contêiner do PBX (RNF-06)
               run: xvfb-run -a node tests/e2e/reconexao.mjs

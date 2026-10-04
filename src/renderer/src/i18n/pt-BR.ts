@@ -3,6 +3,26 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    loadDialog: {
+        log_resultado:
+            'Teste de carga para {destination}: {established} de {requested} atendidas, {withAudio} com áudio',
+        titulo: 'Teste de carga · {name}',
+        fechar: 'Fechar',
+        explicacao:
+            'Faz várias chamadas ao mesmo tempo por esta conta, cada uma tocando um tom, e mede quantas completam e se o áudio chega. Use um destino que atenda sozinho, como um número de eco. As chamadas não aparecem nos cartões nem no histórico.',
+        destino: 'Destino',
+        chamadas: 'Chamadas ao mesmo tempo',
+        segundos: 'Duração de cada uma (s)',
+        intervalo: 'Intervalo entre elas (ms)',
+        andamento: 'Discadas {started} de {total} · atendidas {established} · encerradas {finished}',
+        resumo: '{established} de {requested} chamadas atendidas · {withAudio} com áudio',
+        relatorio: 'Relatório do teste de carga',
+        salvar: 'Salvar relatório',
+        salvo_em: 'Relatório salvo em {path}',
+        parar: 'Parar',
+        comecar: 'Começar',
+        registre_antes: 'Registre a conta antes do teste de carga'
+    },
     sipRequestDialog: {
         titulo: 'Requisição SIP · {name}',
         fechar: 'Fechar',
@@ -169,6 +189,7 @@ export const ptBR = {
         falhou: 'Falhou: {p}'
     },
     accountsPane: {
+        teste_de_carga: 'Teste de carga…',
         requisicao_sip: 'Requisição SIP…',
         exportar_pcap: 'Exportar PCAP (só SIP)',
         exportar_pcap_com_audio: 'Exportar PCAP (com áudio)',

@@ -29,6 +29,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
+| RF-42 | Teste de carga por SIP puro: até 200 chamadas simultâneas por uma conta, cada uma tocando um tom, com relatório de atendidas, áudio, tempo até atender, perda e jitter |
 | RF-46 | Diagnóstico de rede na Saúde: registros DNS SRV do domínio, certificado TLS do PBX (emissor, validade, nomes) e endereço público pelo servidor STUN da conta |
 | RF-44 | Exportar em PCAP, para o Wireshark, o que passou pela rede de uma conta de SIP puro: sinalização e, se pedido, o áudio |
 | RF-45 | Requisição SIP manual (OPTIONS, MESSAGE, SUBSCRIBE, NOTIFY, INFO, PUBLISH) por uma conta de SIP puro ou simulada, com a resposta inteira na tela |
@@ -152,6 +153,7 @@ npm run test:monitor    # monitor: cenário que falha sozinho, aviso no log e we
 npm run test:audio  # áudio nos cenários pela linha de comando: tom e WAV no eco, e um ramal mudo (RF-41)
 npm run test:sip    # SIP puro no Asterisk: registro por UDP, TCP e TLS, chamadas com áudio, DTMF, cancelar, recusar, espera, transferência e SRTP (RF-39)
 npm run test:reconexao  # derruba o contêiner do PBX e confere que as contas voltam sozinhas (RNF-06)
+npm run test:carga-sip  # carga por SIP puro: 50 chamadas simultâneas com o eco do Asterisk e o relatório (RF-42)
 npm run test:load   # carga: 20 contas e 4 chamadas no Asterisk, mede a resposta da interface
 npm run test:resources   # recursos: RAM com 10 contas e 1 chamada e CPU ociosa, no Asterisk (RNF-05)
 ```

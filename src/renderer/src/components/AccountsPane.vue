@@ -8,6 +8,7 @@ import { describeStatus, explainRegError } from '@renderer/lib/accounts'
 import { ref } from 'vue'
 import MenuButton from './MenuButton.vue'
 import SipRequestDialog from './SipRequestDialog.vue'
+import LoadDialog from './LoadDialog.vue'
 import { useLogStore } from '@renderer/stores/log'
 
 const emit = defineEmits<{ new: []; edit: [account: Account]; health: [id: string] }>()
@@ -18,6 +19,8 @@ const confirmDelete = ref<string | null>(null)
 const log = useLogStore()
 /** Conta com a tela de pedido SIP manual aberta (RF-45). */
 const requestFor = ref<string | null>(null)
+/** Conta com a tela do teste de carga aberta (RF-42). */
+const loadFor = ref<string | null>(null)
 
 function callsOf(id: string): number {
     return calls.active.filter((c) => c.accountId === id).length
@@ -45,6 +48,9 @@ function moreActions(account: Account): Array<{ label: string; action: () => voi
         // Só com a conta registrada num motor que sabe fazer isso (RF-44, RF-45).
         ...(engine?.request
             ? [{ label: t('accountsPane.requisicao_sip'), action: () => (requestFor.value = account.id) }]
+            : []),
+        ...(engine?.loadTest
+            ? [{ label: t('accountsPane.teste_de_carga'), action: () => (loadFor.value = account.id) }]
             : []),
         ...(engine?.exportCapture
             ? [
@@ -179,6 +185,7 @@ async function remove(id: string): Promise<void> {
             </p>
         </div>
         <SipRequestDialog v-if="requestFor" :account-id="requestFor" @close="requestFor = null" />
+        <LoadDialog v-if="loadFor" :account-id="loadFor" @close="loadFor = null" />
     </aside>
 </template>
 

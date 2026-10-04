@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { LoadProgress } from '@shared/load'
 import { IPC, type IrisApi, type CertificateErrorEvent, type NativeSipEvent, type UpdateStatus } from '@shared/types'
 
 // A interface só alcança o sistema por estes canais fixos (RNF-08).
@@ -85,6 +86,14 @@ const api: IrisApi = {
         record: (engineId, callId, on) => ipcRenderer.invoke(IPC.sipRecord, engineId, callId, on),
         request: (engineId, request) => ipcRenderer.invoke(IPC.sipRequest, engineId, request),
         exportPcap: (engineId, withRtp) => ipcRenderer.invoke(IPC.sipPcap, engineId, withRtp),
+        loadStart: (engineId, spec) => ipcRenderer.invoke(IPC.sipLoadStart, engineId, spec),
+        loadStop: (engineId) => ipcRenderer.invoke(IPC.sipLoadStop, engineId),
+        onLoadProgress: (listener) => {
+            const handler = (_e: Electron.IpcRendererEvent, engineId: string, progress: LoadProgress): void =>
+                listener(engineId, progress)
+            ipcRenderer.on(IPC.sipLoadProgress, handler)
+            return () => ipcRenderer.removeListener(IPC.sipLoadProgress, handler)
+        },
         sendAudio: (engineId, callId, pcm) => ipcRenderer.send(IPC.sipAudio, engineId, callId, pcm),
         onEvent: (listener) => {
             const handler = (_e: Electron.IpcRendererEvent, event: NativeSipEvent): void => listener(event)

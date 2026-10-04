@@ -11,6 +11,7 @@ import { Emitter } from '@renderer/lib/emitter'
 import { t } from '@renderer/i18n'
 import type { CallEvents, CallQuality, DialOptions, EngineCall, EngineEvents, HealthReport, SipEngine } from './engine'
 import { audioInput } from './audio'
+import type { LoadProgress, LoadReport, LoadSpec } from '@shared/load'
 import { NativeAudio } from './native-audio'
 
 let nextEngine = 1
@@ -229,6 +230,21 @@ export class NativeSipEngine implements SipEngine {
 
     request(spec: SipManualRequest): Promise<SipManualResponse> {
         return window.iris.sip.request(this.id, spec)
+    }
+
+    async loadTest(spec: LoadSpec, onProgress: (progress: LoadProgress) => void): Promise<LoadReport> {
+        const off = window.iris.sip.onLoadProgress((engineId, progress) => {
+            if (engineId === this.id) onProgress(progress)
+        })
+        try {
+            return await window.iris.sip.loadStart(this.id, spec)
+        } finally {
+            off()
+        }
+    }
+
+    stopLoadTest(): Promise<void> {
+        return window.iris.sip.loadStop(this.id)
     }
 
     exportCapture(withRtp: boolean): Promise<string | null> {
