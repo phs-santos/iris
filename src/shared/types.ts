@@ -153,8 +153,9 @@ export type NativeCallEvent =
     | { kind: 'progress'; code: number; reason: string; earlyMedia: boolean }
     | { kind: 'established' }
     | { kind: 'ended'; code?: number; reason?: string; by: 'local' | 'remote' | 'system' }
-    /** O outro lado pôs a chamada em espera ou retomou. */
-    | { kind: 'hold'; held: boolean }
+    | { kind: 'hold'; held: boolean; by: 'local' | 'remote' }
+    /** Andamento de uma transferência pedida por esta conta. */
+    | { kind: 'transfer'; code: number; reason: string; final: boolean }
     | { kind: 'dtmf'; tone: string }
 
 export type NativeCallAction =
@@ -163,6 +164,10 @@ export type NativeCallAction =
     | { type: 'hangup' }
     | { type: 'mute'; muted: boolean }
     | { type: 'dtmf'; tone: string; mode: DtmfMode }
+    | { type: 'hold'; held: boolean }
+    | { type: 'transfer'; target: string }
+    /** Transferência assistida: junta o outro lado desta chamada com o da chamada de consulta. */
+    | { type: 'attended'; consultCallId: string }
 
 export interface NativeCallStats {
     packetsSent: number

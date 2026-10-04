@@ -63,7 +63,7 @@ export const TIMER_F = 64 * T1
 
 const KEEPALIVE_MS = 25_000
 const MIN_REFRESH_S = 5
-const ALLOW = 'INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, NOTIFY'
+const ALLOW = 'INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, NOTIFY, REFER'
 /** Depois de um provisório, o INVITE espera o outro lado atender; o PBX costuma desistir antes disso. */
 const INVITE_WAIT_MS = 180_000
 
@@ -517,7 +517,8 @@ export class SipUserAgent {
             progress: (...args) => sink.target?.progress(...args),
             established: () => sink.target?.established(),
             ended: (end) => sink.target?.ended(end),
-            hold: (held) => sink.target?.hold(held),
+            hold: (held, by) => sink.target?.hold(held, by),
+            transfer: (...args) => sink.target?.transfer(...args),
             dtmf: (tone) => sink.target?.dtmf(tone),
             audio: (pcm) => sink.target?.audio(pcm)
         }

@@ -5,8 +5,7 @@
 export const ptBR = {
     // Motor próprio de SIP puro (sip/native-engine.ts).
     nativeEngine: {
-        sem_espera: 'Contas por SIP puro ainda não põem a chamada em espera; isso chega na próxima versão',
-        sem_transferencia: 'Contas por SIP puro ainda não transferem; isso chega na próxima versão'
+        consulta_outra_conta: 'A consulta precisa ser feita pela mesma conta da chamada'
     },
     // Estado e erros de registro e validação do formulário (lib/accounts.ts).
     accounts: {
@@ -87,8 +86,7 @@ export const ptBR = {
         sip_por_udp: 'SIP por UDP',
         sip_por_tcp: 'SIP por TCP',
         sip_por_tls: 'SIP por TLS',
-        sip_puro_sem_webrtc_por:
-            'SIP puro, sem WebRTC: registra, liga e recebe chamadas com áudio G.711 e DTMF. Espera e transferência chegam na próxima versão.',
+        sip_puro_sem_webrtc_por: 'SIP puro, sem WebRTC: áudio G.711 sem cifra, com DTMF, espera e transferência.',
         servidor_sip_host_e_porta: 'Servidor SIP (host e porta)',
         websocket_wss: 'WebSocket (WSS)',
         wss_pbx_empresa_com_8089: 'wss://pbx.empresa.com:8089/ws',

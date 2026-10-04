@@ -22,7 +22,7 @@ class NativeSipCall implements EngineCall {
     private finished = false
 
     constructor(
-        private engineId: string,
+        readonly engineId: string,
         readonly id: string,
         readonly direction: 'in' | 'out',
         readonly remote: string,
@@ -46,7 +46,9 @@ class NativeSipCall implements EngineCall {
                 void this.audio.start(audioInput.deviceId || undefined)
                 return this.emitter.emit('established')
             case 'hold':
-                return this.emitter.emit(event.held ? 'hold' : 'unhold', 'remote')
+                return this.emitter.emit(event.held ? 'hold' : 'unhold', event.by)
+            case 'transfer':
+                return this.emitter.emit('transfer', event.code, event.reason, event.final)
             case 'dtmf':
                 return this.emitter.emit('dtmf', event.tone)
             case 'ended':
@@ -81,20 +83,23 @@ class NativeSipCall implements EngineCall {
         void this.action({ type: 'mute', muted })
     }
 
-    async setHeld(): Promise<void> {
-        throw new Error(t('nativeEngine.sem_espera'))
+    setHeld(held: boolean): Promise<void> {
+        return this.action({ type: 'hold', held })
     }
 
     sendDtmf(tone: string, mode: DtmfMode): Promise<void> {
         return this.action({ type: 'dtmf', tone, mode })
     }
 
-    async transfer(): Promise<void> {
-        throw new Error(t('nativeEngine.sem_transferencia'))
+    transfer(target: string): Promise<void> {
+        return this.action({ type: 'transfer', target })
     }
 
-    async attendedTransfer(): Promise<void> {
-        throw new Error(t('nativeEngine.sem_transferencia'))
+    async attendedTransfer(consult: EngineCall): Promise<void> {
+        // As duas chamadas precisam ser da mesma conta: o PBX junta os dois diálogos dela.
+        if (!(consult instanceof NativeSipCall) || consult.engineId !== this.engineId)
+            throw new Error(t('nativeEngine.consulta_outra_conta'))
+        await this.action({ type: 'attended', consultCallId: consult.id })
     }
 
     setInputDevice(deviceId: string): Promise<void> {
@@ -112,7 +117,7 @@ class NativeSipCall implements EngineCall {
 /**
  * Motor próprio da Íris para SIP puro por UDP, TCP ou TLS (RF-39). Os sockets ficam no processo
  * principal; aqui só passam os comandos e voltam os eventos. Registra, mede a saúde e faz chamadas
- * com G.711 e DTMF; espera, transferência e SRTP chegam na terceira entrega.
+ * com G.711, DTMF, espera e transferência; o áudio cifrado (SRTP) ainda não existe.
  */
 export class NativeSipEngine implements SipEngine {
     private emitter = new Emitter<EngineEvents>()
