@@ -9,6 +9,7 @@ import { IPC, type UpdateChannel, type UpdateInfo, type UpdateStatus } from '@sh
 import { check, handle } from './ipc-guard'
 import { loadSettings, saveSettings } from './storage'
 import { UpdateController } from '@shared/update'
+import { MacSelfUpdater } from './mac-update'
 
 /** Espera o app abrir e registrar as contas antes de procurar versão nova. */
 const FIRST_CHECK_DELAY_MS = 15_000
@@ -19,7 +20,7 @@ const DOWNLOAD_PAGE = 'https://github.com/phs-santos/iris/releases/latest'
 /**
  * No macOS, o sistema só instala uma atualização assinada com Developer ID. Com a assinatura ad-hoc
  * (enquanto o RNF-17 não chega), o download termina e a instalação falha com "Code signature …
- * did not pass validation". Nesse caso o app só avisa da versão nova e manda para a página de download.
+ * did not pass validation". Nesse caso a própria Íris baixa, confere e troca o app (mac-update.ts).
  */
 function adHocSigned(): Promise<boolean> {
     if (process.platform !== 'darwin') return Promise.resolve(false)
@@ -95,7 +96,8 @@ async function prepare(send: (status: UpdateStatus) => void): Promise<UpdaterSta
         try {
             // O pacote é CommonJS: o `autoUpdater` é um getter que só aparece no export padrão.
             const { autoUpdater } = (await import('electron-updater')).default
-            controller = new UpdateController(autoUpdater, send, channel, manual)
+            const source = manual ? new MacSelfUpdater(autoUpdater) : autoUpdater
+            controller = new UpdateController(source, send, channel)
             setTimeout(() => void controller?.check(), FIRST_CHECK_DELAY_MS)
         } catch (error) {
             reason = `O atualizador não iniciou: ${error instanceof Error ? error.message : String(error)}`

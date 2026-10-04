@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { describeStatus, newAccount, normalizeImported, validateAccount } from '@renderer/lib/accounts'
+import { describeStatus, explainRegError, newAccount, normalizeImported, validateAccount } from '@renderer/lib/accounts'
 import { matches, type LogEntry } from '@renderer/stores/log'
 import { describeSipError } from '@renderer/sip/engine'
 
@@ -46,6 +46,31 @@ describe('describeStatus e describeSipError', () => {
             reason: 'Unauthorized'
         })
         expect(describeSipError(new Error('WebSocket closed'))).toEqual({ code: undefined, reason: 'WebSocket closed' })
+    })
+})
+
+describe('explainRegError', () => {
+    it('só explica quando há erro', () => {
+        expect(explainRegError({ state: 'registered' })).toBeNull()
+    })
+
+    it('traduz os códigos mais comuns', () => {
+        expect(explainRegError({ state: 'error', code: 403, reason: 'Forbidden' })?.title).toBe('O PBX recusou o login')
+        expect(explainRegError({ state: 'error', code: 401, reason: 'Unauthorized' })?.title).toMatch(/senha/)
+        expect(explainRegError({ state: 'error', code: 404 })?.title).toMatch(/não existe/)
+    })
+
+    it('reconhece falha de conexão do WebSocket', () => {
+        expect(explainRegError({ state: 'error', code: 1006, reason: 'WebSocket closed' })?.title).toBe(
+            'Não conectou ao PBX'
+        )
+        expect(explainRegError({ state: 'error', reason: 'Falha ao conectar no WebSocket' })?.title).toBe(
+            'Não conectou ao PBX'
+        )
+    })
+
+    it('tem uma explicação genérica para o resto', () => {
+        expect(explainRegError({ state: 'error', code: 500, reason: 'Server Error' })?.title).toBe('O registro falhou')
     })
 })
 

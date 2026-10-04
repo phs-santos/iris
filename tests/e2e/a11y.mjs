@@ -83,7 +83,16 @@ try {
         .waitFor({ state: 'detached', timeout: 2000 })
         .catch(() => problems.push('[configurações] Esc não fecha'))
 
-    await page.getByRole('button', { name: 'Saúde' }).first().click()
+    await page.getByRole('button', { name: /^Mais ações de / }).click()
+    await scan('menu de ações da conta')
+    await page.keyboard.press('ArrowDown')
+    if (!(await page.evaluate(() => document.activeElement?.textContent?.trim() === 'Duplicar')))
+        problems.push('[menu da conta] seta para baixo não anda pelos itens')
+    await page.keyboard.press('Escape')
+    if (!(await page.evaluate(() => document.activeElement?.getAttribute('aria-haspopup') === 'menu')))
+        problems.push('[menu da conta] Esc não devolve o foco ao botão')
+    await page.getByRole('button', { name: /^Mais ações de / }).click()
+    await page.getByRole('menuitem', { name: 'Saúde' }).click()
     await scan('saúde da conta')
     await page.keyboard.press('Escape')
 

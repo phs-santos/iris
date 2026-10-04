@@ -3,8 +3,9 @@ import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useAiStore } from '@renderer/stores/ai'
 import { useCallsStore } from '@renderer/stores/calls'
-import { describeStatus } from '@renderer/lib/accounts'
+import { describeStatus, explainRegError } from '@renderer/lib/accounts'
 import { ref } from 'vue'
+import MenuButton from './MenuButton.vue'
 
 const emit = defineEmits<{ new: []; edit: [account: Account]; health: [id: string] }>()
 const accounts = useAccountsStore()
@@ -22,6 +23,20 @@ function toggle(account: Account): void {
     else void accounts.unregister(account.id)
 }
 
+/** Ações menos usadas ficam no menu ⋯, para a conta escolhida não virar uma parede de botões. */
+function moreActions(account: Account): Array<{ label: string; action: () => void; danger?: boolean }> {
+    return [
+        { label: 'Saúde', action: () => emit('health', account.id) },
+        { label: 'Duplicar', action: () => void accounts.duplicate(account.id) },
+        { label: 'Excluir', action: () => (confirmDelete.value = account.id), danger: true }
+    ]
+}
+
+const allActions = [
+    { label: 'Registrar todas', action: () => void accounts.registerAll() },
+    { label: 'Desregistrar todas', action: () => void accounts.unregisterAll() }
+]
+
 async function remove(id: string): Promise<void> {
     confirmDelete.value = null
     await accounts.remove(id)
@@ -32,7 +47,10 @@ async function remove(id: string): Promise<void> {
     <aside class="pane">
         <div class="head">
             <span class="label">Contas</span>
-            <button class="btn small ghost" @click="emit('new')">+ Nova</button>
+            <span class="head-actions">
+                <MenuButton label="Ações de todas as contas" text="Todas" :items="allActions" />
+                <button class="btn small ghost" @click="emit('new')">+ Nova</button>
+            </span>
         </div>
 
         <div class="list">
@@ -70,6 +88,17 @@ async function remove(id: string): Promise<void> {
                         </div>
                     </button>
 
+                    <div
+                        v-if="explainRegError(accounts.statusOf(account.id))"
+                        class="problem"
+                        role="status"
+                        @click.stop
+                    >
+                        <b>{{ explainRegError(accounts.statusOf(account.id))?.title }}</b>
+                        <span>{{ explainRegError(accounts.statusOf(account.id))?.hint }}</span>
+                        <button class="btn small" @click="ai.explainAccount(account.id)">Por que falhou?</button>
+                    </div>
+
                     <div v-if="accounts.selectedId === account.id" class="actions" @click.stop>
                         <button class="btn small" @click="toggle(account)">
                             {{
@@ -79,22 +108,11 @@ async function remove(id: string): Promise<void> {
                             }}
                         </button>
                         <button class="btn small" @click="emit('edit', account)">Editar</button>
-                        <button class="btn small" @click="emit('health', account.id)">Saúde</button>
-                        <button
-                            v-if="accounts.statusOf(account.id).state === 'error'"
-                            class="btn small"
-                            @click="ai.explainAccount(account.id)"
-                        >
-                            Por que falhou?
-                        </button>
-                        <button class="btn small" @click="accounts.duplicate(account.id)">Duplicar</button>
-                        <button
+                        <MenuButton
                             v-if="confirmDelete !== account.id"
-                            class="btn small"
-                            @click="confirmDelete = account.id"
-                        >
-                            Excluir
-                        </button>
+                            :label="`Mais ações de ${account.name}`"
+                            :items="moreActions(account)"
+                        />
                         <template v-else>
                             <button class="btn small stop" @click="remove(account.id)">Confirmar exclusão</button>
                             <button class="btn small" @click="confirmDelete = null">Cancelar</button>
@@ -205,6 +223,29 @@ async function remove(id: string): Promise<void> {
 .tag.busy {
     color: #6fe0a6;
     border-color: rgba(63, 207, 134, 0.5);
+}
+.head-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.problem {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(240, 103, 94, 0.4);
+    background: rgba(240, 103, 94, 0.1);
+    font-size: 12px;
+    cursor: default;
+}
+.problem b {
+    color: #ff8f86;
+}
+.problem span {
+    color: var(--fg);
 }
 .actions {
     display: flex;

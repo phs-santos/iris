@@ -10,7 +10,13 @@ Baixe só o arquivo do seu sistema:
 | Linux (Debian, Ubuntu, Mint) | [iris_VERSION_amd64.deb](https://github.com/phs-santos/iris/releases/download/vVERSION/iris_VERSION_amd64.deb) |
 | Linux (outras distribuições) | [Iris-VERSION.AppImage](https://github.com/phs-santos/iris/releases/download/vVERSION/Iris-VERSION.AppImage) |
 
-No Mac, veja o chip em **menu Apple → Sobre Este Mac**: "Apple M…" usa o `arm64`; "Intel" usa o `x64`.
+**No Mac, o jeito mais fácil é pelo Terminal**, que não mostra o aviso da Apple. O comando escolhe a versão certa para o seu chip:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/phs-santos/iris/main/scripts/install-macos.sh | bash
+```
+
+No Mac, se for usar o `.dmg`, veja o chip em **menu Apple → Sobre Este Mac**: "Apple M…" usa o `arm64`; "Intel" usa o `x64`.
 
 Os outros arquivos da lista abaixo não são para baixar à mão:
 
@@ -22,7 +28,7 @@ Os outros arquivos da lista abaixo não são para baixar à mão:
 Os instaladores ainda não são assinados, então o sistema avisa na primeira vez:
 
 - **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. Se aparecer "O controle inteligente de aplicativos bloqueou um aplicativo", não há botão para liberar: esse recurso do Windows 11 só deixa rodar instalador assinado. Enquanto a Íris não for assinada, ela não instala nessas máquinas, a não ser que o Controle Inteligente de Aplicativos seja desligado em **Segurança do Windows → Controle de aplicativos e do navegador** (o Windows não deixa religar depois sem reinstalar o sistema).
-- **macOS:** arraste a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Se o macOS disser que o app está danificado, rode `xattr -dr com.apple.quarantine /Applications/Iris.app`.
+- **macOS, pelo `.dmg`:** arraste a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Pelo comando do Terminal acima, esse aviso não aparece.
 - **macOS, senha das Chaves:** quem atualiza de uma versão até a 1.0.5 pode ver uma última vez o pedido de senha das Chaves, enquanto a Íris traz as senhas antigas para o arquivo próprio. Digite a senha de login do Mac e confirme. Depois disso o pedido não volta. Se você negar, nenhuma senha se perde: a Íris pergunta de novo na próxima abertura.
 - **Linux, `.deb`:** instale com `sudo apt install ./iris_VERSION_amd64.deb`. Para atualizar, baixe e instale o `.deb` da versão nova.
 - **Linux, AppImage:** dê permissão de execução (`chmod +x Iris-VERSION.AppImage`) e abra. O AppImage se atualiza sozinho.

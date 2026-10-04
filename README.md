@@ -32,7 +32,13 @@ Recursos (RNF-05): a CPU ociosa com 10 contas registradas fica em 0,1%, abaixo d
 
 ## Instalar
 
-Baixe o instalador da [página de releases](https://github.com/phs-santos/iris/releases/latest). Pegue só o arquivo do seu sistema; o "Source code (zip)" que aparece na lista é o código do projeto, não o app.
+**No macOS, instale pelo Terminal** (recomendado). O comando baixa a versão certa para o seu Mac, confere o arquivo e coloca a Íris em Aplicativos, sem o aviso "A Apple não pôde verificar…". Use o mesmo comando para atualizar, com a Íris fechada:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/phs-santos/iris/main/scripts/install-macos.sh | bash
+```
+
+Nos outros sistemas, ou se preferir o `.dmg`, baixe o instalador da [página de releases](https://github.com/phs-santos/iris/releases/latest). Pegue só o arquivo do seu sistema; o "Source code (zip)" que aparece na lista é o código do projeto, não o app.
 
 | Sistema | Arquivo |
 | --- | --- |
@@ -45,7 +51,7 @@ Baixe o instalador da [página de releases](https://github.com/phs-santos/iris/r
 Os instaladores ainda não são assinados (RNF-17), então o sistema avisa na primeira vez:
 
 - **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. Se aparecer "O controle inteligente de aplicativos bloqueou um aplicativo", não há botão para liberar: esse recurso do Windows 11 só deixa rodar instalador assinado. Enquanto a Íris não for assinada, ela não instala nessas máquinas, a não ser que o Controle Inteligente de Aplicativos seja desligado em **Segurança do Windows → Controle de aplicativos e do navegador** (o Windows não deixa religar depois sem reinstalar o sistema).
-- **macOS:** depois de arrastar a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Se o macOS disser que o app está danificado, rode `xattr -dr com.apple.quarantine /Applications/Iris.app`.
+- **macOS, pelo `.dmg`:** o aviso aparece porque o navegador marca o arquivo baixado e a Íris não tem assinatura da Apple. Use o comando do Terminal acima, que não passa pelo navegador. Se já baixou o `.dmg`, arraste a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**.
 - **macOS, senha das Chaves:** quem atualiza de uma versão até a 1.0.5 pode ver uma última vez o pedido de senha das Chaves, enquanto a Íris traz as senhas antigas para o arquivo próprio. Digite a senha de login do Mac e confirme. Depois disso o pedido não volta. Se você negar, nenhuma senha se perde: a Íris pergunta de novo na próxima abertura.
 
 ## Rodar a partir do código
@@ -165,7 +171,7 @@ O app instalado procura versões novas nos releases de [phs-santos/iris](https:/
 - Nada é baixado sozinho: o app avisa que há versão nova e espera você clicar em **Baixar**. Depois de baixada, ela entra ao reiniciar.
 - **Canais:** o estável recebe só os releases normais. O beta recebe também os marcados como pré-lançamento no GitHub, com versão do tipo `1.2.0-beta.1`.
 - Em desenvolvimento (`npm run dev`) e na linha de comando, o app não procura atualização. No Linux, só o AppImage se atualiza; quem usa o `.deb` instala o da versão nova.
-- No macOS, a atualização só instala com o app assinado (RNF-17). Até lá, o app avisa da versão nova e o botão **Abrir página de download** leva ao `.dmg`; instale por cima e as contas continuam.
+- No macOS, o app não tem assinatura da Apple (RNF-17), e o atualizador padrão recusaria a versão nova. Por isso a própria Íris baixa o `.zip` do release, confere o SHA-512 publicado no `latest-mac.yml`, troca o app e reinicia (`src/main/mac-update.ts`), sem o aviso da Apple. Se algo falhar, a tela mostra o comando do Terminal (`scripts/install-macos.sh`).
 
 Para publicar uma versão:
 

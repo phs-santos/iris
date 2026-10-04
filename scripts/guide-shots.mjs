@@ -118,7 +118,8 @@ try {
     await dialog().getByRole('button', { name: 'Remover chave' }).click()
     await close()
 
-    await page.getByRole('button', { name: 'Saúde' }).first().click()
+    await page.getByRole('button', { name: /^Mais ações de / }).click()
+    await page.getByRole('menuitem', { name: 'Saúde' }).click()
     await dialog().locator('.checks li').first().waitFor()
     await shot('saude', dialog())
     await close()

@@ -91,7 +91,8 @@ try {
     })
 
     const registerStart = Date.now()
-    await page.getByRole('button', { name: 'Registrar todas', exact: true }).click()
+    await page.getByRole('button', { name: 'Todas', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Registrar todas', exact: true }).click()
     // O certificado autoassinado do PBX de teste precisa ser aceito uma vez (RF-37).
     const trust = page.getByRole('button', { name: 'Confiar neste host' })
     // isVisible não espera: o aviso do certificado pode aparecer um instante depois do clique.
@@ -167,7 +168,8 @@ try {
     }
     await page.getByText('0 chamadas').waitFor({ timeout: 20000 })
     step('chamadas encerradas')
-    await page.getByRole('button', { name: 'Desregistrar todas' }).click()
+    await page.getByRole('button', { name: 'Todas', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Desregistrar todas' }).click()
     await page.getByText('0 registradas').waitFor({ timeout: 20000 })
     step('contas desregistradas')
     console.log(failed ? 'Carga FALHOU' : 'Carga OK')

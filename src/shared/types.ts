@@ -106,7 +106,7 @@ export interface UpdateInfo {
     currentVersion: string
     channel: UpdateChannel
     status: UpdateStatus
-    /** O app avisa da versão nova, mas a instalação é à mão, pela página de download. */
+    /** macOS sem assinatura: a Íris se troca sozinha (mac-update) e, se falhar, oferece o comando do Terminal. */
     manual: boolean
 }
 

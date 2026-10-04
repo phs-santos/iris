@@ -185,8 +185,6 @@ onUnmounted(() => {
             <button class="btn small" title="Só o discador e a chamada, numa janela estreita" @click="setMode('phone')">
                 Modo Telefone
             </button>
-            <button class="btn small" @click="accounts.registerAll()">Registrar todas</button>
-            <button class="btn small" @click="accounts.unregisterAll()">Desregistrar todas</button>
             <button v-if="updatePending" class="btn small primary" @click="openUpdate">Atualização disponível</button>
             <button class="btn small" @click="showGuide = true">Guia</button>
             <button class="btn small" title="Configurações (Ctrl/Cmd+,)" @click="settingsAt = 'profile'">
@@ -245,6 +243,22 @@ onUnmounted(() => {
                         Cenários
                         <span v-if="scenarios.running" class="count run">rodando</span>
                     </button>
+                </div>
+                <!-- Chamada recebida em destaque, acima de tudo, em qualquer aba (RF-10). -->
+                <div
+                    v-for="call in calls.ringingIncoming"
+                    :key="call.id"
+                    class="incoming"
+                    role="region"
+                    :aria-label="`Chamada recebida de ${call.remoteName || call.remote}`"
+                >
+                    <span class="ring-dot" aria-hidden="true"></span>
+                    <span class="incoming-text">
+                        <b>{{ call.remoteName || call.remote }}</b>
+                        <span class="mono">{{ call.remote }} → {{ accounts.nameOf(call.accountId) }}</span>
+                    </span>
+                    <button class="btn go" @click="calls.answer(call.id)">Atender</button>
+                    <button class="btn stop" @click="calls.reject(call.id)">Recusar</button>
                 </div>
                 <template v-if="centerTab === 'phone'">
                     <DialerPane ref="dialer" />
@@ -341,6 +355,38 @@ onUnmounted(() => {
     min-width: 0;
     min-height: 0;
     border-right: 1px solid var(--line);
+}
+.incoming {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+}
+.incoming-text {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+.incoming-text .mono {
+    font-size: 11px;
+    color: var(--muted);
+}
+.ring-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .ring-dot {
+        animation: pulse 1.2s ease-in-out infinite;
+    }
 }
 .center-tabs {
     display: flex;

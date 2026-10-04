@@ -133,8 +133,6 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'list',
                 items: [
-                    '**Registrar todas**: registra as contas que ainda não estão registradas. Útil depois de abrir o app ou de a rede voltar.',
-                    '**Desregistrar todas**: tira todos os ramais do ar de uma vez, por exemplo antes de mexer na central.',
                     '**Modo Telefone**: troca a janela por um telefone simples, só com o teclado e a chamada. Veja "Modo Telefone".',
                     '**Atualização disponível**: aparece só quando há versão nova. Veja "Atualização".',
                     '**Guia**: abre esta tela. A tecla **F1** também abre.',
@@ -173,21 +171,34 @@ export const GUIDE: GuideSection[] = [
                 type: 'p',
                 text: 'As etiquetas à direita do nome dizem: um **número** é a quantidade de chamadas ativas da conta; **AA** é auto-atender ligado; **SIM** é conta do PBX simulado.'
             },
+            { type: 'h', text: 'Todas as contas de uma vez' },
+            {
+                type: 'list',
+                items: [
+                    'O botão **Todas**, no alto da coluna de contas, abre **Registrar todas** e **Desregistrar todas**.',
+                    '**Registrar todas** registra as contas que ainda não estão registradas. Útil depois de abrir o app ou de a rede voltar.',
+                    '**Desregistrar todas** tira todos os ramais do ar de uma vez, por exemplo antes de mexer na central.'
+                ]
+            },
             { type: 'h', text: 'Ações de uma conta' },
             {
                 type: 'p',
-                text: 'Clique na conta para selecioná-la. Ela passa a ser a conta de origem do discador e mostra os botões:'
+                text: 'Clique na conta para selecioná-la. Ela passa a ser a conta de origem do discador e mostra **Registrar** (ou **Desregistrar**), **Editar** e o menu **⋯** com o resto:'
             },
             {
                 type: 'list',
                 items: [
                     '**Registrar / Desregistrar**: põe ou tira o ramal do ar.',
                     '**Editar**: abre o formulário. Se a conta estava registrada, ela é registrada de novo com os dados novos.',
-                    '**Saúde**: roda as verificações da conta. Veja "Saúde e diagnóstico".',
-                    '**Duplicar**: cria uma cópia, para cadastrar vários ramais parecidos sem redigitar tudo.',
-                    '**Excluir**: pede confirmação e apaga a conta e a senha guardada.',
-                    '**Por que falhou?**: aparece quando a conta está em erro e pede a explicação à IA. Veja "Ajuda da IA".'
+                    '**⋯ → Saúde**: roda as verificações da conta. Veja "Saúde e diagnóstico".',
+                    '**⋯ → Duplicar**: cria uma cópia, para cadastrar vários ramais parecidos sem redigitar tudo.',
+                    '**⋯ → Excluir**: pede confirmação e apaga a conta e a senha guardada.'
                 ]
+            },
+            { type: 'h', text: 'Quando o registro falha' },
+            {
+                type: 'p',
+                text: 'A conta mostra um quadro vermelho com o problema em português e o que conferir, por exemplo "O PBX recusou o login: confira usuário e senha". O código SIP original (como `403 Forbidden`) continua na linha da conta. O botão **Por que falhou?** pede a explicação à IA. Veja "Ajuda da IA".'
             },
             { type: 'h', text: 'Cadastrar ou editar' },
             { type: 'image', name: 'conta', alt: 'Formulário de conta com a seção Avançado aberta' },
@@ -485,7 +496,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'image', name: 'saude', alt: 'Janela de saúde de uma conta com a lista de verificações' },
             {
                 type: 'p',
-                text: 'Selecione a conta e clique em **Saúde**. A Íris confere, na ordem:'
+                text: 'Selecione a conta e clique em **⋯ → Saúde**. A Íris confere, na ordem:'
             },
             {
                 type: 'table',
@@ -736,7 +747,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'Importar' },
             {
                 type: 'p',
-                text: 'Lê um arquivo exportado pela Íris. Contas com o mesmo id são substituídas; as outras são adicionadas. Depois de importar, use **Registrar todas** para pôr as contas novas no ar.'
+                text: 'Lê um arquivo exportado pela Íris. Contas com o mesmo id são substituídas; as outras são adicionadas. Depois de importar, use **Todas → Registrar todas** para pôr as contas novas no ar.'
             }
         ]
     },
@@ -846,7 +857,7 @@ export const GUIDE: GuideSection[] = [
                     ['Linux, .deb', 'Não: baixe e instale o `.deb` da versão nova'],
                     [
                         'macOS',
-                        'Avisa da versão nova, mas ainda não instala sozinha, porque o app não é assinado. O botão **Abrir página de download** leva ao `.dmg` novo; instale por cima e as contas continuam'
+                        'Sim. Como o app não tem assinatura da Apple, a própria Íris baixa, confere o arquivo (SHA-512) e se troca ao reiniciar, sem o aviso da Apple. Se der erro, a tela mostra um comando para colar no Terminal'
                     ]
                 ]
             }
@@ -863,7 +874,7 @@ export const GUIDE: GuideSection[] = [
                     '**Fechar a janela só a esconde.** Os ramais continuam registrados e as chamadas continuam.',
                     'O **ícone na bandeja** (área de notificação) traz a janela de volta com um clique e tem o menu **Mostrar Íris** e **Sair**.',
                     '**Sair** encerra o app de verdade: os ramais saem do ar e as chamadas caem.',
-                    'Uma **chamada recebida** gera uma notificação do sistema; clicar nela abre a janela.'
+                    'Uma **chamada recebida** gera uma notificação do sistema; clicar nela abre a janela. Na Bancada, ela também aparece numa faixa colorida no alto da coluna do meio, com **Atender** e **Recusar**.'
                 ]
             },
             {

@@ -109,7 +109,8 @@ let failed = false
 try {
     await page.getByText('3 contas').waitFor()
     // Sem as contas simuladas de exemplo: só as 10 do PBX.
-    await page.getByRole('button', { name: 'Desregistrar todas' }).click()
+    await page.getByRole('button', { name: 'Todas', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Desregistrar todas' }).click()
     await app.evaluate(({ dialog }, file) => {
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [file] })
     }, importFile)
@@ -118,8 +119,11 @@ try {
     await page.getByRole('button', { name: 'Escolher arquivo' }).click()
     await page.getByText('10 contas importadas').waitFor()
     await page.getByRole('button', { name: 'Fechar' }).click()
-    const registerAll = page.getByRole('button', { name: 'Registrar todas', exact: true })
-    await registerAll.click()
+    const registerAll = async () => {
+        await page.getByRole('button', { name: 'Todas', exact: true }).click()
+        await page.getByRole('menuitem', { name: 'Registrar todas', exact: true }).click()
+    }
+    await registerAll()
     const trust = page.getByRole('button', { name: 'Confiar neste host' })
     // isVisible não espera: o aviso do certificado pode aparecer um instante depois do clique.
     await trust
@@ -135,7 +139,7 @@ try {
             break
         } catch (error) {
             if (attempt === 3) throw error
-            await registerAll.click()
+            await registerAll()
         }
     }
     for (const name of ['Suporte 1001', 'Vendas 1002', 'Lab 2001']) {

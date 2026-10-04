@@ -82,6 +82,37 @@ export function describeStatus(status: RegStatus): string {
     return [status.code, status.reason].filter(Boolean).join(' ') || 'erro'
 }
 
+/** Erro de registro em português: o que aconteceu e o que conferir. O código original aparece ao lado. */
+export interface RegErrorHelp {
+    title: string
+    hint: string
+}
+
+export function explainRegError(status: RegStatus): RegErrorHelp | null {
+    if (status.state !== 'error') return null
+    const reason = status.reason ?? ''
+    switch (status.code) {
+        case 401:
+        case 407:
+            return { title: 'O PBX não aceitou a senha', hint: 'Confira a senha e o usuário de autenticação.' }
+        case 403:
+            return { title: 'O PBX recusou o login', hint: 'Confira usuário e senha, e se o ramal pode registrar.' }
+        case 404:
+            return { title: 'O ramal não existe no PBX', hint: 'Confira o ramal e o domínio SIP.' }
+        case 408:
+            return { title: 'O PBX não respondeu a tempo', hint: 'Confira o endereço do WebSocket e a rede.' }
+        case 480:
+        case 503:
+            return { title: 'O PBX está indisponível', hint: 'Tente de novo em instantes ou rode Saúde.' }
+    }
+    if (/websocket|1006|connect|fetch|network|timeout/i.test(reason) || status.code === 1006)
+        return {
+            title: 'Não conectou ao PBX',
+            hint: 'Confira o endereço do WebSocket (wss://…), a porta e o certificado. Saúde testa cada parte.'
+        }
+    return { title: 'O registro falhou', hint: 'Abra Saúde ou "Por que falhou?" para entender o motivo.' }
+}
+
 /** Campos obrigatórios e formato do WSS. Retorna mensagens por campo. */
 export function validateAccount(account: Account, password: string): Record<string, string> {
     const errors: Record<string, string> = {}
