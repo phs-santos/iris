@@ -13,6 +13,8 @@ const CONTAINER = process.env.PBX_CONTAINER ?? 'iris-asterisk-1'
 const userData = mkdtempSync(join(tmpdir(), 'iris-sip-puro-'))
 const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
+// Para investigar uma conexão que não fecha: grava o registro de rede do Chromium.
+if (process.env.IRIS_NETLOG) args.push(`--log-net-log=${process.env.IRIS_NETLOG}`)
 const contacts = () => execSync(`docker exec ${CONTAINER} asterisk -rx "pjsip show contacts"`).toString()
 
 // Com IRIS_APP, roda contra o app empacotado (o pacote de diagnóstico do test:pacote).
@@ -124,6 +126,8 @@ try {
     await call('486 Busy Here').waitFor({ timeout: 20000 })
     step('número ocupado: 486 no cartão')
 
+    // Só valem as linhas da URA escritas depois deste instante: outros testes também ligam para ela.
+    const since = new Date().toISOString()
     await dial('Puro UDP', '8000')
     const ivr = call(/2001\s*→\s*8000/)
     await ivr.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
@@ -133,7 +137,7 @@ try {
     let out = ''
     for (let i = 0; i < 25 && !/URA recebeu/.test(out); i++) {
         await page.waitForTimeout(1000)
-        out = execSync('docker compose logs --since 40s asterisk', { encoding: 'utf8' })
+        out = execSync(`docker compose logs --since ${since} asterisk`, { encoding: 'utf8' })
     }
     if (!/URA recebeu 4321/.test(out))
         throw new Error(`a URA não recebeu 4321 por RTP (recebeu "${/URA recebeu (\S*)/.exec(out)?.[1] ?? 'nada'}")`)
