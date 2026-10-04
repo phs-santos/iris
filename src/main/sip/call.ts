@@ -1,6 +1,6 @@
 // Uma chamada do motor próprio (RF-39, segunda entrega): o diálogo SIP (INVITE, ACK, CANCEL, BYE,
-// re-INVITE, INFO e REFER) e o áudio RTP em G.711. Tem espera e transferência cega e assistida; o
-// SRTP e o RTCP ficam para depois.
+// re-INVITE, INFO e REFER) e o áudio RTP em G.711, com ou sem cifra (SRTP por SDES). Tem espera e
+// transferência cega e assistida.
 
 import { randomBytes } from 'node:crypto'
 import { digestAuthorization, parseChallenge, type DigestChallenge } from './digest'
@@ -8,6 +8,7 @@ import { addressOf, cseqOf, header, headerParams, headers, type SipRequest, type
 import { RtpSession, type RtpStats } from './rtp'
 import { answerDirection, buildSdp, parseSdp, SdpError, type MediaDirection, type RemoteMedia } from './sdp'
 import type { G711 } from './g711'
+import { newSrtpKey } from './srtp'
 
 const token = (bytes = 6): string => randomBytes(bytes).toString('hex')
 const DTMF_PAYLOAD = 101
@@ -39,6 +40,8 @@ export interface CallHost {
     readonly authUser: string
     readonly password: string
     readonly displayName?: string
+    /** A conta exige áudio cifrado: oferece SRTP ao ligar e recusa quem liga sem ele. */
+    readonly srtp: boolean
     /** Endereço que o outro lado alcança, para o Contact e o SDP. */
     contactUri(): string
     mediaAddress(): string
@@ -80,6 +83,11 @@ export class SipCall {
     private readonly sdpSession = Date.now()
     private remoteHeld = false
     private localHeld = false
+    /** Áudio cifrado nesta chamada: a nossa chave, a do outro lado e o número da linha a=crypto. */
+    private secure = false
+    private localKey?: string
+    private remoteKey?: string
+    private cryptoTag = 1
     private muted = false
     /** INVITE recebido, guardado para as respostas; ou o que mandamos, para o CANCEL. */
     private invite?: SipRequest
@@ -187,12 +195,21 @@ export class SipCall {
             dtmfPayload: DTMF_PAYLOAD,
             direction,
             sessionId: this.sdpSession,
-            version: this.sdpVersion++
+            version: this.sdpVersion++,
+            crypto: this.secure && this.localKey ? { tag: this.cryptoTag, key: this.localKey } : undefined
         })
     }
 
     /** `answer`: é a resposta a um pedido nosso; o sentido dela espelha o nosso e não diz nada do outro lado. */
     private applyRemote(media: RemoteMedia, answer = false): void {
+        if (this.secure && !media.crypto) throw new SdpError('O outro lado não aceitou o áudio cifrado (SRTP)')
+        // Só troca a cifra quando a chave muda: recriar com a mesma chave perderia a contagem de voltas
+        // do número de sequência, e os pacotes seguintes não confeririam.
+        const remoteKey = this.secure ? media.crypto?.key : undefined
+        if (remoteKey !== this.remoteKey) {
+            this.remoteKey = remoteKey
+            this.rtp.setCrypto(remoteKey && this.localKey ? { local: this.localKey, remote: remoteKey } : undefined)
+        }
         this.rtp.setRemote({
             address: media.address,
             port: media.port,
@@ -237,6 +254,10 @@ export class SipCall {
     async start(extraHeaders: [string, string][] = []): Promise<void> {
         try {
             this.rtpPort = await this.rtp.open()
+            if (this.host.srtp) {
+                this.secure = true
+                this.localKey = newSrtpKey()
+            }
             const uri = `sip:${this.remote}@${this.host.domain}`
             let response: SipResponse
             for (let tries = 0; ; tries++) {
@@ -272,7 +293,7 @@ export class SipCall {
         if (response.body.trim()) {
             try {
                 // 183 com SDP: o áudio do PBX (toque, mensagem) já pode chegar antes de atender.
-                this.rtp.setRemote(parseSdp(response.body))
+                this.applyRemote(parseSdp(response.body), true)
                 early = true
             } catch {
                 // SDP provisório que não serve: espera o da resposta final.
@@ -338,8 +359,18 @@ export class SipCall {
             this.send(488, 'Not Acceptable Here')
             return this.finish({ code: 488, reason, by: 'system' })
         }
+        if (this.host.srtp && !media.crypto) {
+            this.send(488, 'Not Acceptable Here')
+            return this.finish({ code: 488, reason: 'Esta conta exige áudio cifrado (SRTP)', by: 'system' })
+        }
         this.rtpPort = await this.rtp.open()
         if (this.state !== 'ringing') return
+        // Quem liga oferece a cifra: a resposta usa a mesma linha a=crypto, com a nossa chave.
+        if (media.crypto) {
+            this.secure = true
+            this.localKey = newSrtpKey()
+            this.cryptoTag = media.crypto.tag
+        }
         this.applyRemote(media)
         const body = this.localSdp(answerDirection(media.direction), [media.codec])
         this.state = 'established'
@@ -501,8 +532,8 @@ export class SipCall {
         }
     }
 
-    stats(): RtpStats & { codec: string } {
-        return { ...this.rtp.getStats(), codec: this.codecs[0] ?? 'PCMU' }
+    stats(): RtpStats & { codec: string; secure: boolean } {
+        return { ...this.rtp.getStats(), codec: this.codecs[0] ?? 'PCMU', secure: this.secure }
     }
 
     // ─── Pedidos que chegam dentro da chamada ──────────────────────────────

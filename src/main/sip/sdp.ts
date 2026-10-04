@@ -2,6 +2,7 @@
 // a do outro lado: para onde mandar o RTP, com qual codec e em que sentido.
 
 import type { G711 } from './g711'
+import { isSrtpKey, SRTP_SUITE } from './srtp'
 
 export type MediaDirection = 'sendrecv' | 'sendonly' | 'recvonly' | 'inactive'
 
@@ -15,6 +16,8 @@ export interface LocalMedia {
     direction: MediaDirection
     sessionId: number
     version: number
+    /** Com chave, o áudio vai cifrado (RTP/SAVP) e a chave vai na linha a=crypto. */
+    crypto?: { tag: number; key: string }
 }
 
 export interface RemoteMedia {
@@ -26,6 +29,8 @@ export interface RemoteMedia {
     dtmfPayload?: number
     /** O sentido do ponto de vista de quem mandou o SDP. */
     direction: MediaDirection
+    /** O outro lado cifra o áudio com esta chave (SRTP por SDES). */
+    crypto?: { tag: number; key: string }
 }
 
 export class SdpError extends Error {}
@@ -41,7 +46,8 @@ export function buildSdp(media: LocalMedia): string {
         's=Iris',
         `c=IN ${family} ${media.address}`,
         't=0 0',
-        `m=audio ${media.port} RTP/AVP ${payloads.join(' ')}`,
+        `m=audio ${media.port} ${media.crypto ? 'RTP/SAVP' : 'RTP/AVP'} ${payloads.join(' ')}`,
+        ...(media.crypto ? [`a=crypto:${media.crypto.tag} ${SRTP_SUITE} inline:${media.crypto.key}`] : []),
         ...media.codecs.map((c) => `a=rtpmap:${PAYLOAD[c]} ${c}/8000`),
         `a=rtpmap:${media.dtmfPayload} telephone-event/8000`,
         `a=fmtp:${media.dtmfPayload} 0-16`,
@@ -51,7 +57,7 @@ export function buildSdp(media: LocalMedia): string {
     ].join('\r\n')
 }
 
-/** Lê o primeiro áudio do SDP. Lança SdpError se não houver G.711 em comum ou se pedir SRTP. */
+/** Lê o primeiro áudio do SDP. Lança SdpError se não houver G.711 em comum ou cifra que a Íris fale. */
 export function parseSdp(text: string): RemoteMedia {
     const lines = text.split(/\r?\n/).map((line) => line.trim())
     const start = lines.findIndex((line) => line.startsWith('m=audio '))
@@ -59,7 +65,16 @@ export function parseSdp(text: string): RemoteMedia {
     const next = lines.findIndex((line, i) => i > start && line.startsWith('m='))
     const section = lines.slice(start, next < 0 ? undefined : next)
     const [, portText, proto, ...formats] = section[0]!.split(/\s+/)
-    if (proto !== 'RTP/AVP') throw new SdpError(`Mídia ${proto} ainda não é suportada (só RTP sem cifra)`)
+    if (proto !== 'RTP/AVP' && proto !== 'RTP/SAVP')
+        throw new SdpError(`Mídia ${proto} não é suportada (só RTP e SRTP)`)
+    let crypto: RemoteMedia['crypto']
+    for (const line of section) {
+        const match = /^a=crypto:(\d+) (\S+) inline:([A-Za-z0-9+/=]+)/.exec(line)
+        if (!crypto && match && match[2] === SRTP_SUITE && isSrtpKey(match[3]!))
+            crypto = { tag: Number(match[1]), key: match[3]! }
+    }
+    if (proto === 'RTP/SAVP' && !crypto)
+        throw new SdpError(`Áudio cifrado sem uma cifra em comum: a Íris fala ${SRTP_SUITE}`)
 
     // O endereço da seção de áudio vale mais que o da sessão.
     const connection =
@@ -86,7 +101,17 @@ export function parseSdp(text: string): RemoteMedia {
     const directions: MediaDirection[] = ['sendrecv', 'sendonly', 'recvonly', 'inactive']
     const all = [...lines.slice(0, start), ...section]
     const direction = directions.find((d) => all.includes(`a=${d}`)) ?? 'sendrecv'
-    return { address, port: Number(portText), codec: codec.name, payload: codec.payload, dtmfPayload, direction }
+    // A chave só vale com RTP/SAVP: em RTP/AVP o outro lado manda sem cifra.
+    const secure = proto === 'RTP/SAVP' ? crypto : undefined
+    return {
+        address,
+        port: Number(portText),
+        codec: codec.name,
+        payload: codec.payload,
+        dtmfPayload,
+        direction,
+        crypto: secure
+    }
 }
 
 /** O sentido da nossa resposta: o espelho do que o outro lado pediu. */

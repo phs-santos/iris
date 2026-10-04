@@ -30,6 +30,8 @@ export interface Account {
     transport?: AccountTransport
     /** SIP puro: host e porta do PBX, ex.: "10.0.0.5:5080". Vazio usa o domínio e a porta padrão. */
     sipServer?: string
+    /** SIP puro: exige áudio cifrado (SRTP) nas chamadas. */
+    srtp?: boolean
     /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */
     iceServers: string
     dtmfMode: DtmfMode
@@ -139,6 +141,7 @@ export interface NativeSipConfig {
     transport: SipTransportKind
     /** Host e porta do PBX; vazio usa o domínio. */
     server?: string
+    srtp?: boolean
 }
 
 export type NativeSipEventBody =
@@ -174,7 +177,11 @@ export interface NativeCallStats {
     packetsReceived: number
     packetsLost: number
     jitterMs: number
+    /** Tempo de ida e volta pelo RTCP; ausente com SRTP ou enquanto o outro lado não respondeu. */
+    rttMs?: number
     codec: string
+    /** O áudio desta chamada vai cifrado (SRTP). */
+    secure: boolean
 }
 
 export type RegStateName = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error'
