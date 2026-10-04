@@ -19,10 +19,10 @@ O SIP Bench é um softphone desktop para desenvolvedores e QA testarem telefonia
 - Cenários de teste salvos e repetíveis
 - Modo simulado, sem PBX
 - Instaladores para Windows, macOS e Linux com atualização automática
+- SIP puro por UDP, TCP ou TLS, com motor próprio (RF-39, incluído em 04/10/2026). Até a terceira entrega do RF-39, as chamadas exigem WebRTC (WSS + DTLS-SRTP)
 
 **Fora do escopo**
 
-- SIP sobre UDP ou TCP puro. O PBX precisa aceitar WebRTC (WSS + DTLS-SRTP); para os demais, usa-se um gateway.
 - Vídeo, chat e conferência
 - Uso como softphone de atendimento em produção (fila, CRM, relatórios)
 - Versão mobile
@@ -131,6 +131,7 @@ São 37 requisitos em cinco grupos: 15 essenciais, 16 importantes e 6 desejávei
 | RF-36 | Gravar a chamada em arquivo de áudio local | Desejável | Depois | O arquivo contém os dois lados da conversa |
 | RF-37 | Aceitar certificado autoassinado de um host específico, com aviso explícito | Importante | M2 | Só o host aceito conecta; os demais continuam recusados |
 | RF-38 | Ajuda de IA para explicar o log, uma chamada ou uma falha de registro, pela OpenRouter, com a chave do próprio usuário | Desejável | M4 | Sem chave nada é enviado; a tela mostra o texto antes de enviar; por padrão ramais, números, IPs, domínios e nomes saem mascarados; senhas e dados de autenticação nunca saem; a chave fica no cofre de senhas e a interface não consegue lê-la |
+| RF-39 | SIP puro por UDP, TCP ou TLS com motor próprio em TypeScript, sem biblioteca nativa, atrás da interface `SipEngine`. Três entregas: (1) registro, renovação, OPTIONS e Saúde; (2) chamadas com G.711 e DTMF (RFC 4733 e SIP INFO); (3) espera, transferência, SRTP e qualidade por RTCP | Importante | Depois do M4 | Entrega 1: um ramal registra no Asterisk por UDP, por TCP e por TLS, renova o registro e aparece nos contatos do PBX. Entrega 2: chamada com áudio nos dois sentidos entre um ramal de SIP puro e um ramal WebRTC. Entrega 3: as mesmas ações de chamada do WebRTC |
 
 ## Requisitos não funcionais
 
@@ -320,6 +321,7 @@ O próprio produto é uma ferramenta de teste, então a base dos testes é um PB
 - Electron em vez de Tauri, pela consistência do WebRTC
 - easy-sipjs como motor SIP, atrás da interface `SipEngine`
 - Contas e senhas guardadas localmente (senhas cifradas em arquivo, sem o cofre do sistema, desde 04/10/2026), importação e exportação em JSON
+- Motor SIP próprio em TypeScript para SIP puro (RF-39), no processo principal, em vez de biblioteca nativa: o PJSIP é GPL e exigiria compilar para três sistemas (decisão do usuário em 4 de outubro de 2026). O easy-sipjs continua sendo o motor do WebRTC
 
 **Em aberto**
 

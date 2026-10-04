@@ -10,11 +10,12 @@ Documentos de referência em [docs/](docs/). O projeto se chamava "SIP Bench", e
 
 Quando o código e a especificação divergirem, siga a especificação e avise o usuário. Se algo não estiver em nenhum desses documentos, pergunte ao usuário em vez de inventar o escopo.
 
-## Estado (03/10/2026)
+## Estado (04/10/2026)
 
 - **M0 a M3 concluídos.** O README lista o que cada RF já faz.
 - **M4 em andamento.** Já feito: revisão de segurança ([docs/SEGURANCA.md](docs/SEGURANCA.md)) e revisão de acessibilidade (RNF-12, `test:a11y`).
-- Typecheck, testes de unidade, Prettier e licenças passam.
+- Feito em 04/10/2026, **ainda sem commit e sem release**: ícone novo (fone com asa), bandeja com estado, arquivos de dados à prova de estrago, preferências gravadas em fila, log interno em arquivo (RNF-14), reconexão (RNF-06), lint e cobertura (RNF-15), fumaça do app empacotado (RNF-01, RNF-04), tradução dos componentes (RNF-13) e a entrega 1 do motor próprio de SIP puro (RF-39).
+- Typecheck, lint, testes de unidade com cobertura, Prettier e licenças passam. Os e2e locais (macOS) passam, inclusive `test:pacote`, `test:sip` e `test:reconexao`. Os passos novos do CI ainda não rodaram no GitHub: a fumaça do pacote no Windows e no Linux nunca foi vista funcionando.
 
 ## Próximos passos, em ordem
 
@@ -31,21 +32,26 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
     - **macOS sem assinatura:** confirmado em 03/10/2026 (1.0.2 → 1.0.3) que o download termina e a instalação falha com "Code signature … did not pass validation". Por isso, com assinatura ad-hoc o app entra em modo manual: avisa da versão nova e abre a página de download.
     - **Falta para marcar:** ver uma versão nova ser baixada e aplicada ao reiniciar (o critério de aceitação), no Windows ou no AppImage; no macOS só depois da assinatura (passo 3).
 3. **[ ] RNF-17 (instaladores assinados).** **Bloqueado.** Em 04/10/2026 o usuário decidiu não pagar a conta Apple Developer. No macOS, a instalação recomendada passa a ser `scripts/install-macos.sh` (curl, sem a marca de quarentena, conferindo o SHA-512 do `latest-mac.yml`), e a atualização do macOS é feita pela própria Íris (`src/main/mac-update.ts`: baixa o .zip, confere o SHA-512, troca o app e reinicia; regras em `src/shared/mac-update.ts`), com o comando do Terminal como plano B na tela. Isso foi autorizado por ele e não conta como contornar a assinatura. Testado em 04/10/2026: um app empacotado 1.2.9 se atualizou para a 1.3.0 publicada. Depende do usuário fornecer o Apple Developer ID (assinar e notarizar) e o certificado de assinatura para Windows. Enquanto isso não chegar, não tente contornar. Hoje o macOS usa assinatura ad-hoc (`resetAdHocDarwinSignature`).
-4. **[ ] RNF ainda sem cumprimento.** Este levantamento foi feito comparando a especificação com o código em 03/10/2026. Confirme cada item antes de começar:
-    - **RNF-13:** os textos da interface estão fixos nos componentes. A especificação pede arquivos de tradução (pt-BR, prontos para inglês). É a maior lacuna.
-    - **RNF-14:** não há log interno do app em arquivo rotativo (5 × 10 MB na pasta de dados).
-    - **RNF-15:** não há lint (ESLint) nem relatório de cobertura no CI. A meta é 70% ou mais na camada de domínio.
-    - **RNF-06:** a reconexão usa o `autoReconnect` do easy-sipjs. Falta a espera crescente com limite de tentativas configurável e o teste que derruba o contêiner do PBX.
-    - **RNF-04:** falta medir no CI a abertura (≤ 3 s) e o registro (≤ 2 s). A resposta da interface (≤ 100 ms) já é medida em `load.mjs`.
-    - **RNF-01:** os testes e2e rodam só em Linux. A especificação pede smoke test nos três sistemas.
+4. **[ ] RNF ainda sem cumprimento.** Levantamento de 03/10/2026, atualizado em 04/10/2026:
+    - **RNF-13: feito.** Nenhum texto fixo nos componentes: `$t()` no modelo e `t()` no script, catálogo em `src/renderer/src/i18n/pt-BR.ts` e guia em `i18n/guide.pt-BR.ts`. `scripts/check-i18n.mjs` roda no `npm run lint` e reprova texto fixo em `.vue`. Ficaram em português no código: as linhas do log de eventos (stores), as mensagens do processo principal e a linha de comando.
+    - **RNF-14: feito.** `src/main/app-log.ts`, 5 × 10 MB em `logs/iris.log` na pasta de dados. Recebe erros não tratados dos dois processos e falhas de canal de IPC.
+    - **RNF-15: feito.** `npm run lint` (ESLint) e `npm run test:coverage` (mínimo de 70% na camada de domínio, hoje perto de 85%) no CI.
+    - **RNF-06: feito.** A biblioteca reconecta depois de uma queda com espera crescente e o limite das Configurações → Conexão; a store de contas refaz a primeira conexão que falha (`src/shared/reconnect.ts`). Senha errada (401, 403, 404, 407) não é tentada de novo. `test:reconexao` derruba o contêiner do PBX.
+    - **RNF-04 e RNF-01: escritos, falta ver no CI.** `test:pacote` abre o app empacotado e mede abertura e registro; o job `pacote` roda nos três sistemas. Os tempos só reprovam com `STRICT_TIMES=1` (no macOS local a abertura deu 2,9 s, colada no limite de 3 s).
     - **RNF-02:** falta o checklist manual com FreeSWITCH e Kamailio.
     - **RNF-17:** falta só a assinatura (passo 3). O `.deb` já sai no `dist:linux` e no release; a instalação foi conferida num contêiner Ubuntu 24.04, mas o app instalado por `.deb` ainda não foi aberto numa máquina com tela.
 5. **[ ] Entregas do M4 que não são código:** o guia de uso e o teste com 3 pessoas (RNF-11: primeira chamada em até 2 minutos).
-    - **Guia: feito**, como tela dentro do app (botão "Guia" ou F1). Texto em `src/renderer/src/guide/content.ts`, tela em `GuideDialog.vue`, capturas em `src/renderer/src/assets/guide` geradas por `npm run guide:shots`. Quando uma tela mudar, atualize a seção do guia e refaça as capturas.
+    - **Guia: feito**, como tela dentro do app (botão "Guia" ou F1). Texto em `src/renderer/src/i18n/guide.pt-BR.ts`, tela em `GuideDialog.vue`, capturas em `src/renderer/src/assets/guide` geradas por `npm run guide:shots`. Quando uma tela mudar, atualize a seção do guia e refaça as capturas.
     - **Falta:** o roteiro do teste com 3 pessoas (o agente prepara) e o teste em si (com o usuário).
 6. **[ ] Fechar o M4.** Critério de saída: todos os RF/RNF essenciais e importantes aprovados, sem defeito crítico aberto. Atualize o "Estado atual" do README, que ainda diz "M0 a M3" e "RNF-17 fica para o M4", e as pendências do `docs/SEGURANCA.md`.
 
 **RF-38 (ajuda da IA), pedido pelo usuário em 03/10/2026:** feito. Só OpenRouter, com a chave do usuário e a máscara ligada por padrão. Regras em `src/shared/ai.ts`, chamada em `src/main/ai.ts`, tela em `AiDialog.vue`, testes em `tests/ai.test.ts` e `test:ai`. Testado em 03/10/2026 com uma chave de verdade (resposta em 9 s, modelo sugerido `anthropic/claude-sonnet-5.5`); o `test:ai` usa uma OpenRouter falsa. Falta o botão no resultado de um passo de cenário.
+
+**RF-39 (SIP puro com motor próprio em TypeScript), pedido pelo usuário em 04/10/2026.** Três entregas; o requisito está na especificação.
+- **(1) Registro: feito, sem release.** Conta com transporte UDP, TCP ou TLS registra, renova, responde ao OPTIONS do PBX, mede a Saúde e mostra o SIP bruto. INVITE recebido é recusado com 480. Onde está: `src/main/sip/` (`message.ts`, `digest.ts`, `transport.ts`, `user-agent.ts`), ponte de IPC em `src/main/native-sip.ts`, motor da interface em `src/renderer/src/sip/native-engine.ts`, alvo em `src/shared/sip-target.ts`. Testes: `tests/user-agent.test.ts` (PBX falso em memória), `tests/transport.test.ts` e `test:sip` (Asterisk, ramais 2001 a 2005, portas 5060 e 5061).
+- **(2) Chamadas com G.711 e DTMF: a fazer.** INVITE/ACK/BYE/CANCEL (transação de INVITE e diálogos), SDP, RTP no processo principal (G.711, buffer de jitter, RFC 4733), e a ponte de áudio com a interface (microfone e alto-falante em blocos de 20 ms). `NativeSipEngine.dial` hoje lança erro.
+- **(3) Espera, transferência, SRTP e qualidade por RTCP: a fazer.**
+- Não há busca DNS SRV: o host vem do domínio ou do campo "Servidor SIP".
 
 **Ideias conversadas, ainda sem requisito** (não faça sem o usuário pedir): criador de URA que exporta o plano de discagem e gera os cenários de teste; modo Telefone (tela simples de celular); a lista de melhorias de experiência de uso (erros em português, primeiro uso guiado, chamada recebida em destaque, tela única de Preferências).
 
@@ -60,10 +66,12 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 
 Pendências conhecidas, que não precisam ser feitas agora:
 - RNF-05, memória: de 331 a 389 MB no macOS com tela retina, contra o limite de 300 MB. O heap JS fica em 10 MB; o peso está no processo de GPU (150 a 190 MB durante a chamada) e na memória nativa da interface. Só abrir o app já custa de 180 a 260 MB. Desligar a aceleração de GPU não resolve.
-- A primeira conexão não tenta de novo: com muitas contas no mesmo host, o Chromium abre os WebSockets um de cada vez, e a última da fila pode passar dos 5 s do SIP.js e ficar em erro (`1006`). Entra no RNF-06.
 - Todo canal de IPC que a interface chama ao abrir tem que ser registrado **antes** de `createWindow()` e sem `await` na frente. A 1.0.4 foi publicada e recolhida em minutos porque o canal `update:info` só era registrado depois de rodar o `codesign`, e a falha dele impedia as contas de carregar. Antes de publicar, leia o log do app gerado pelo CI.
 - Os testes e2e rodam o app sem empacotar, e os fuses impedem o Playwright de abrir o app empacotado. Antes de um release, abra o app empacotado e **olhe a janela**: a tela em branco do Keychain passou por todos os testes. Para inspecionar, gere um pacote de diagnóstico com `npx electron-builder --dir -c.electronFuses.enableNodeCliInspectArguments=true -c.directories.output=<pasta>` e abra com `electron.launch({ executablePath })`.
 - Senhas: desde 04/10/2026 ficam em `senhas.json` cifrado por `chave-local.bin` (decisão do usuário, para o macOS sem assinatura não pedir a senha das Chaves). O `secrets.json` antigo (cofre do sistema) é migrado inteiro ao abrir o app (`secrets:migrate`, antes de registrar); só sai dele o que o cofre conseguiu abrir, e o resto fica para a próxima abertura (1.1.0). Arquivo de senhas ou chave estragados nunca são sobrescritos: vão para o lado (`senhas.json.corrompido-…`, `chave-local.bin.invalida-…`) e a tela avisa.
+- As preferências (`settings.json`) só mudam por `settings:update` (interface) ou `updateSettings` (processo principal), que alteram um campo de cada vez numa fila. Não volte ao "ler tudo, mudar e gravar tudo": era assim que uma tela apagava a alteração da outra.
+- Num script que roda como módulo principal do Electron (`scripts/make-icons.mjs`), `await app.whenReady()` no topo do módulo trava para sempre. Use `app.whenReady().then(...)`.
+- Testes de unidade de código do processo principal entram no `include` do `tsconfig.node.json` e no `exclude` do `tsconfig.web.json`.
 - O terminal do VSCode exporta `ELECTRON_RUN_AS_NODE=1`, e os testes e2e falham com "Process failed to launch". Rode com `env -u ELECTRON_RUN_AS_NODE`.
 - Fechar o app no meio de uma chamada de teste deixa canais presos no Asterisk, e o `test:pbx` seguinte falha. Limpe com `docker exec iris-asterisk-1 asterisk -rx 'channel request hangup all'`.
 - `grantFileProtocolExtraPrivileges` continua ligado. Para desligar, a interface teria que ser servida por um protocolo próprio (`app://`).
@@ -86,14 +94,17 @@ Pendências conhecidas, que não precisam ser feitas agora:
     - só faça o commit quando o usuário pedir.
 - **Requisitos no código:** cite o RF/RNF no comentário quando ele explica uma decisão, por exemplo `// … (RNF-19)`. Comente o *porquê*, com a mesma densidade do código ao redor.
 - **Formato:** Prettier, com 4 espaços, sem ponto e vírgula, aspas simples e 120 colunas. Rode `npm run format` antes do commit.
-- **Antes de dar algo por pronto:** rode `npm run typecheck`, `npm test` e `npm run format:check`. Se mexer na interface, rode também `npm run test:e2e` e `npm run test:a11y`. Se mexer no SIP, rode `test:pbx` com o Asterisk. Informe o que rodou e o que não rodou.
+- **Antes de dar algo por pronto:** rode `npm run typecheck`, `npm run lint`, `npm run test:coverage` e `npm run format:check`. Se mexer na interface, rode também `npm run test:e2e` e `npm run test:a11y`. Se mexer no SIP, rode `test:pbx` com o Asterisk. Informe o que rodou e o que não rodou.
 - **Arquitetura que deve ser mantida:**
     - a interface só conhece `SipEngine` (`src/renderer/src/sip/engine.ts`, RNF-16). O motor real é `easysip-engine.ts`; o simulado é `mock-engine.ts`. Recursos novos entram nos dois;
     - o IPC passa só pelos canais fixos de `src/preload`, registrados com `handle`/`on` de `src/main/ipc-guard.ts`, e os argumentos são conferidos (veja `docs/SEGURANCA.md`);
+    - texto de tela nunca fica fixo num componente (RNF-13): crie a entrada em `src/renderer/src/i18n/pt-BR.ts` e use `$t('grupo.nome')` no modelo ou `t()` no script;
+    - o ícone tem fonte em SVG (`build/icon.svg`, `build/tray.svg`, `assets/logo-mark.svg`); os PNG saem de `npm run icons`;
     - nada de `v-html`, `innerHTML` ou `eval`. Senhas nunca vão para log nem para exportação (RNF-10);
     - mudança de formato em `accounts.json`, `settings.json` ou `scenarios.json` precisa de migração (RNF-19).
 - **Testes e2e:**
     - são scripts Playwright em `tests/e2e/*.mjs`;
     - usam `IRIS_USER_DATA` (pasta temporária) e `IRIS_FAKE_MEDIA=1`;
     - `PBX_WS` aponta para o Asterisk. O plano de discagem está no README.
+- **Antes de um release:** rode `npm run test:pacote` e leia o log que ele imprime; ele abre o app empacotado, que os outros testes não abrem.
 - **README:** quando um requisito terminar, atualize a tabela "Estado atual" e, se houver comando novo, a seção "Testes".
