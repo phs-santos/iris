@@ -165,3 +165,110 @@ export function normalizeImported(data: unknown): Array<{ account: Account; pass
         return { account, password: typeof password === 'string' ? password : undefined }
     })
 }
+
+// ─── Contas em lote por CSV (RF-48) ────────────────────────────────────────
+
+const CSV_COLUMNS: Record<string, string> = {
+    nome: 'name',
+    name: 'name',
+    ramal: 'extension',
+    extension: 'extension',
+    dominio: 'domain',
+    domain: 'domain',
+    senha: 'password',
+    password: 'password',
+    transporte: 'transport',
+    transport: 'transport',
+    endereco: 'address',
+    address: 'address',
+    servidor: 'address',
+    usuario: 'authUsername',
+    auth: 'authUsername',
+    'auto-atender': 'autoAnswer',
+    autoatender: 'autoAnswer',
+    srtp: 'srtp'
+}
+export const CSV_HEADER = 'nome;ramal;dominio;senha;transporte;endereco'
+const MAX_CSV_ROWS = 1000
+
+/** Separa uma linha de CSV, com campos entre aspas e aspas dobradas dentro deles. */
+function splitCsvLine(line: string, separator: string): string[] {
+    const out: string[] = []
+    let field = ''
+    let quoted = false
+    for (let i = 0; i < line.length; i++) {
+        const c = line[i]!
+        if (quoted) {
+            if (c === '"' && line[i + 1] === '"') {
+                field += '"'
+                i++
+            } else if (c === '"') quoted = false
+            else field += c
+        } else if (c === '"' && field === '') quoted = true
+        else if (c === separator) {
+            out.push(field.trim())
+            field = ''
+        } else field += c
+    }
+    out.push(field.trim())
+    return out
+}
+
+const plain = (text: string): string =>
+    text
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim()
+const yes = (text: string | undefined): boolean => /^(s|sim|y|yes|1|true|x)$/i.test((text ?? '').trim())
+
+/**
+ * Lê uma planilha de contas salva como CSV. A primeira linha diz as colunas (nome, ramal, dominio,
+ * senha, transporte, endereco; opcionais: usuario, auto-atender, srtp), separadas por ponto e vírgula,
+ * vírgula ou tabulação. O endereço é o WebSocket (wss://…) ou, em SIP puro, o host e a porta.
+ * Para no primeiro erro, dizendo a linha: importar metade de uma planilha confunde mais do que ajuda.
+ */
+export function parseAccountsCsv(text: string): Array<{ account: Account; password: string }> {
+    const lines = text
+        .replace(/^\uFEFF/, '')
+        .split(/\r?\n/)
+        .filter((line) => line.trim())
+    if (lines.length < 2) throw new Error(t('accounts.csv_vazio'))
+    if (lines.length - 1 > MAX_CSV_ROWS) throw new Error(t('accounts.csv_grande', { max: MAX_CSV_ROWS }))
+    const separator = [';', '\t', ','].find((s) => lines[0]!.includes(s)) ?? ';'
+    const columns = splitCsvLine(lines[0]!, separator).map((name) => CSV_COLUMNS[plain(name)])
+    for (const needed of ['name', 'extension', 'domain'])
+        if (!columns.includes(needed)) throw new Error(t('accounts.csv_sem_coluna', { header: CSV_HEADER }))
+
+    return lines.slice(1).map((line, index) => {
+        const row: Record<string, string> = {}
+        splitCsvLine(line, separator).forEach((value, i) => {
+            if (columns[i]) row[columns[i]!] = value
+        })
+        const address = row.address ?? ''
+        const wanted = plain(row.transport ?? '')
+        const transport = ['udp', 'tcp', 'tls'].includes(wanted)
+            ? (wanted as 'udp' | 'tcp' | 'tls')
+            : wanted === '' || wanted === 'ws' || wanted === 'wss'
+              ? 'ws'
+              : null
+        const where = t('accounts.csv_linha', { line: index + 2 })
+        if (!transport) throw new Error(`${where}: ${t('accounts.csv_transporte', { value: row.transport })}`)
+        const account = newAccount({
+            name: row.name ?? '',
+            extension: row.extension ?? '',
+            domain: row.domain ?? '',
+            authUsername: row.authUsername ?? '',
+            transport,
+            wssUrl: transport === 'ws' ? address : '',
+            sipServer: transport === 'ws' ? '' : address,
+            autoAnswer: { enabled: yes(row.autoAnswer), delayMs: 1000 },
+            srtp: transport !== 'ws' && yes(row.srtp) ? true : undefined,
+            color: ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]
+        })
+        const password = row.password ?? ''
+        const error = Object.values(validateAccount(account, password))[0]
+        if (error) throw new Error(`${where}: ${error}`)
+        return { account, password }
+    })
+}

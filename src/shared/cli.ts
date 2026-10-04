@@ -6,8 +6,10 @@ export interface CliOptions {
     scenarios: string[]
     all: boolean
     runs: number
-    /** Caminho do relatório; a extensão escolhe o formato (.json ou texto). */
+    /** Caminho do relatório; a extensão escolhe o formato (.json, .xml para JUnit, ou texto). */
     report?: string
+    /** Contas de origem no lugar da que está no cenário: o mesmo roteiro roda uma vez para cada (RF-48). */
+    origins: string[]
     /** Arquivo de contas exportado pela Íris (com senhas). Usa uma pasta de dados temporária. */
     accountsFile?: string
     /** Arquivo de cenários (scenarios.json, uma lista ou um cenário só). */
@@ -23,6 +25,7 @@ export interface CliConfig {
     all: boolean
     runs: number
     report?: string
+    origins: string[]
     accountsText?: string
     scenariosText?: string
 }
@@ -37,7 +40,9 @@ Executa cenários sem abrir a janela e sai com código diferente de zero se algu
   --cenario, --scenario <nome|id>   cenário a executar (pode repetir)
   --todos, --all                    executa todos os cenários
   --vezes, --runs <n>               repete cada cenário n vezes (padrão 1)
-  --relatorio, --report <arquivo>   salva o relatório (.json ou .txt)
+  --relatorio, --report <arquivo>   salva o relatório (.json, .xml no formato JUnit, ou .txt)
+  --conta, --account <conta>        roda o cenário com esta conta de origem, por id, nome ou
+                                    ramal@domínio (pode repetir: uma execução para cada)
   --contas, --accounts <arquivo>    contas exportadas pela Íris, com senhas (não toca nos seus dados)
   --cenarios, --scenarios <arquivo> arquivo de cenários (padrão: os cenários salvos no app)
   --confiar-host, --trust-host <h>  aceita o certificado autoassinado desse host (pode repetir)
@@ -54,6 +59,8 @@ const FLAGS: Record<string, keyof CliOptions> = {
     '--all': 'all',
     '--vezes': 'runs',
     '--runs': 'runs',
+    '--conta': 'origins',
+    '--account': 'origins',
     '--relatorio': 'report',
     '--report': 'report',
     '--contas': 'accountsFile',
@@ -77,7 +84,15 @@ const BOOLEAN: Array<keyof CliOptions> = ['all', 'fakeMedia', 'help']
  */
 export function parseCliArgs(argv: string[]): { options: CliOptions } | { error: string } | null {
     if (!argv.some((arg) => FLAGS[arg.split('=')[0]])) return null
-    const options: CliOptions = { scenarios: [], all: false, runs: 1, trustHosts: [], fakeMedia: false, help: false }
+    const options: CliOptions = {
+        scenarios: [],
+        all: false,
+        runs: 1,
+        origins: [],
+        trustHosts: [],
+        fakeMedia: false,
+        help: false
+    }
     for (let i = 0; i < argv.length; i++) {
         const [flag, inline] = argv[i].split(/=(.*)/s, 2)
         const key = FLAGS[flag]
@@ -94,7 +109,7 @@ export function parseCliArgs(argv: string[]): { options: CliOptions } | { error:
             if (!Number.isInteger(n) || n < 1 || n > 10_000)
                 return { error: `${flag} precisa ser um número de 1 a 10000` }
             options.runs = n
-        } else if (key === 'scenarios' || key === 'trustHosts') {
+        } else if (key === 'scenarios' || key === 'trustHosts' || key === 'origins') {
             options[key].push(value)
         } else {
             ;(options[key] as string) = value

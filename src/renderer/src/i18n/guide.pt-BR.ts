@@ -729,6 +729,11 @@ export const GUIDE: GuideSection[] = [
                     ['Esperar silêncio', 'Passa quando o áudio para; falha se continuar chegando até o tempo limite']
                 ]
             },
+            { type: 'h', text: 'O mesmo roteiro para várias contas' },
+            {
+                type: 'p',
+                text: 'Nos campos de número, dígitos e valor esperado você pode escrever `{ramal}`, `{dominio}` e `{nome}`: na hora de rodar, eles viram os dados da **conta de origem** do cenário. Assim um roteiro como "discar `*97`, mandar `{ramal}#`" serve para qualquer ramal: troque a conta de origem no alto do cenário ou, na linha de comando, use `--conta`.'
+            },
             { type: 'h', text: 'Conferir o áudio' },
             {
                 type: 'p',
@@ -789,7 +794,14 @@ export const GUIDE: GuideSection[] = [
                     ['--cenario <nome|id>', 'Cenário a executar. Pode repetir a opção para rodar vários'],
                     ['--todos', 'Executa todos os cenários'],
                     ['--vezes <n>', 'Repete cada cenário n vezes (padrão 1)'],
-                    ['--relatorio <arquivo>', 'Salva o relatório em `.json` ou `.txt`'],
+                    [
+                        '--relatorio <arquivo>',
+                        'Salva o relatório em `.json`, `.txt` ou `.xml`. O `.xml` sai no formato JUnit, que os sistemas de CI mostram como lista de testes'
+                    ],
+                    [
+                        '--conta <conta>',
+                        'Roda o cenário com esta conta de origem (id, nome ou `ramal@domínio`) no lugar da que está nele. Repita a opção para rodar uma vez com cada conta'
+                    ],
                     [
                         '--contas <arquivo>',
                         'Usa contas de um arquivo exportado pela Íris, com senhas. Não lê nem altera os seus dados'
@@ -802,7 +814,7 @@ export const GUIDE: GuideSection[] = [
             },
             {
                 type: 'p',
-                text: 'Códigos de saída: **0** tudo passou, **1** algum passo falhou, **2** erro de uso ou de configuração. Os nomes em inglês também valem (`--scenario`, `--all`, `--runs`, `--report`, `--accounts`, `--scenarios`, `--trust-host`, `--fake-media`, `--help`).'
+                text: 'Códigos de saída: **0** tudo passou, **1** algum passo falhou, **2** erro de uso ou de configuração. Os nomes em inglês também valem (`--scenario`, `--all`, `--runs`, `--report`, `--account`, `--accounts`, `--scenarios`, `--trust-host`, `--fake-media`, `--help`).'
             },
             {
                 type: 'note',
@@ -832,6 +844,30 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'p',
                 text: 'Lê um arquivo exportado pela Íris. Contas com o mesmo id são substituídas; as outras são adicionadas. Depois de importar, use **Todas → Registrar todas** para pôr as contas novas no ar.'
+            },
+            { type: 'h', text: 'Importar planilha (CSV)' },
+            {
+                type: 'p',
+                text: 'Para cadastrar muitos ramais de uma vez, monte uma planilha, salve como CSV e use **Escolher planilha**. A primeira linha diz as colunas; as contas vêm nas linhas seguintes:'
+            },
+            {
+                type: 'code',
+                text: 'nome;ramal;dominio;senha;transporte;endereco\nSuporte 1001;1001;pbx.empresa.com;segredo;ws;wss://pbx.empresa.com:8089/ws\nFila 2001;2001;10.0.0.5;segredo;udp;10.0.0.5:5060'
+            },
+            {
+                type: 'list',
+                items: [
+                    '**transporte**: `ws` (WebSocket, o padrão), `udp`, `tcp` ou `tls`.',
+                    '**endereco**: o WebSocket (`wss://…`) ou, em SIP puro, o host e a porta. Em SIP puro pode ficar vazio.',
+                    'Colunas opcionais: **usuario** (de autenticação), **auto-atender** e **srtp** (`sim` liga).',
+                    'O separador pode ser ponto e vírgula, vírgula ou tabulação. São até 1000 contas por vez.',
+                    'Se uma linha estiver errada, **nenhuma conta é criada** e a tela diz qual linha e por quê.'
+                ]
+            },
+            {
+                type: 'note',
+                kind: 'atenção',
+                text: 'A planilha tem as senhas em texto puro. Apague o arquivo depois de importar.'
             }
         ]
     },

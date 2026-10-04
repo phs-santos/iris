@@ -97,6 +97,10 @@ export function mockDriver(list: MockAccount[]): ScenarioDriver & { engines: Map
         },
         logSince: (since, accountId) =>
             log.filter((l) => l.ts >= since && (!accountId || l.accountId === accountId)).map((l) => l.text),
-        accountName: (id) => `Conta ${list.find((a) => a.id === id)?.extension ?? '?'}`
+        accountName: (id) => `Conta ${list.find((a) => a.id === id)?.extension ?? '?'}`,
+        accountInfo: (id) => {
+            const account = list.find((a) => a.id === id)
+            return account && { name: `Conta ${account.extension}`, extension: account.extension, domain: 'demo.local' }
+        }
     }
 }

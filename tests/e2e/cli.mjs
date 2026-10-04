@@ -45,6 +45,20 @@ try {
     if (json.length !== 2 || json[0].runs !== 2 || json[0].successRate !== 100) throw new Error('relatório incompleto')
     step('cada passo aparece com tempo e o relatório .json tem os dois cenários')
 
+    // Relatório JUnit (RF-49) e o mesmo roteiro com outra conta de origem (RF-48).
+    const junit = join(tmp, 'relatorio.xml')
+    const other = iris(...sim, '--cenario', 'URA 8000', '--conta', 'Sim 1002', '--relatorio', junit)
+    expect(
+        other,
+        0,
+        /Cenário "URA 8000"[\s\S]*1\. Registrar Sim 1002/,
+        'o mesmo cenário roda com a conta dada em --conta'
+    )
+    const xml = readFileSync(junit, 'utf8')
+    if (!/<testsuites name="Íris" tests="1" failures="0"/.test(xml) || !/<testcase classname="URA 8000"/.test(xml))
+        throw new Error(`relatório JUnit inesperado:\n${xml}`)
+    step('relatório .xml sai no formato JUnit')
+
     const busy = iris(...sim, '--cenario', 'Ocupado')
     expect(busy, 1, /✗ 3\. Aguardar c1 em chamada · \d+ ms · .*486 Busy Here/, 'passo que falha sai com código 1')
     expect(iris(...sim, '--todos'), 1, /Cenário "Ocupado"/, '--todos roda os três e falha por causa do Ocupado')

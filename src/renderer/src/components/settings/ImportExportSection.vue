@@ -2,6 +2,7 @@
 import { t } from '@renderer/i18n'
 import { ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
+import { CSV_HEADER } from '@renderer/lib/accounts'
 
 const accounts = useAccountsStore()
 const includePasswords = ref(false)
@@ -30,6 +31,17 @@ async function doImport(): Promise<void> {
         message.value = { ok: false, text: (error as Error).message }
     }
 }
+
+async function doImportCsv(): Promise<void> {
+    const text = await window.iris.files.openText('csv')
+    if (text === null) return
+    try {
+        const count = await accounts.importCsv(text)
+        message.value = { ok: true, text: t('importExportSection.contas_criadas', { count }) }
+    } catch (error) {
+        message.value = { ok: false, text: (error as Error).message }
+    }
+}
 </script>
 
 <template>
@@ -54,6 +66,11 @@ async function doImport(): Promise<void> {
             <h4>{{ $t('importExportSection.importar') }}</h4>
             <p>{{ $t('importExportSection.le_um_arquivo_exportado_pela') }}</p>
             <button class="btn" @click="doImport">{{ $t('importExportSection.escolher_arquivo') }}</button>
+        </div>
+        <div class="part">
+            <h4>{{ $t('importExportSection.importar_csv') }}</h4>
+            <p>{{ $t('importExportSection.csv_explicacao', { header: CSV_HEADER }) }}</p>
+            <button class="btn" @click="doImportCsv">{{ $t('importExportSection.escolher_csv') }}</button>
         </div>
         <p v-if="message" class="result" :class="message.ok ? 'ok' : 'bad'" role="status">{{ message.text }}</p>
     </section>

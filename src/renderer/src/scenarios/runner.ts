@@ -42,6 +42,8 @@ export interface ScenarioDriver {
     /** Linhas de log desde `since` (ms), opcionalmente de uma conta. */
     logSince(since: number, accountId?: string): string[]
     accountName(id: string): string
+    /** Dados da conta para as variáveis dos passos (RF-48). */
+    accountInfo(id: string): { name: string; extension: string; domain: string } | undefined
 }
 
 export type StepStatus = 'pending' | 'running' | 'passed' | 'failed' | 'skipped'
@@ -128,6 +130,14 @@ export async function runScenario(
     const results: StepResult[] = scenario.steps.map(() => ({ status: 'pending' }))
     const accountOf = (step: { account?: string }): string => step.account || scenario.accountId
     const claimed = new Set<string>()
+    // Variáveis (RF-48): {ramal}, {dominio} e {nome} da conta de origem, para o mesmo roteiro servir a
+    // várias contas.
+    const origin = driver.accountInfo(scenario.accountId)
+    const vars: Record<string, string> = origin
+        ? { ramal: origin.extension, dominio: origin.domain, domínio: origin.domain, nome: origin.name }
+        : {}
+    const expand = (text: string): string =>
+        text.replace(/\{([a-zíA-ZÍ]+)\}/g, (whole, name: string) => vars[name.toLowerCase()] ?? whole)
 
     const callOf = (alias: string): DriverCall => {
         const id = aliases.get(alias.trim())
@@ -168,7 +178,7 @@ export async function runScenario(
                 const id = accountOf(step)
                 if (driver.regStatus(id).state !== 'registered')
                     throw new StepFailure(`${driver.accountName(id)} não está registrada`)
-                const callId = await driver.dial(id, step.to.trim()).catch((error: Error) => {
+                const callId = await driver.dial(id, expand(step.to.trim())).catch((error: Error) => {
                     throw new StepFailure(`Não discou: ${error.message}`)
                 })
                 if (!callId) throw new StepFailure('Não discou')
@@ -224,7 +234,7 @@ export async function runScenario(
                 const c = callOf(step.call)
                 if (c.state !== 'established')
                     throw new StepFailure(`A chamada está ${describeCall(c)}, não em chamada`)
-                await driver.sendDtmf(c.id, step.digits)
+                await driver.sendDtmf(c.id, expand(step.digits))
                 // O envio por RTP termina de tocar depois que a promessa resolve; sem esta espera,
                 // um "desligar" logo em seguida cortava o último dígito.
                 await sleep(DTMF_SETTLE_MS, signal)
@@ -234,7 +244,7 @@ export async function runScenario(
                 const c = callOf(step.call)
                 if (c.state !== 'established')
                     throw new StepFailure(`A chamada está ${describeCall(c)}, não em chamada`)
-                await driver.transfer(c.id, step.to.trim())
+                await driver.transfer(c.id, expand(step.to.trim()))
                 await until(
                     () => Boolean(callOf(step.call).transfer?.final),
                     TRANSFER_TIMEOUT_MS,
@@ -296,7 +306,7 @@ export async function runScenario(
                 return undefined
             }
             case 'verify': {
-                const expected = step.expected.trim()
+                const expected = expand(step.expected).trim()
                 if (step.check === 'log') {
                     const hit = driver.logSince(startedAt).some((line) => line.includes(expected))
                     if (!hit) throw new StepFailure(`"${expected}" não apareceu no log`)
@@ -442,5 +452,47 @@ export function reportToText(report: ScenarioReport): string {
     lines.push('', 'Execuções:')
     for (const r of report.results)
         lines.push(`  #${r.run} ${r.passed ? 'passou' : `falhou no passo ${r.failedStep}: ${r.message}`} · ${r.ms} ms`)
+    return lines.join('\n')
+}
+
+const xml = (text: string): string =>
+    text.replace(/[<>&"']/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' })[c]!)
+
+/**
+ * Relatório no formato JUnit (RF-49), que os sistemas de CI sabem ler: cada cenário é uma suíte e cada
+ * execução, um teste. A falha leva o passo e a mensagem.
+ */
+export function reportsToJUnit(reports: ScenarioReport[]): string {
+    const seconds = (ms: number): string => (ms / 1000).toFixed(3)
+    const total = reports.reduce((n, r) => n + r.runs, 0)
+    const failed = reports.reduce((n, r) => n + r.failed, 0)
+    const time = reports.reduce((n, r) => n + r.results.reduce((sum, run) => sum + run.ms, 0), 0)
+    const lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        `<testsuites name="Íris" tests="${total}" failures="${failed}" time="${seconds(time)}">`
+    ]
+    for (const report of reports) {
+        const suiteTime = report.results.reduce((sum, run) => sum + run.ms, 0)
+        lines.push(
+            `  <testsuite name="${xml(report.scenario)}" tests="${report.runs}" failures="${report.failed}" time="${seconds(suiteTime)}" timestamp="${report.startedAt}">`
+        )
+        for (const run of report.results) {
+            const name = report.runs > 1 ? `execução ${run.run}` : report.scenario
+            const open = `    <testcase classname="${xml(report.scenario)}" name="${xml(name)}" time="${seconds(run.ms)}"`
+            if (run.passed) {
+                lines.push(`${open} />`)
+                continue
+            }
+            const step = report.steps[(run.failedStep ?? 1) - 1] ?? ''
+            const message = `passo ${run.failedStep} (${step}): ${run.message ?? 'falhou'}`
+            lines.push(
+                `${open}>`,
+                `      <failure message="${xml(message)}">${xml(message)}</failure>`,
+                '    </testcase>'
+            )
+        }
+        lines.push('  </testsuite>')
+    }
+    lines.push('</testsuites>', '')
     return lines.join('\n')
 }

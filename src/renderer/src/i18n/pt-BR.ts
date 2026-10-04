@@ -23,6 +23,11 @@ export const ptBR = {
     },
     // Estado e erros de registro e validação do formulário (lib/accounts.ts).
     accounts: {
+        csv_vazio: 'O arquivo precisa da linha com os nomes das colunas e de pelo menos uma conta',
+        csv_grande: 'O arquivo tem contas demais: o limite é {max} por vez',
+        csv_sem_coluna: 'A primeira linha precisa ter pelo menos as colunas nome, ramal e dominio. Exemplo: {header}',
+        csv_linha: 'Linha {line}',
+        csv_transporte: 'transporte "{value}" desconhecido; use ws, udp, tcp ou tls',
         desconectada: 'desconectada',
         conectando: 'conectando',
         conectado_aguardando: 'conectado, aguardando registro',
@@ -519,6 +524,11 @@ export const ptBR = {
             'Senha errada, ramal inexistente e login recusado não são tentados de novo: insistir faz o PBX bloquear o seu endereço.'
     },
     importExportSection: {
+        importar_csv: 'Importar planilha (CSV)',
+        csv_explicacao:
+            'Cria várias contas de uma vez a partir de uma planilha salva como CSV. A primeira linha diz as colunas: {header}. Opcionais: usuario, auto-atender e srtp. O endereço é o WebSocket (wss://…) ou, em SIP puro, o host e a porta.',
+        escolher_csv: 'Escolher planilha',
+        contas_criadas: '{count} contas criadas a partir da planilha.',
         importar_e_exportar_contas: 'Importar e exportar contas',
         leve_as_contas_para_outra: 'Leve as contas para outra máquina ou mande para um colega.',
         exportar: 'Exportar',

@@ -29,6 +29,8 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
+| RF-48 | Contas em lote por planilha CSV e variáveis nos cenários (`{ramal}`, `{dominio}`, `{nome}` da conta de origem); `--conta` na linha de comando roda o mesmo roteiro com outra conta |
+| RF-49 | Relatório JUnit (`.xml`) na linha de comando |
 | RF-41 | Áudio nos cenários: passos Tocar tom, Tocar arquivo WAV, Esperar áudio e Esperar silêncio. Pega chamada muda, que o código SIP não mostra. Tocar só em SIP puro e no simulado; medir, em qualquer conta |
 | RF-36 | Gravação da chamada em WAV estéreo (um lado em cada canal), por enquanto só em SIP puro |
 | RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |
@@ -99,12 +101,14 @@ Para CI, leve as contas e os cenários em arquivos. Com `--contas`, a Íris usa 
 
 ```bash
 iris --contas contas.json --cenarios cenarios.json --todos \
-     --confiar-host 127.0.0.1 --midia-falsa --relatorio relatorio.json
+     --confiar-host 127.0.0.1 --midia-falsa --relatorio relatorio.xml
 ```
 
 - `contas.json` é uma exportação da Íris com senhas. `cenarios.json` pode ser o `scenarios.json` do app, uma lista ou um cenário só.
 - A conta de origem de um cenário pode ser o id, o nome ou `ramal@domínio`, para o mesmo cenário servir em outra máquina.
 - Todas as contas do arquivo são registradas antes de começar, inclusive as que só recebem chamadas.
+- O relatório sai em `.json`, `.txt` ou `.xml`; o `.xml` é JUnit, que o CI mostra como lista de testes.
+- `--conta <conta>` roda o cenário com outra conta de origem; repita para rodar com várias. Com `{ramal}` nos passos, um roteiro só serve a todas.
 - `--ajuda` lista todas as opções. No Linux sem tela, rode com `xvfb-run -a`. Pode rodar com o app aberto.
 
 ## PBX de teste (Asterisk)

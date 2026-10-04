@@ -255,7 +255,8 @@ export interface IrisApi {
     }
     files: {
         saveText(defaultName: string, content: string): Promise<string | null>
-        openText(): Promise<string | null>
+        /** Abre o diálogo e devolve o texto do arquivo escolhido. `csv` troca o filtro de JSON por CSV. */
+        openText(kind?: 'json' | 'csv'): Promise<string | null>
     }
     /** Arquivos WAV para os cenários (RF-41): o processo principal lê e devolve PCM de 16 bits a 8000 Hz. */
     audio: {

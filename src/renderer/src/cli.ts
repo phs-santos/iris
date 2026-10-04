@@ -6,7 +6,14 @@ import { EXIT_FAILED, EXIT_OK, EXIT_USAGE, extractScenarioList, type CliConfig }
 import type { Account, Scenario } from '@shared/types'
 import { describeStep, normalizeScenarios, validateScenario } from './lib/scenarios'
 import { describeStatus } from './lib/accounts'
-import { buildReport, REGISTER_TIMEOUT_MS, reportToText, runScenario, type RunResult } from './scenarios/runner'
+import {
+    buildReport,
+    REGISTER_TIMEOUT_MS,
+    reportsToJUnit,
+    reportToText,
+    runScenario,
+    type RunResult
+} from './scenarios/runner'
 import { storeDriver } from './scenarios/store-driver'
 import { useAccountsStore } from './stores/accounts'
 import { useScenariosStore } from './stores/scenarios'
@@ -75,7 +82,17 @@ export async function runCli(config: CliConfig): Promise<number> {
         if (chosen.length === 0) throw new UsageError('nenhum cenário para executar')
 
         // Liga as contas citadas nos cenários às contas desta máquina e confere os passos antes de começar.
-        const prepared = chosen.map((original) => {
+        // Com --conta, cada cenário roda uma vez para cada conta de origem pedida (RF-48).
+        const expanded = config.origins.length
+            ? chosen.flatMap((scenario) =>
+                  config.origins.map((origin) => ({
+                      ...scenario,
+                      accountId: origin,
+                      name: config.origins.length > 1 ? `${scenario.name} · ${origin}` : scenario.name
+                  }))
+              )
+            : chosen
+        const prepared = expanded.map((original) => {
             const scenario: Scenario = JSON.parse(JSON.stringify(original))
             const map = (ref: string | undefined, where: string): string => {
                 const account = resolveAccount(ref ?? '', accounts.accounts)
@@ -149,10 +166,12 @@ export async function runCli(config: CliConfig): Promise<number> {
         }
 
         if (config.report) {
-            const json = config.report.toLowerCase().endsWith('.json')
-            const content = json
+            const file = config.report.toLowerCase()
+            const content = file.endsWith('.json')
                 ? JSON.stringify(reports.length === 1 ? reports[0] : reports, null, 2)
-                : reports.map(reportToText).join('\n\n')
+                : file.endsWith('.xml')
+                  ? reportsToJUnit(reports)
+                  : reports.map(reportToText).join('\n\n')
             const path = await window.iris.cli.writeReport(content)
             if (path) print(`\nRelatório salvo em ${path}`)
         }

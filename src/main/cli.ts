@@ -70,6 +70,7 @@ export function registerCliIpc(): void {
             scenarios: options.scenarios,
             all: options.all,
             runs: options.runs,
+            origins: options.origins,
             report: options.report,
             accountsText: options.accountsFile ? await readText(options.accountsFile, 'contas') : undefined,
             scenariosText: options.scenariosFile ? await readText(options.scenariosFile, 'cenários') : undefined

@@ -245,13 +245,18 @@ function registerIpc(): void {
         await fs.writeFile(result.filePath, content, 'utf8')
         return result.filePath
     })
-    handle(IPC.filesOpenText, async () => {
+    handle(IPC.filesOpenText, async (_e, kind?: 'json' | 'csv') => {
+        check(kind === undefined || kind === 'json' || kind === 'csv', 'tipo de arquivo')
         if (!mainWindow) return null
         const result = await dialog.showOpenDialog(mainWindow, {
             properties: ['openFile'],
-            filters: [{ name: 'JSON', extensions: ['json'] }]
+            filters: [
+                kind === 'csv' ? { name: 'CSV', extensions: ['csv', 'txt'] } : { name: 'JSON', extensions: ['json'] }
+            ]
         })
         if (result.canceled || !result.filePaths[0]) return null
+        const info = await fs.stat(result.filePaths[0])
+        check(info.size <= 20_000_000, 'arquivo de até 20 MB')
         return fs.readFile(result.filePaths[0], 'utf8')
     })
 

@@ -27,7 +27,7 @@ const api: IrisApi = {
     },
     files: {
         saveText: (name, content) => ipcRenderer.invoke(IPC.filesSaveText, name, content),
-        openText: () => ipcRenderer.invoke(IPC.filesOpenText)
+        openText: (kind) => ipcRenderer.invoke(IPC.filesOpenText, kind)
     },
     audio: {
         pickWav: () => ipcRenderer.invoke(IPC.audioPickWav),
