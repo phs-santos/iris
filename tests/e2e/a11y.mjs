@@ -50,6 +50,19 @@ try {
         .catch(() => problems.push('[formulário de conta] Esc não fecha'))
     if (await page.locator('form.dialog').count()) await page.getByRole('button', { name: 'Fechar' }).click()
 
+    await page.getByRole('button', { name: 'Fluxo SIP' }).click()
+    await page
+        .getByRole('dialog', { name: 'Fluxo SIP' })
+        .getByRole('button', { name: /^INVITE, / })
+        .first()
+        .click()
+    await scan('fluxo SIP')
+    await page.keyboard.press('Escape')
+    await page
+        .getByRole('dialog', { name: 'Fluxo SIP' })
+        .waitFor({ state: 'detached', timeout: 2000 })
+        .catch(() => problems.push('[fluxo SIP] Esc não fecha'))
+
     await page.getByRole('button', { name: 'Áudio' }).click()
     await scan('diálogo de áudio')
     await page.keyboard.press('Escape')

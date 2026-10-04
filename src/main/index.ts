@@ -4,7 +4,6 @@ import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
 import { IPC, type Account, type Scenario, type Settings } from '@shared/types'
 import {
-    encryptionAvailable,
     getSecret,
     loadAccounts,
     loadScenarios,
@@ -12,7 +11,9 @@ import {
     saveAccounts,
     saveScenarios,
     saveSettings,
-    setSecret
+    secretsStatus,
+    setSecret,
+    migrateLegacySecrets
 } from './storage'
 import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
@@ -190,7 +191,8 @@ function registerIpc(): void {
         return setSecret(id, password, !cliOptions?.accountsFile)
     })
     if (!cli) handle(IPC.cliConfig, () => null)
-    handle(IPC.secretsAvailable, () => encryptionAvailable())
+    handle(IPC.secretsStatus, () => secretsStatus())
+    handle(IPC.secretsMigrate, () => migrateLegacySecrets())
     handle(IPC.settingsLoad, () => loadSettings())
     handle(IPC.settingsSave, async (_e, settings: Settings) => {
         check(

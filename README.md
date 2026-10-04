@@ -20,6 +20,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-15, 16, 17, 18 | Transferência cega e assistida (consulta, concluir ou voltar) com progresso; cabeçalhos SIP extras no INVITE |
 | RF-19 | Escolha de microfone e alto-falante, com medidor e som de teste, aplicada também às chamadas em andamento |
 | RF-21, 22, 23 | Log por conta com filtros, aba de SIP bruto sem senhas, copiar e salvar .txt/.json |
+| Fluxo SIP | Diagrama de escada de cada chamada a partir do SIP bruto, com a mensagem completa ao clicar e exportação em .html |
 | RF-24, 25, 26 | Saúde da conta, diagnóstico de microfone e TURN, qualidade da chamada |
 | RF-28, 29, 30 | Cenários: editor de passos (registrar, discar, atender, esperar, aguardar estado, DTMF, transferir, desligar, verificar), resultado de cada passo com tempo, repetição N vezes com relatório .txt/.json |
 | RF-31 | Cenários pela linha de comando, sem janela: resultado de cada passo no terminal, relatório e código de saída 1 quando algum passo falha |
@@ -45,7 +46,7 @@ Os instaladores ainda não são assinados (RNF-17), então o sistema avisa na pr
 
 - **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. Se aparecer "O controle inteligente de aplicativos bloqueou um aplicativo", não há botão para liberar: esse recurso do Windows 11 só deixa rodar instalador assinado. Enquanto a Íris não for assinada, ela não instala nessas máquinas, a não ser que o Controle Inteligente de Aplicativos seja desligado em **Segurança do Windows → Controle de aplicativos e do navegador** (o Windows não deixa religar depois sem reinstalar o sistema).
 - **macOS:** depois de arrastar a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Se o macOS disser que o app está danificado, rode `xattr -dr com.apple.quarantine /Applications/Iris.app`.
-- **macOS, senha das Chaves:** quem atualiza de uma versão até a 1.0.5 pode ver uma última vez o pedido de senha das Chaves, enquanto a Íris traz as senhas antigas para o arquivo próprio. Digite a senha de login do Mac e confirme. Depois disso o pedido não volta.
+- **macOS, senha das Chaves:** quem atualiza de uma versão até a 1.0.5 pode ver uma última vez o pedido de senha das Chaves, enquanto a Íris traz as senhas antigas para o arquivo próprio. Digite a senha de login do Mac e confirme. Depois disso o pedido não volta. Se você negar, nenhuma senha se perde: a Íris pergunta de novo na próxima abertura.
 
 ## Rodar a partir do código
 

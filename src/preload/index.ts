@@ -14,7 +14,8 @@ const api: IrisApi = {
     secrets: {
         get: (id) => ipcRenderer.invoke(IPC.secretsGet, id),
         set: (id, password) => ipcRenderer.invoke(IPC.secretsSet, id, password),
-        encryptionAvailable: () => ipcRenderer.invoke(IPC.secretsAvailable)
+        status: () => ipcRenderer.invoke(IPC.secretsStatus),
+        migrate: () => ipcRenderer.invoke(IPC.secretsMigrate)
     },
     settings: {
         load: () => ipcRenderer.invoke(IPC.settingsLoad),

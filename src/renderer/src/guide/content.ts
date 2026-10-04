@@ -442,7 +442,28 @@ export const GUIDE: GuideSection[] = [
                     '**Salvar .txt / Salvar .json**: grava as linhas filtradas num arquivo, para anexar a um chamado.',
                     '**Limpar**: apaga o log da conta filtrada, ou tudo se o filtro for "Todas as contas".',
                     '**Explicar com IA**: manda o recorte atual para a IA explicar. Veja "Ajuda da IA".',
+                    '**Fluxo SIP**: desenha as chamadas como diagrama de escada. Veja abaixo.',
                     '**Ir para o fim**: aparece quando você rola para cima; volta a acompanhar as linhas novas.'
+                ]
+            },
+            { type: 'h', text: 'Fluxo SIP (diagrama de escada)' },
+            {
+                type: 'image',
+                name: 'fluxo',
+                alt: 'Tela Fluxo SIP com uma chamada recusada: INVITE, 100 Trying, 486 Busy Here em vermelho e ACK'
+            },
+            {
+                type: 'p',
+                text: 'Mostra o SIP bruto de cada chamada como setas entre a conta e o PBX, na ordem em que as mensagens passaram, com o tempo desde a primeira. Precisa de **Mostrar SIP bruto no log** ligado na conta.'
+            },
+            {
+                type: 'list',
+                items: [
+                    '**Lista à esquerda**: uma linha por chamada (Call-ID), da mais nova para a mais antiga, com o resultado. Falhas aparecem em vermelho. REGISTER e OPTIONS ficam escondidos até você marcar a opção.',
+                    '**Cores das setas**: azul é pedido, cinza é resposta provisória (1xx), verde é sucesso (2xx), amarelo é o desafio de senha (401 e 407, normal no registro) e vermelho é erro. Seta tracejada é a mesma mensagem enviada de novo, sinal de que o outro lado não respondeu a tempo.',
+                    '**Clique numa seta** (ou use Tab e Enter) para ver a mensagem completa embaixo e copiá-la.',
+                    '**Duas pernas**: marque a caixa de duas chamadas, por exemplo a do 1001 que liga e a do 1002 que recebe, para ver as duas com o PBX no meio.',
+                    '**Salvar .html**: grava o desenho e todas as mensagens num arquivo que abre em qualquer navegador, bom para anexar num chamado. O arquivo não leva senha, Authorization nem nonce.'
                 ]
             },
             {
@@ -824,6 +845,7 @@ export const GUIDE: GuideSection[] = [
                 type: 'list',
                 items: [
                     'Não grava senha em texto puro: o arquivo de senhas é cifrado. Quem tiver a pasta de dados inteira, porém, consegue ler as senhas; trate essa pasta como confidencial.',
+                    'Não apaga um arquivo de senhas estragado: ele é guardado ao lado, com a data no nome, e a tela pede para digitar as senhas de novo.',
                     'Não põe senha, hash nem nonce no log, nem na tela nem nos arquivos salvos.',
                     'Não manda nada para fora além do que você pede: o registro e as chamadas com a sua central, a busca por atualização no GitHub e, se você usar, o texto da prévia para a OpenRouter.',
                     'Não aceita certificado inválido sem você mandar, e só para o host escolhido.'

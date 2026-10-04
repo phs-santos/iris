@@ -49,13 +49,43 @@ class MockCall implements EngineCall {
     state: 'ringing' | 'established' | 'ended' = 'ringing'
     private timers: ReturnType<typeof setTimeout>[] = []
     ivr = false
+    /** Cada perna tem o seu Call-ID, como num PBX que fica no meio (B2BUA). */
+    readonly callId: string
+    private cseq = 1
 
     constructor(
         private engine: MockEngine,
         readonly direction: 'in' | 'out',
         readonly remote: string,
         readonly remoteName?: string
-    ) {}
+    ) {
+        this.callId = `${this.id}-${Math.random().toString(36).slice(2, 8)}@${engine.domain}`
+    }
+
+    private get uri(): string {
+        return `sip:${this.remote}@${this.engine.domain}`
+    }
+
+    sip(dir: 'out' | 'in', start: string, method: string, seq = 1, extra: string[] = []): void {
+        this.engine.sip(dir, start, { callId: this.callId, seq, method }, extra)
+    }
+
+    /** Resposta ao INVITE que abriu a chamada. */
+    respond(dir: 'out' | 'in', status: string, extra: string[] = []): void {
+        this.sip(dir, `SIP/2.0 ${status}`, 'INVITE', 1, extra)
+    }
+
+    ack(dir: 'out' | 'in', seq = 1): void {
+        this.sip(dir, `ACK ${this.uri} SIP/2.0`, 'ACK', seq)
+    }
+
+    /** Pedido novo dentro da chamada (BYE, INFO, REFER, re-INVITE) e a resposta do outro lado. */
+    exchange(dir: 'out' | 'in', method: string, extra: string[] = [], reply = '200 OK'): number {
+        const seq = ++this.cseq
+        this.sip(dir, `${method} ${this.uri} SIP/2.0`, method, seq, extra)
+        this.sip(dir === 'out' ? 'in' : 'out', `SIP/2.0 ${reply}`, method, seq)
+        return seq
+    }
 
     on<K extends keyof CallEvents>(event: K, listener: (...args: CallEvents[K]) => void): () => void {
         return this.emitter.on(event, listener)
@@ -85,10 +115,12 @@ class MockCall implements EngineCall {
 
     async answer(): Promise<void> {
         if (this.direction !== 'in' || this.state !== 'ringing') return
-        this.engine.sip('→ SIP/2.0 200 OK')
+        this.respond('out', '200 OK', ['Content-Type: application/sdp'])
+        this.ack('in')
         this.establish()
         if (this.peer) {
-            this.peer.engine.sip('← SIP/2.0 200 OK')
+            this.peer.respond('in', '200 OK', ['Content-Type: application/sdp'])
+            this.peer.ack('out')
             this.peer.engine.log('info', `${this.peer.remote} atendeu`)
             this.peer.establish()
         }
@@ -96,24 +128,36 @@ class MockCall implements EngineCall {
 
     async reject(): Promise<void> {
         if (this.state !== 'ringing') return
-        this.engine.sip('→ SIP/2.0 486 Busy Here')
+        this.respond('out', '486 Busy Here')
+        this.ack('in')
         this.end({ by: 'local', code: 486, reason: 'Busy Here' })
-        this.peer?.engine.sip('← SIP/2.0 486 Busy Here')
+        this.peer?.respond('in', '486 Busy Here')
+        this.peer?.ack('out')
         this.peer?.end({ by: 'remote', code: 486, reason: 'Busy Here' })
     }
 
     async hangup(): Promise<void> {
         if (this.state === 'ended') return
         if (this.state === 'ringing' && this.direction === 'out') {
-            this.engine.sip('→ CANCEL')
+            for (const [leg, dir] of [
+                [this, 'out'],
+                [this.peer, 'in']
+            ] as const) {
+                if (!leg) continue
+                const back = dir === 'out' ? 'in' : 'out'
+                leg.sip(dir, `CANCEL ${leg.uri} SIP/2.0`, 'CANCEL')
+                leg.sip(back, 'SIP/2.0 200 OK', 'CANCEL')
+                leg.respond(back, '487 Request Terminated')
+                leg.ack(dir)
+            }
             this.end({ by: 'local', code: 487, reason: 'Request Terminated' })
             this.peer?.end({ by: 'remote', code: 487, reason: 'Chamada cancelada por quem ligou' })
             return
         }
         if (this.state === 'ringing') return this.reject()
-        this.engine.sip('→ BYE')
+        this.exchange('out', 'BYE')
         this.end({ by: 'local' })
-        this.peer?.engine.sip('← BYE')
+        this.peer?.exchange('in', 'BYE')
         this.peer?.end({ by: 'remote' })
     }
 
@@ -123,26 +167,31 @@ class MockCall implements EngineCall {
 
     async setHeld(held: boolean): Promise<void> {
         if (this.state !== 'established') return
-        this.engine.sip(`→ re-INVITE (a=${held ? 'sendonly' : 'sendrecv'})`)
+        const sdp = ['Content-Type: application/sdp', '', `a=${held ? 'sendonly' : 'sendrecv'}`]
+        this.ack('out', this.exchange('out', 'INVITE', sdp))
+        this.peer?.ack('in', this.peer.exchange('in', 'INVITE', sdp))
         this.emit(held ? 'hold' : 'unhold', 'local')
         this.peer?.emit(held ? 'hold' : 'unhold', 'remote')
     }
 
     async sendDtmf(tone: string, mode: DtmfMode): Promise<void> {
         if (this.state !== 'established') throw new Error('A chamada ainda não foi atendida')
-        this.engine.sip(mode === 'rtp-event' ? `→ RTP telephone-event ${tone}` : `→ INFO (dtmf-relay Signal=${tone})`)
+        // O DTMF por RTP não passa pelo SIP: vai no áudio (RFC 4733).
+        if (mode === 'rtp-event') this.engine.log('info', `RTP telephone-event ${tone}`)
+        else this.exchange('out', 'INFO', ['Content-Type: application/dtmf-relay', '', `Signal=${tone}`])
         if (this.ivr) this.engine.log('info', `URA recebeu o dígito ${tone}`)
         this.peer?.emit('dtmf', tone)
     }
 
     async transfer(target: string): Promise<void> {
         if (this.state !== 'established') throw new Error('Só chamadas em andamento podem ser transferidas')
-        this.engine.sip(`→ REFER (Refer-To: sip:${target}@${this.engine.domain})`)
+        this.exchange('out', 'REFER', [`Refer-To: <sip:${target}@${this.engine.domain}>`], '202 Accepted')
         this.emit('transfer', 100, 'Trying', false)
         this.later(150, () => this.emit('transfer', 180, 'Ringing', false))
         this.later(400, () => {
             this.emit('transfer', 200, 'OK', true)
             this.engine.log('info', `Transferido para ${target}`)
+            this.exchange('in', 'BYE')
             this.end({ by: 'local', reason: `Transferida para ${target}` })
             this.peer?.end({ by: 'remote', reason: `Transferida para ${target}` })
         })
@@ -154,8 +203,14 @@ class MockCall implements EngineCall {
             throw new Error('As duas chamadas precisam estar em andamento')
         const a = this.peer
         const c = other.peer
-        this.engine.sip(
-            `→ REFER (Refer-To: sip:${other.remote}@${this.engine.domain}?Replaces=${other.id}; Referred-By: ${this.engine.extension})`
+        this.exchange(
+            'out',
+            'REFER',
+            [
+                `Refer-To: <sip:${other.remote}@${this.engine.domain}?Replaces=${other.callId}>`,
+                `Referred-By: <sip:${this.engine.extension}@${this.engine.domain}>`
+            ],
+            '202 Accepted'
         )
         this.emit('transfer', 100, 'Trying', false)
         this.later(300, () => {
@@ -170,15 +225,16 @@ class MockCall implements EngineCall {
                 a.peer = c
                 a.ivr = other.ivr
                 a.engine.log('info', `Agora em chamada com ${other.remote} (transferência de ${this.engine.extension})`)
-                a.engine.sip('← INVITE (Replaces)')
+                a.exchange('in', 'INVITE', [`Replaces: ${this.callId}`])
             }
             if (c) {
                 c.peer = a
                 c.engine.log('info', `Agora em chamada com ${this.remote} (transferência de ${this.engine.extension})`)
-                c.engine.sip('← re-INVITE')
+                c.exchange('in', 'INVITE')
             }
             this.engine.log('info', `${this.remote} transferido para ${other.remote}`)
-            this.engine.sip('← BYE')
+            this.exchange('in', 'BYE')
+            other.exchange('in', 'BYE')
             this.end({ by: 'remote', reason: `Transferida para ${other.remote}` })
             other.end({ by: 'remote', reason: `Transferência concluída com ${this.remote}` })
         })
@@ -208,6 +264,8 @@ export class MockEngine implements SipEngine {
     readonly domain: string
     readonly extension: string
     private calls = new Set<MockCall>()
+    private readonly registerCallId: string
+    private registerSeq = 0
 
     constructor(
         private account: Account,
@@ -215,6 +273,7 @@ export class MockEngine implements SipEngine {
     ) {
         this.domain = account.domain.toLowerCase()
         this.extension = account.extension
+        this.registerCallId = `reg-${nextId++}-${Math.random().toString(36).slice(2, 8)}@${this.domain}`
     }
 
     on<K extends keyof EngineEvents>(event: K, listener: (...args: EngineEvents[K]) => void): () => void {
@@ -225,8 +284,36 @@ export class MockEngine implements SipEngine {
         this.emitter.emit('log', { level, kind, text })
     }
 
-    sip(line: string): void {
-        if (this.account.rawSipLog) this.log('info', line, 'sip')
+    /** Mensagem do SIP bruto simulado: a linha inicial e os cabeçalhos que o diagrama de escada usa. */
+    sip(
+        dir: 'out' | 'in',
+        start: string,
+        dialog: { callId: string; seq: number; method: string },
+        extra: string[] = []
+    ): void {
+        if (!this.account.rawSipLog) return
+        const lines = [
+            `${dir === 'out' ? '→' : '←'} ${start}`,
+            `Call-ID: ${dialog.callId}`,
+            `CSeq: ${dialog.seq} ${dialog.method}`,
+            ...extra
+        ]
+        this.log('info', lines.join('\n'), 'sip')
+    }
+
+    private register(expires: number): number {
+        const seq = ++this.registerSeq
+        this.sip(
+            'out',
+            `REGISTER sip:${this.domain} SIP/2.0`,
+            { callId: this.registerCallId, seq, method: 'REGISTER' },
+            [`Expires: ${expires}`]
+        )
+        return seq
+    }
+
+    private registerReply(seq: number, status: string): void {
+        this.sip('in', `SIP/2.0 ${status}`, { callId: this.registerCallId, seq, method: 'REGISTER' })
     }
 
     private setStatus(status: RegStatus): void {
@@ -240,17 +327,18 @@ export class MockEngine implements SipEngine {
 
     connect(): Promise<void> {
         this.setStatus({ state: 'connecting' })
-        this.sip(`→ REGISTER sip:${this.domain}`)
+        const first = this.register(600)
         return new Promise((resolve) =>
             setTimeout(() => {
+                // Como um PBX de verdade: o primeiro REGISTER recebe o desafio, o segundo leva a senha.
+                this.registerReply(first, '401 Unauthorized')
                 if (!this.password) {
-                    this.sip('← SIP/2.0 401 Unauthorized')
                     this.setStatus({ state: 'error', code: 401, reason: 'Unauthorized' })
                 } else if (/^(errada|wrong)$/i.test(this.password)) {
-                    this.sip('← SIP/2.0 403 Forbidden')
+                    this.registerReply(this.register(600), '403 Forbidden')
                     this.setStatus({ state: 'error', code: 403, reason: 'Forbidden' })
                 } else {
-                    this.sip('← SIP/2.0 200 OK')
+                    this.registerReply(this.register(600), '200 OK')
                     registry.add(this)
                     this.setStatus({ state: 'registered' })
                 }
@@ -262,7 +350,7 @@ export class MockEngine implements SipEngine {
     async disconnect(): Promise<void> {
         for (const call of this.calls) await call.hangup()
         registry.delete(this)
-        if (this.status.state === 'registered') this.sip(`→ REGISTER sip:${this.domain} (Expires: 0)`)
+        if (this.status.state === 'registered') this.registerReply(this.register(0), '200 OK')
         this.setStatus({ state: 'disconnected' })
     }
 
@@ -275,9 +363,13 @@ export class MockEngine implements SipEngine {
     async dial(destination: string): Promise<EngineCall> {
         if (!this.registered) throw new Error('A conta precisa estar registrada para ligar')
         const call = this.track(new MockCall(this, 'out', destination))
-        this.sip(`→ INVITE sip:${destination}@${this.domain}`)
+        call.sip('out', `INVITE sip:${destination}@${this.domain} SIP/2.0`, 'INVITE', 1, [
+            `From: <sip:${this.extension}@${this.domain}>`,
+            `To: <sip:${destination}@${this.domain}>`,
+            'Content-Type: application/sdp'
+        ])
         call.later(MOCK_TIMING.trying, () => {
-            this.sip('← SIP/2.0 100 Trying')
+            call.respond('in', '100 Trying')
             call.emit('progress', 100, 'Trying', false)
             this.route(call, destination)
         })
@@ -286,7 +378,8 @@ export class MockEngine implements SipEngine {
 
     private route(call: MockCall, destination: string): void {
         const fail = (code: number, reason: string): void => {
-            this.sip(`← SIP/2.0 ${code} ${reason}`)
+            call.respond('in', `${code} ${reason}`)
+            call.ack('out')
             call.end({ by: 'remote', code, reason })
         }
         const target = [...registry].find(
@@ -298,7 +391,7 @@ export class MockEngine implements SipEngine {
             call.peer = incoming
             call.later(MOCK_TIMING.ringing, () => {
                 if (call.state !== 'ringing') return
-                this.sip('← SIP/2.0 180 Ringing')
+                call.respond('in', '180 Ringing')
                 call.emit('progress', 180, 'Ringing', false)
             })
             call.later(MOCK_TIMING.noAnswer, () => {
@@ -311,7 +404,7 @@ export class MockEngine implements SipEngine {
         if (destination === '486') return fail(486, 'Busy Here')
         if (destination === '408') {
             call.later(MOCK_TIMING.ringing, () => {
-                this.sip('← SIP/2.0 180 Ringing')
+                call.respond('in', '180 Ringing')
                 call.emit('progress', 180, 'Ringing', false)
             })
             call.later(MOCK_TIMING.timeout, () => fail(408, 'Request Timeout'))
@@ -320,11 +413,12 @@ export class MockEngine implements SipEngine {
         if (destination.startsWith('8')) {
             call.ivr = true
             call.later(MOCK_TIMING.ringing, () => {
-                this.sip('← SIP/2.0 183 Session Progress (SDP)')
+                call.respond('in', '183 Session Progress', ['Content-Type: application/sdp'])
                 call.emit('progress', 183, 'Session Progress', true)
             })
             call.later(MOCK_TIMING.ivrAnswer, () => {
-                this.sip('← SIP/2.0 200 OK')
+                call.respond('in', '200 OK', ['Content-Type: application/sdp'])
+                call.ack('out')
                 this.log('info', 'URA atendeu: "Digite 1 para suporte, 2 para vendas"')
                 call.establish()
             })
@@ -336,8 +430,13 @@ export class MockEngine implements SipEngine {
     receive(from: string, fromName: string, peer: MockCall): MockCall {
         const call = this.track(new MockCall(this, 'in', from, fromName))
         call.peer = peer
-        this.sip(`← INVITE de sip:${from}@${this.domain}`)
-        this.sip('→ SIP/2.0 180 Ringing')
+        call.sip('in', `INVITE sip:${this.extension}@${this.domain} SIP/2.0`, 'INVITE', 1, [
+            `From: <sip:${from}@${this.domain}>`,
+            `To: <sip:${this.extension}@${this.domain}>`,
+            'Content-Type: application/sdp'
+        ])
+        call.respond('out', '100 Trying')
+        call.respond('out', '180 Ringing')
         this.emitter.emit('incoming', call)
         return call
     }

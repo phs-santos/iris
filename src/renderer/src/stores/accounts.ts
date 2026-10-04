@@ -16,7 +16,10 @@ export const useAccountsStore = defineStore('accounts', () => {
     const accounts = ref<Account[]>([])
     const runtime = reactive<Record<string, Runtime>>({})
     const selectedId = ref<string | null>(null)
-    const encryptionAvailable = ref(true)
+    /** Trazendo as senhas do formato antigo; o macOS pode estar mostrando o pedido das Chaves. */
+    const migratingSecrets = ref(false)
+    /** Aviso sobre o arquivo de senhas (RNF-07); null quando está tudo certo. */
+    const secretsProblem = ref<string | null>(null)
     const loaded = ref(false)
 
     const selected = computed(() => accounts.value.find((a) => a.id === selectedId.value) ?? null)
@@ -38,7 +41,12 @@ export const useAccountsStore = defineStore('accounts', () => {
     }
 
     async function load(): Promise<void> {
-        encryptionAvailable.value = await window.iris.secrets.encryptionAvailable()
+        // As senhas do formato antigo vêm antes de registrar, para as contas já acharem a senha.
+        if ((await window.iris.secrets.status()).legacy) {
+            migratingSecrets.value = true
+            await window.iris.secrets.migrate().finally(() => (migratingSecrets.value = false))
+        }
+        secretsProblem.value = (await window.iris.secrets.status()).problem
         let list = await window.iris.accounts.load()
         if (list.length === 0) {
             // Primeiro uso: contas simuladas para explorar o app sem PBX (UC-08).
@@ -182,7 +190,8 @@ export const useAccountsStore = defineStore('accounts', () => {
         selected,
         groups,
         loaded,
-        encryptionAvailable,
+        migratingSecrets,
+        secretsProblem,
         byId,
         nameOf,
         statusOf,

@@ -3,6 +3,7 @@ import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { formatEntry, formatTime, useLogStore, type LogFilter } from '@renderer/stores/log'
 import { useAiStore } from '@renderer/stores/ai'
+import LadderDialog from './LadderDialog.vue'
 
 /** Linhas desenhadas na tela; o resto continua disponível para copiar e salvar. */
 const VISIBLE_LIMIT = 1500
@@ -15,6 +16,7 @@ const filter = reactive<LogFilter>({ accountId: null, kind: 'event', minLevel: '
 const follow = ref(true)
 const listEl = ref<HTMLElement | null>(null)
 const copied = ref('')
+const showLadder = ref(false)
 
 const matching = computed(() => log.filtered(filter))
 const visible = computed(() => matching.value.slice(-VISIBLE_LIMIT))
@@ -138,9 +140,11 @@ async function save(format: 'txt' | 'json'): Promise<void> {
             <button class="btn small" :disabled="matching.length === 0" @click="ai.explainLog(matching)">
                 Explicar com IA
             </button>
+            <button class="btn small" @click="showLadder = true">Fluxo SIP</button>
             <span class="note">{{ copied }}</span>
             <button v-if="!follow" class="btn small ghost" @click="jumpToEnd">Ir para o fim</button>
         </div>
+        <LadderDialog v-if="showLadder" :account-id="filter.accountId" @close="showLadder = false" />
     </aside>
 </template>
 

@@ -94,6 +94,25 @@ try {
     await page.locator('.line.sip', { hasText: 'INVITE sip:1002@demo.local' }).first().waitFor()
     step('log SIP bruto mostra o INVITE')
     if (shots) await page.screenshot({ path: join(shots, '6-log-sip.png') })
+
+    // Diagrama de escada: a chamada vira setas, e a seta abre a mensagem completa.
+    await page.getByRole('button', { name: 'Fluxo SIP' }).click()
+    const ladder = page.getByRole('dialog', { name: 'Fluxo SIP' })
+    await ladder.locator('.what', { hasText: 'INVITE → 200 OK' }).first().click()
+    await ladder
+        .getByRole('button', { name: /^INVITE, / })
+        .first()
+        .click()
+    await ladder.locator('pre', { hasText: 'Call-ID:' }).waitFor()
+    for (const label of ['100 Trying', '200 OK', 'ACK'])
+        await ladder
+            .getByRole('button', { name: new RegExp(`^${label}, `) })
+            .first()
+            .waitFor()
+    if (shots) await page.screenshot({ path: join(shots, '7-fluxo-sip.png') })
+    await page.keyboard.press('Escape')
+    await ladder.waitFor({ state: 'detached' })
+    step('fluxo SIP desenha a chamada e abre a mensagem ao clicar')
     if (/No handler registered|Error occurred in handler/.test(mainErrors))
         throw new Error(`Erro de IPC no processo principal:\n${mainErrors.slice(0, 600)}`)
     if (pageErrors.length) throw new Error(`Erros na interface:\n${pageErrors.join('\n')}`)

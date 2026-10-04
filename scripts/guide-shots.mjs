@@ -100,6 +100,12 @@ try {
     await busy.waitFor({ timeout: 8000 })
     await page.getByRole('tab', { name: 'Tudo' }).click()
     await shot('log', page.locator('aside.pane').last())
+    await page.getByRole('button', { name: 'Fluxo SIP' }).click()
+    await dialog()
+        .getByRole('button', { name: /^486 Busy Here, / })
+        .click()
+    await shot('fluxo', dialog())
+    await close()
     await page.getByRole('tab', { name: 'Eventos' }).click()
 
     await busy.getByRole('button', { name: 'Explicar com IA' }).click()

@@ -109,7 +109,7 @@ function onKey(event: KeyboardEvent): void {
 // Ao trazer as senhas do formato antigo, o macOS pode pedir a senha de login uma última vez (RNF-07).
 const VAULT_NOTICE_DELAY_MS = 1500
 const vaultSlow = ref(false)
-const waitingVault = computed(() => vaultSlow.value && !accounts.loaded)
+const waitingVault = computed(() => vaultSlow.value && accounts.migratingSecrets)
 /** Espera a tela ser desenhada; o tempo limite cobre a janela que ainda não apareceu. */
 const firstPaint = (): Promise<void> =>
     new Promise((resolve) => {
@@ -191,9 +191,9 @@ onUnmounted(() => {
             das Chaves), digite e confirme; isso acontece só uma vez. As contas aparecem em seguida.
         </div>
 
-        <div v-if="accounts.loaded && !accounts.encryptionAvailable" class="banner warn" role="status">
-            Este sistema não oferece criptografia de senhas. As senhas ficam só na memória e precisam ser digitadas de
-            novo depois de reiniciar o app.
+        <div v-if="accounts.secretsProblem" class="banner warn" role="status">
+            <span>{{ accounts.secretsProblem }}</span>
+            <button class="btn small" @click="accounts.secretsProblem = null">Entendi</button>
         </div>
 
         <main class="columns">
