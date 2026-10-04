@@ -7,11 +7,15 @@ import { useCallsStore } from './calls'
 import { describeStatus, newAccount, normalizeImported, parseAccountsCsv, sampleAccounts } from '@renderer/lib/accounts'
 import { reconnectDelay, shouldReconnect } from '@shared/reconnect'
 import { usePreferencesStore } from './preferences'
+import { parseBlfList, type MwiInfo, type PresenceState } from '@shared/presence'
 
 interface Runtime {
     status: RegStatus
     engine?: SipEngine
     health?: HealthReport
+    /** Estado dos ramais acompanhados (BLF) e aviso de correio de voz (RF-27). */
+    presence?: Record<string, PresenceState>
+    mwi?: MwiInfo
     /** Há uma nova tentativa de registro agendada (RNF-06); `max` 0 é sem limite. */
     retry?: { attempt: number; max: number }
 }
@@ -182,6 +186,22 @@ export const useAccountsStore = defineStore('accounts', () => {
         })
         engine.on('log', (entry) => log.add(id, entry.level, entry.kind, entry.text))
         engine.on('incoming', (call) => calls.addIncoming(id, call))
+        engine.on('presence', (extension, state) => {
+            if (runtime[id]?.engine !== engine) return
+            runtime[id].presence = { ...runtime[id].presence, [extension]: state }
+        })
+        engine.on('mwi', (info) => {
+            if (runtime[id]?.engine !== engine) return
+            const before = runtime[id].mwi?.newMessages ?? 0
+            runtime[id].mwi = info
+            if (info.newMessages !== before)
+                log.add(
+                    id,
+                    'info',
+                    'event',
+                    `Correio de voz: ${info.newMessages} nova(s), ${info.oldMessages} antiga(s)`
+                )
+        })
 
         log.add(
             id,
@@ -270,6 +290,15 @@ export const useAccountsStore = defineStore('accounts', () => {
         nameOf,
         statusOf,
         retryOf: (id: string) => runtime[id]?.retry,
+        /** Ramais acompanhados pela conta, na ordem em que foram escritos, com o estado que o PBX informou. */
+        presenceOf: (account: Account): Array<{ extension: string; state: PresenceState }> =>
+            runtime[account.id]?.engine
+                ? parseBlfList(account.blf).map((extension) => ({
+                      extension,
+                      state: runtime[account.id]?.presence?.[extension] ?? 'unknown'
+                  }))
+                : [],
+        mwiOf: (id: string) => runtime[id]?.mwi,
         refreshProblems,
         load,
         save,

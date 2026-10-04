@@ -20,6 +20,7 @@ import {
 import { TlsCertificateError, type SipTransport, type TransportFactory } from './transport'
 import { SipCall, type CallEvents, type CallHost, type ResponseOptions } from './call'
 import { PacketCapture } from './pcap'
+import { parseDialogInfo, parseMessageSummary, type MwiInfo, type PresenceState } from '@shared/presence'
 
 export interface UserAgentConfig {
     user: string
@@ -35,6 +36,8 @@ export interface UserAgentConfig {
     trusted?: boolean
     /** Exige áudio cifrado (SRTP) nas chamadas. */
     srtp?: boolean
+    /** Ramais cujo estado acompanhar (BLF, RF-27). */
+    blf?: string[]
     /** Validade pedida no registro, em segundos. */
     expires?: number
     userAgent?: string
@@ -55,6 +58,9 @@ export interface UaEvents {
     log(level: 'debug' | 'info' | 'warn' | 'error', kind: 'event' | 'sip', text: string): void
     /** Certificado TLS recusado; a tela oferece confiar no host (RF-37). */
     certificate(host: string, error: string): void
+    /** Estado de um ramal acompanhado (BLF) e aviso de correio de voz (RF-27). */
+    presence?(extension: string, state: PresenceState): void
+    mwi?(info: MwiInfo): void
     /** Chamada recebida: devolve quem vai ouvir os eventos dela. */
     incoming?(call: SipCall): CallEvents
 }
@@ -66,9 +72,11 @@ export const TIMER_F = 64 * T1
 
 const KEEPALIVE_MS = 25_000
 const MIN_REFRESH_S = 5
-const ALLOW = 'INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, NOTIFY, REFER'
+const ALLOW = 'INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, NOTIFY, REFER, SUBSCRIBE'
 /** Depois de um provisório, o INVITE espera o outro lado atender; o PBX costuma desistir antes disso. */
 const INVITE_WAIT_MS = 180_000
+/** Validade pedida nas assinaturas de presença. */
+const SUBSCRIBE_EXPIRES_S = 600
 
 export class SipTimeoutError extends Error {
     constructor(method: string) {
@@ -95,6 +103,9 @@ export class SipUserAgent {
     private transport?: SipTransport
     private pending = new Map<string, Pending>()
     private calls = new Map<string, SipCall>()
+    /** Assinaturas de presença em andamento, pelo Call-ID (RF-27). */
+    private subscriptions = new Map<string, { extension: string; timer?: ReturnType<typeof setTimeout> }>()
+    private subscribed = false
     /** Tudo o que passou pela rede desta conta, para exportar em PCAP (RF-44). */
     readonly capture = new PacketCapture()
     private state: UaState = 'disconnected'
@@ -176,6 +187,8 @@ export class SipUserAgent {
         this.stopped = true
         clearTimeout(this.refreshTimer)
         clearInterval(this.keepalive)
+        for (const subscription of this.subscriptions.values()) clearTimeout(subscription.timer)
+        this.subscriptions.clear()
         if (this.transport && this.state === 'registered') {
             const unregister = this.sendRegister(0).catch(() => undefined)
             await Promise.race([unregister, new Promise((done) => setTimeout(done, 1500))])
@@ -218,6 +231,10 @@ export class SipUserAgent {
             if (response.status >= 200 && response.status < 300) {
                 const granted = this.grantedExpires(response)
                 this.setStatus({ state: 'registered' })
+                if (!this.subscribed) {
+                    this.subscribed = true
+                    for (const extension of this.config.blf ?? []) void this.subscribe(extension)
+                }
                 // Renova antes de vencer, com folga para uma retransmissão.
                 const wait = Math.max(MIN_REFRESH_S, Math.round(granted * 0.85))
                 clearTimeout(this.refreshTimer)
@@ -500,6 +517,72 @@ export class SipUserAgent {
         return { response, ms: Date.now() - started }
     }
 
+    // ─── Presença e correio de voz (RF-27) ─────────────────────────────────
+
+    /**
+     * Assina o estado de um ramal (evento `dialog`, RFC 4235) e renova antes de vencer. Se o PBX
+     * recusa, o ramal fica como "sem notícia" e o log diz o motivo.
+     */
+    private async subscribe(extension: string, callId = `${token(12)}@iris`): Promise<void> {
+        if (this.stopped || !this.transport) return
+        const uri = `sip:${extension}@${this.config.domain}`
+        const build = (): SipRequest => {
+            const request = this.buildRequest('SUBSCRIBE', uri, SUBSCRIBE_EXPIRES_S)
+            request.headers.find(([name]) => name === 'To')![1] = `<${uri}>`
+            request.headers.find(([name]) => name === 'Call-ID')![1] = callId
+            request.headers.push(['Event', 'dialog'], ['Accept', 'application/dialog-info+xml'])
+            return request
+        }
+        clearTimeout(this.subscriptions.get(callId)?.timer)
+        this.subscriptions.set(callId, { extension })
+        try {
+            let response = await this.request(build())
+            if (response.status === 401 || response.status === 407) {
+                const proxy = response.status === 407
+                const value = header(response, proxy ? 'Proxy-Authenticate' : 'WWW-Authenticate')
+                if (value) {
+                    const saved = this.challenge
+                    this.challenge = { value: parseChallenge(value), proxy }
+                    this.nonceCount = 0
+                    response = await this.request(build()).finally(() => (this.challenge = saved))
+                }
+            }
+            if (response.status >= 300) throw new Error(`${response.status} ${response.reason}`)
+            const granted = Number(header(response, 'Expires')) || SUBSCRIBE_EXPIRES_S
+            const entry = this.subscriptions.get(callId)
+            // Assinatura nova a cada renovação: é mais simples que manter o diálogo e o PBX troca a antiga.
+            if (entry && !this.stopped)
+                entry.timer = setTimeout(
+                    () => {
+                        this.subscriptions.delete(callId)
+                        void this.subscribe(extension)
+                    },
+                    Math.max(30, granted * 0.85) * 1000
+                )
+        } catch (error) {
+            this.subscriptions.delete(callId)
+            this.events.presence?.(extension, 'unknown')
+            this.events.log(
+                'warn',
+                'event',
+                `O PBX não aceitou acompanhar o ramal ${extension}: ${(error as Error).message}`
+            )
+        }
+    }
+
+    private onNotify(request: SipRequest): void {
+        const event = (header(request, 'Event') ?? '').split(';')[0]!.trim().toLowerCase()
+        if (event === 'message-summary') {
+            // Chega com ou sem assinatura: muitos PBX mandam o aviso por conta própria.
+            const info = parseMessageSummary(request.body)
+            if (info) this.events.mwi?.(info)
+            return
+        }
+        const subscription = this.subscriptions.get(header(request, 'Call-ID') ?? '')
+        if (event !== 'dialog' || !subscription) return
+        if (request.body.trim()) this.events.presence?.(subscription.extension, parseDialogInfo(request.body))
+    }
+
     // ─── Chamadas (segunda entrega do RF-39) ───────────────────────────────
 
     private host(): CallHost {
@@ -561,7 +644,10 @@ export class SipUserAgent {
         if (request.method === 'ACK') return
         if (request.method === 'INVITE' && this.events.incoming) return this.onInvite(request)
         if (request.method === 'OPTIONS') return this.reply(request, 200, 'OK', { extra: [['Allow', ALLOW]] })
-        if (request.method === 'NOTIFY') return this.reply(request, 200, 'OK')
+        if (request.method === 'NOTIFY') {
+            this.reply(request, 200, 'OK')
+            return this.onNotify(request)
+        }
         if (request.method === 'INVITE') {
             this.events.log('warn', 'event', 'Chamada recebida e recusada: não há quem atenda nesta conta')
             return this.reply(request, 480, 'Temporarily Unavailable')

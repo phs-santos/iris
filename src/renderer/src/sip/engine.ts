@@ -3,6 +3,7 @@
 
 import type { DtmfMode, SipManualRequest, SipManualResponse } from '@shared/types'
 import type { LoadProgress, LoadReport, LoadSpec } from '@shared/load'
+import type { MwiInfo, PresenceState } from '@shared/presence'
 
 export type RegState = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error'
 
@@ -90,6 +91,9 @@ export type EngineEvents = {
     status: [status: RegStatus]
     log: [entry: EngineLog]
     incoming: [call: EngineCall]
+    /** Estado de um ramal acompanhado (BLF) e aviso de correio de voz (RF-27). */
+    presence: [extension: string, state: PresenceState]
+    mwi: [info: MwiInfo]
 }
 
 export interface DialOptions {

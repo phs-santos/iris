@@ -338,6 +338,73 @@ describe('motor próprio: registro por SIP puro (RF-39)', () => {
         await agent.stop()
     })
 
+    it('BLF e correio de voz (RF-27): assina o estado dos ramais e lê os avisos do PBX', async () => {
+        const presence: string[] = []
+        const mwi: unknown[] = []
+        let transport!: FakeTransport
+        const agent = new SipUserAgent(
+            { ...config, blf: ['1002', '1003'] },
+            (options) => {
+                transport = new FakeTransport(options)
+                // O PBX aceita acompanhar o 1002 e recusa o 1003.
+                transport.answer = (request) =>
+                    request.method === 'SUBSCRIBE' && request.uri.includes('1003')
+                        ? { status: 489, reason: 'Bad Event' }
+                        : { status: 200, reason: 'OK', extra: [['Expires', '600']] }
+                return transport
+            },
+            {
+                status: () => undefined,
+                log: () => undefined,
+                certificate: () => undefined,
+                presence: (extension, state) => presence.push(`${extension} ${state}`),
+                mwi: (info) => mwi.push(info)
+            }
+        )
+        await agent.start()
+        await vi.advanceTimersByTimeAsync(0)
+        const subscribes = transport.sent.filter((r) => r.method === 'SUBSCRIBE')
+        expect(subscribes.map((r) => r.uri)).toEqual(['sip:1002@pbx.teste', 'sip:1003@pbx.teste'])
+        expect(header(subscribes[0]!, 'Event')).toBe('dialog')
+        expect(header(subscribes[0]!, 'Accept')).toBe('application/dialog-info+xml')
+        expect(header(subscribes[0]!, 'To')).toBe('<sip:1002@pbx.teste>')
+
+        const notify = (callId: string, event: string, body: string): string =>
+            [
+                'NOTIFY sip:2001@192.168.0.10:50600 SIP/2.0',
+                'Via: SIP/2.0/UDP pbx.teste:5060;branch=z9hG4bKnotify' + body.length,
+                'From: <sip:1002@pbx.teste>;tag=pbx',
+                'To: <sip:2001@pbx.teste>;tag=a',
+                `Call-ID: ${callId}`,
+                'CSeq: 1 NOTIFY',
+                `Event: ${event}`,
+                'Subscription-State: active;expires=600',
+                `Content-Length: ${Buffer.byteLength(body)}`,
+                '',
+                body
+            ].join('\r\n')
+        const callId = header(subscribes[0]!, 'Call-ID')!
+        transport.onMessage(
+            notify(callId, 'dialog', '<dialog-info><dialog id="a"><state>confirmed</state></dialog></dialog-info>')
+        )
+        transport.onMessage(notify(callId, 'dialog', '<dialog-info></dialog-info>'))
+        // De uma assinatura que não é nossa: ignorado. O aviso de correio vale mesmo sem assinatura.
+        transport.onMessage(
+            notify(
+                'desconhecido',
+                'dialog',
+                '<dialog-info><dialog id="a"><state>confirmed</state></dialog></dialog-info>'
+            )
+        )
+        transport.onMessage(notify('avulso', 'message-summary', 'Messages-Waiting: yes\r\nVoice-Message: 3/1\r\n'))
+        expect(presence).toEqual(['1003 unknown', '1002 busy', '1002 idle'])
+        expect(mwi).toEqual([{ waiting: true, newMessages: 3, oldMessages: 1 }])
+        // Todo NOTIFY recebe 200, inclusive o que foi ignorado.
+        const replies = transport.raw.slice(-4).map((text) => parseMessage(text))
+        expect(replies.every((r) => r.kind === 'response' && r.status === 200)).toBe(true)
+        await agent.stop()
+    })
+
     it('o log da tela não leva a resposta do desafio (RNF-10)', async () => {
         const { agent, logs } = setup({}, (t) => (t.answer = withAuth()))
         await agent.start()

@@ -131,6 +131,8 @@ export const ptBR = {
         iris_electron_chromium: 'Íris {version} · Electron {electron} · Chromium {chrome} · {platform}'
     },
     accountForm: {
+        blf_ramais: 'Ramais para acompanhar (BLF), separados por vírgula',
+        blf_exemplo: '1002, 1003',
         audio_cifrado: 'Exigir áudio cifrado (SRTP)',
         fechar: 'Fechar',
         nome: 'Nome',
@@ -189,6 +191,11 @@ export const ptBR = {
         falhou: 'Falhou: {p}'
     },
     accountsPane: {
+        blf_livre: 'livre',
+        blf_tocando: 'tocando',
+        blf_ocupado: 'em chamada',
+        blf_sem_noticia: 'sem notícia do PBX',
+        correio: 'correio de voz: {n}',
         teste_de_carga: 'Teste de carga…',
         requisicao_sip: 'Requisição SIP…',
         exportar_pcap: 'Exportar PCAP (só SIP)',

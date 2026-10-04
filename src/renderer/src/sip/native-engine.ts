@@ -11,6 +11,7 @@ import { Emitter } from '@renderer/lib/emitter'
 import { t } from '@renderer/i18n'
 import type { CallEvents, CallQuality, DialOptions, EngineCall, EngineEvents, HealthReport, SipEngine } from './engine'
 import { audioInput } from './audio'
+import { parseBlfList } from '@shared/presence'
 import type { LoadProgress, LoadReport, LoadSpec } from '@shared/load'
 import { NativeAudio } from './native-audio'
 
@@ -164,6 +165,8 @@ export class NativeSipEngine implements SipEngine {
         if (event.engineId !== this.id) return
         if (event.type === 'status') return this.emitter.emit('status', event.status)
         if (event.type === 'audio') return this.calls.get(event.callId)?.play(event.pcm)
+        if (event.type === 'presence') return this.emitter.emit('presence', event.extension, event.state)
+        if (event.type === 'mwi') return this.emitter.emit('mwi', event.info)
         if (event.type === 'log') {
             // Sem "Mostrar SIP bruto no log", ficam só os eventos.
             if (event.kind !== 'sip' || this.account.rawSipLog)
@@ -203,7 +206,8 @@ export class NativeSipEngine implements SipEngine {
                     displayName: account.displayName?.trim() || undefined,
                     transport: account.transport as SipTransportKind,
                     server: account.sipServer?.trim() || undefined,
-                    srtp: account.srtp || undefined
+                    srtp: account.srtp || undefined,
+                    blf: parseBlfList(account.blf)
                 },
                 this.password
             )

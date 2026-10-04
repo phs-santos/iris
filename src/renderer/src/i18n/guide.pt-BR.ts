@@ -176,6 +176,15 @@ export const GUIDE: GuideSection[] = [
                 type: 'p',
                 text: 'As etiquetas à direita do nome dizem: um **número** é a quantidade de chamadas ativas da conta; **AA** é auto-atender ligado; **SIM** é conta do PBX simulado.'
             },
+            { type: 'h', text: 'Luzes de outros ramais (BLF) e correio de voz' },
+            {
+                type: 'p',
+                text: 'Em contas de **SIP puro** e do **PBX simulado**, o campo **Ramais para acompanhar (BLF)**, em Avançado, recebe uma lista como `1002, 1003`. Com a conta registrada, cada ramal aparece embaixo dela como uma etiqueta: borda verde é **livre**, amarela é **tocando**, vermelha é **em chamada** e cinza é **sem notícia do PBX** (o PBX recusou acompanhar o ramal, e o log diz o motivo). O PBX precisa publicar o estado dos ramais; no Asterisk, isso é um `hint` no plano de discagem.'
+            },
+            {
+                type: 'p',
+                text: 'Quando o PBX avisa que há mensagens no **correio de voz** do ramal, a conta mostra a etiqueta "correio de voz" com a quantidade de mensagens novas, e o log registra a mudança.'
+            },
             { type: 'h', text: 'Todas as contas de uma vez' },
             {
                 type: 'list',
@@ -277,6 +286,10 @@ export const GUIDE: GuideSection[] = [
                         'Automático tenta o melhor. **SIP INFO** manda os dígitos pela sinalização; **RTP (RFC 4733)** manda junto com o áudio. Troque se a URA não reconhecer os dígitos'
                     ],
                     ['Cor', 'A cor da conta na lista, nos cartões e no log'],
+                    [
+                        'Ramais para acompanhar (BLF)',
+                        'Só em SIP puro e no simulado. Ramais cujo estado (livre, tocando, em chamada) aparece embaixo da conta'
+                    ],
                     [
                         'STUN / TURN',
                         'Servidores para atravessar NAT, separados por vírgula. Sem TURN, a chamada pode ficar muda atrás de alguns roteadores'
