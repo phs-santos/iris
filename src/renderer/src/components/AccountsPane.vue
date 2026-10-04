@@ -7,12 +7,17 @@ import { useCallsStore } from '@renderer/stores/calls'
 import { describeStatus, explainRegError } from '@renderer/lib/accounts'
 import { ref } from 'vue'
 import MenuButton from './MenuButton.vue'
+import SipRequestDialog from './SipRequestDialog.vue'
+import { useLogStore } from '@renderer/stores/log'
 
 const emit = defineEmits<{ new: []; edit: [account: Account]; health: [id: string] }>()
 const accounts = useAccountsStore()
 const ai = useAiStore()
 const calls = useCallsStore()
 const confirmDelete = ref<string | null>(null)
+const log = useLogStore()
+/** Conta com a tela de pedido SIP manual aberta (RF-45). */
+const requestFor = ref<string | null>(null)
 
 function callsOf(id: string): number {
     return calls.active.filter((c) => c.accountId === id).length
@@ -26,8 +31,26 @@ function toggle(account: Account): void {
 
 /** Ações menos usadas ficam no menu ⋯, para a conta escolhida não virar uma parede de botões. */
 function moreActions(account: Account): Array<{ label: string; action: () => void; danger?: boolean }> {
+    const engine = accounts.engineOf(account.id)
+    const exportPcap = async (withRtp: boolean): Promise<void> => {
+        const path = await engine?.exportCapture?.(withRtp).catch((error: Error) => {
+            log.add(account.id, 'error', 'event', t('accountsPane.pcap_falhou', { message: error.message }))
+            return null
+        })
+        if (path) log.add(account.id, 'info', 'event', t('accountsPane.pcap_salvo', { path }))
+    }
     return [
         { label: t('accountsPane.saude'), action: () => emit('health', account.id) },
+        // Só com a conta registrada num motor que sabe fazer isso (RF-44, RF-45).
+        ...(engine?.request
+            ? [{ label: t('accountsPane.requisicao_sip'), action: () => (requestFor.value = account.id) }]
+            : []),
+        ...(engine?.exportCapture
+            ? [
+                  { label: t('accountsPane.exportar_pcap'), action: () => void exportPcap(false) },
+                  { label: t('accountsPane.exportar_pcap_com_audio'), action: () => void exportPcap(true) }
+              ]
+            : []),
         { label: t('accountsPane.duplicar'), action: () => void accounts.duplicate(account.id) },
         { label: t('accountsPane.excluir'), action: () => (confirmDelete.value = account.id), danger: true }
     ]
@@ -155,6 +178,7 @@ async function remove(id: string): Promise<void> {
                 {{ $t('accountsPane.para_cadastrar_o_primeiro_ramal') }}
             </p>
         </div>
+        <SipRequestDialog v-if="requestFor" :account-id="requestFor" @close="requestFor = null" />
     </aside>
 </template>
 

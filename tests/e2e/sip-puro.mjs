@@ -100,6 +100,19 @@ try {
     await health.getByRole('button', { name: 'Fechar' }).first().click()
     step('Saúde: transporte conectado e OPTIONS respondido')
 
+    // Pedido SIP manual (RF-45): um OPTIONS pela conta registrada mostra a resposta do PBX.
+    await account('Puro UDP')
+        .getByRole('button', { name: /Mais ações|⋯/ })
+        .click()
+    await page.getByRole('menuitem', { name: 'Requisição SIP…' }).click()
+    const manual = page.getByRole('dialog')
+    await manual.getByRole('button', { name: 'Enviar' }).click()
+    await manual.getByText(/^200 OK em \d+ ms$/).waitFor({ timeout: 10000 })
+    if (!/Allow: .*INVITE/.test(await manual.locator('pre').textContent()))
+        throw new Error('a resposta completa do OPTIONS não apareceu')
+    await manual.getByRole('button', { name: 'Fechar' }).first().click()
+    step('pedido manual: OPTIONS ao PBX mostra o 200 OK com os cabeçalhos')
+
     await page.getByRole('tab', { name: 'SIP bruto' }).click()
     const log = page.locator('.line.sip')
     await log
@@ -302,6 +315,27 @@ try {
         .first()
         .waitFor({ timeout: 15000 })
     step('recusar devolve ocupado para quem ligou')
+
+    // Captura em PCAP (RF-44). O diálogo de salvar é do sistema; aqui ele é trocado por um caminho fixo.
+    const pcapPath = join(userData, 'captura.pcap')
+    await app.evaluate(({ dialog }, filePath) => {
+        dialog.showSaveDialog = async () => ({ canceled: false, filePath })
+    }, pcapPath)
+    await account('Puro UDP').locator('.row').click()
+    await account('Puro UDP')
+        .getByRole('button', { name: /Mais ações|⋯/ })
+        .click()
+    await page.getByRole('menuitem', { name: 'Exportar PCAP (com áudio)' }).click()
+    await page.getByRole('tab', { name: 'Eventos' }).click()
+    await page.locator('.list').getByText('Captura salva em').first().waitFor({ timeout: 10000 })
+    const pcap = readFileSync(pcapPath)
+    if (pcap.readUInt32LE(0) !== 0xa1b2c3d4 || pcap.readUInt32LE(20) !== 101)
+        throw new Error('cabeçalho do PCAP errado')
+    const captured = pcap.toString('latin1')
+    if (!captured.includes(`REGISTER sip:${HOST} SIP/2.0`) || !captured.includes('INVITE sip:600@'))
+        throw new Error('o PCAP não tem o REGISTER e o INVITE da conta')
+    if (pcap.length < 200_000) throw new Error(`o PCAP com áudio ficou pequeno demais: ${pcap.length} bytes`)
+    step(`captura em PCAP com a sinalização e o áudio (${Math.round(pcap.length / 1024)} KB)`)
 
     await account('Puro UDP').getByRole('button', { name: 'Desregistrar' }).click()
     await expectContact('2001', false)

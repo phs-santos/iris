@@ -29,6 +29,8 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
+| RF-44 | Exportar em PCAP, para o Wireshark, o que passou pela rede de uma conta de SIP puro: sinalização e, se pedido, o áudio |
+| RF-45 | Requisição SIP manual (OPTIONS, MESSAGE, SUBSCRIBE, NOTIFY, INFO, PUBLISH) por uma conta de SIP puro ou simulada, com a resposta inteira na tela |
 | RF-43 | Monitor: um cenário roda sozinho a cada N minutos e avisa por notificação e webhook quando passa a falhar ou volta a passar |
 | RF-48 | Contas em lote por planilha CSV e variáveis nos cenários (`{ramal}`, `{dominio}`, `{nome}` da conta de origem); `--conta` na linha de comando roda o mesmo roteiro com outra conta |
 | RF-49 | Relatório JUnit (`.xml`) na linha de comando |

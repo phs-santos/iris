@@ -183,6 +183,27 @@ export type NativeCallAction =
     /** Toca um áudio (PCM de 16 bits a 8000 Hz) no lugar do microfone; termina quando o áudio acaba. */
     | { type: 'play'; pcm: Int16Array }
 
+/** Pedido SIP manual (RF-45), fora de qualquer chamada. */
+export interface SipManualRequest {
+    method: string
+    /** Endereço do pedido, ex.: `sip:pbx.empresa.com` ou `sip:1002@pbx.empresa.com`. */
+    uri: string
+    /** Cabeçalhos extras, um por item, como "Nome: valor". */
+    headers: string[]
+    body?: string
+    contentType?: string
+}
+
+export interface SipManualResponse {
+    status: number
+    reason: string
+    /** A resposta inteira, como chegou. */
+    text: string
+    ms: number
+}
+
+export const MANUAL_METHODS = ['OPTIONS', 'MESSAGE', 'SUBSCRIBE', 'NOTIFY', 'INFO', 'PUBLISH'] as const
+
 export interface NativeCallStats {
     packetsSent: number
     packetsReceived: number
@@ -319,6 +340,10 @@ export interface IrisApi {
         callLevel(engineId: string, callId: string): Promise<number | null>
         /** Liga ou desliga a gravação (RF-36). Devolve o caminho do arquivo, ou null se a chamada não existe. */
         record(engineId: string, callId: string, on: boolean): Promise<string | null>
+        /** Pedido SIP manual (RF-45). */
+        request(engineId: string, request: SipManualRequest): Promise<SipManualResponse>
+        /** Salva a captura da conta em PCAP (RF-44); devolve o caminho, ou null se o usuário cancelou. */
+        exportPcap(engineId: string, withRtp: boolean): Promise<string | null>
         /** 20 ms do microfone para a chamada. */
         sendAudio(engineId: string, callId: string, pcm: Int16Array): void
         onEvent(listener: (event: NativeSipEvent) => void): () => void
@@ -370,6 +395,8 @@ export const IPC = {
     sipCallStats: 'sip:call-stats',
     sipCallLevel: 'sip:call-level',
     sipRecord: 'sip:record',
+    sipRequest: 'sip:request',
+    sipPcap: 'sip:pcap',
     sipAudio: 'sip:audio',
     sipEvent: 'sip:event',
     aiStatus: 'ai:status',
