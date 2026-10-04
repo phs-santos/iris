@@ -1,11 +1,12 @@
-// User-agent do motor próprio (RF-39), primeira entrega: registro e OPTIONS por UDP, TCP ou TLS.
-// Cuida das transações que não são INVITE (RFC 3261, 17.1.2), da autenticação digest, da renovação do
-// registro e de responder ao que o PBX pergunta. Chamadas (INVITE e mídia) ficam para a entrega seguinte.
+// User-agent do motor próprio (RF-39): registro, OPTIONS e chamadas por UDP, TCP ou TLS. Cuida das
+// transações cliente (RFC 3261, 17.1), da autenticação digest, da renovação do registro e de entregar
+// cada pedido à chamada dona dele. O diálogo e o áudio de cada chamada ficam em call.ts.
 
 import { randomBytes } from 'node:crypto'
 import type { SipTransportKind } from '@shared/sip-target'
 import { digestAuthorization, parseChallenge, type DigestChallenge } from './digest'
 import {
+    addressOf,
     cseqOf,
     header,
     headerParams,
@@ -17,6 +18,7 @@ import {
     type SipResponse
 } from './message'
 import { TlsCertificateError, type SipTransport, type TransportFactory } from './transport'
+import { SipCall, type CallEvents, type CallHost, type ResponseOptions } from './call'
 
 export interface UserAgentConfig {
     user: string
@@ -50,6 +52,8 @@ export interface UaEvents {
     log(level: 'debug' | 'info' | 'warn' | 'error', kind: 'event' | 'sip', text: string): void
     /** Certificado TLS recusado; a tela oferece confiar no host (RF-37). */
     certificate(host: string, error: string): void
+    /** Chamada recebida: devolve quem vai ouvir os eventos dela. */
+    incoming?(call: SipCall): CallEvents
 }
 
 /** Temporizadores da RFC 3261 (seção 17.1.2.2), em milissegundos. */
@@ -59,7 +63,9 @@ export const TIMER_F = 64 * T1
 
 const KEEPALIVE_MS = 25_000
 const MIN_REFRESH_S = 5
-const ALLOW = 'OPTIONS, NOTIFY'
+const ALLOW = 'INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, NOTIFY'
+/** Depois de um provisório, o INVITE espera o outro lado atender; o PBX costuma desistir antes disso. */
+const INVITE_WAIT_MS = 180_000
 
 export class SipTimeoutError extends Error {
     constructor(method: string) {
@@ -78,11 +84,14 @@ interface Pending {
     resolve(response: SipResponse): void
     reject(error: Error): void
     timers: ReturnType<typeof setTimeout>[]
+    request: SipRequest
+    onProvisional?: (response: SipResponse) => void
 }
 
 export class SipUserAgent {
     private transport?: SipTransport
     private pending = new Map<string, Pending>()
+    private calls = new Map<string, SipCall>()
     private state: UaState = 'disconnected'
     private callId = `${token(12)}@iris`
     private fromTag = token(6)
@@ -166,6 +175,10 @@ export class SipUserAgent {
             const unregister = this.sendRegister(0).catch(() => undefined)
             await Promise.race([unregister, new Promise((done) => setTimeout(done, 1500))])
         }
+        await Promise.race([
+            Promise.all([...this.calls.values()].map((call) => call.hangup().catch(() => undefined))),
+            new Promise((done) => setTimeout(done, 1500))
+        ])
         this.closeTransport()
         this.state = 'disconnected'
     }
@@ -178,6 +191,7 @@ export class SipUserAgent {
         }
         this.transport?.close()
         this.transport = undefined
+        for (const call of [...this.calls.values()]) call.abort('A conexão com o PBX caiu')
     }
 
     private dropped(error?: Error): void {
@@ -294,17 +308,30 @@ export class SipUserAgent {
     }
 
     /** Transação cliente: manda, repete em UDP e devolve a resposta final. */
-    private request(message: SipRequest): Promise<SipResponse> {
+    private request(message: SipRequest, onProvisional?: (response: SipResponse) => void): Promise<SipResponse> {
         const transport = this.transport
         if (!transport) return Promise.reject(new Error('Sem conexão com o PBX'))
-        const branch = `z9hG4bK${token(8)}`
         const via = message.headers.find(([name]) => name === 'Via')!
-        via[1] = `${via[1]};branch=${branch}`
+        // O CANCEL já vem com o branch do INVITE que ele cancela.
+        const existing = headerParams(via[1])['branch']
+        const branch = existing ?? `z9hG4bK${token(8)}`
+        if (!existing) via[1] = `${via[1]};branch=${branch}`
+        const invite = message.method === 'INVITE'
+        let answered = false
         const text = serializeMessage(message)
         const key = `${branch}|${message.method}`
 
         return new Promise<SipResponse>((resolve, reject) => {
-            const entry: Pending = { resolve, reject, timers: [] }
+            const entry: Pending = {
+                resolve,
+                reject,
+                timers: [],
+                request: message,
+                onProvisional: (response) => {
+                    answered = true
+                    onProvisional?.(response)
+                }
+            }
             this.pending.set(key, entry)
             const send = (): void => {
                 this.events.log('info', 'sip', `→ ${redact(text).replace(/\r\n/g, '\n')}`)
@@ -315,21 +342,28 @@ export class SipUserAgent {
                 // Temporizador E: repete em T1, 2·T1, 4·T1… até T2, enquanto não houver resposta.
                 let wait = T1
                 const again = (): void => {
-                    if (!this.pending.has(key)) return
+                    // O INVITE para de repetir quando chega um provisório (temporizador A).
+                    if (!this.pending.has(key) || (invite && answered)) return
                     send()
-                    wait = Math.min(wait * 2, T2)
+                    wait = invite ? wait * 2 : Math.min(wait * 2, T2)
                     entry.timers.push(setTimeout(again, wait))
                 }
                 entry.timers.push(setTimeout(again, wait))
             }
             // Temporizador F: desiste.
-            entry.timers.push(
-                setTimeout(() => {
-                    if (!this.pending.delete(key)) return
-                    entry.timers.forEach(clearTimeout)
-                    reject(new SipTimeoutError(message.method))
-                }, TIMER_F)
-            )
+            const giveUp = (): void => {
+                // Um INVITE que já teve provisório está tocando: espera bem mais.
+                if (invite && answered && !waited) {
+                    waited = true
+                    entry.timers.push(setTimeout(giveUp, INVITE_WAIT_MS))
+                    return
+                }
+                if (!this.pending.delete(key)) return
+                entry.timers.forEach(clearTimeout)
+                reject(new SipTimeoutError(message.method))
+            }
+            let waited = false
+            entry.timers.push(setTimeout(giveUp, TIMER_F))
         })
     }
 
@@ -358,13 +392,20 @@ export class SipUserAgent {
     private onResponse(response: SipResponse): void {
         const via = headerParams(header(response, 'Via') ?? '')
         this.learnAddress(via)
-        if (response.status < 200) return
-        const key = `${via['branch']}|${cseqOf(response).method}`
+        const method = cseqOf(response).method
+        const key = `${via['branch']}|${method}`
         const entry = this.pending.get(key)
-        // Resposta repetida de uma transação já encerrada: nada a fazer.
-        if (!entry) return
+        if (response.status < 200) return entry?.onProvisional?.(response)
+        if (!entry) {
+            // 200 do INVITE repetido: o ACK se perdeu, a chamada manda de novo.
+            if (method === 'INVITE' && response.status < 300)
+                this.calls.get(header(response, 'Call-ID') ?? '')?.onRepeatedOk()
+            return
+        }
         this.pending.delete(key)
         entry.timers.forEach(clearTimeout)
+        // Recusa de um INVITE: o ACK faz parte da mesma transação (RFC 3261, 17.1.1.3).
+        if (method === 'INVITE' && response.status >= 300) this.ackFailure(entry.request, response)
         entry.resolve(response)
     }
 
@@ -377,36 +418,127 @@ export class SipUserAgent {
         if (Number.isInteger(rport) && rport > 0) this.contact.port = rport
     }
 
+    private ackFailure(invite: SipRequest, response: SipResponse): void {
+        const pick = (name: string): [string, string] => [name, header(invite, name) ?? '']
+        const ack: SipRequest = {
+            kind: 'request',
+            method: 'ACK',
+            uri: invite.uri,
+            headers: [
+                pick('Via'),
+                ['Max-Forwards', '70'],
+                pick('From'),
+                ['To', header(response, 'To') ?? header(invite, 'To') ?? ''],
+                pick('Call-ID'),
+                ['CSeq', `${cseqOf(invite).seq} ACK`]
+            ],
+            body: ''
+        }
+        this.sendText(serializeMessage(ack))
+    }
+
+    private sendText(text: string): void {
+        this.events.log('info', 'sip', `→ ${redact(text).replace(/\r\n/g, '\n')}`)
+        this.transport?.send(text)
+    }
+
+    // ─── Chamadas (segunda entrega do RF-39) ───────────────────────────────
+
+    private host(): CallHost {
+        const { user, domain, authUser, password, displayName, transport } = this.config
+        const contact = (): { host: string; port: number } => this.contact ?? { host: '0.0.0.0', port: 0 }
+        const bracket = (host: string): string => (host.includes(':') ? `[${host}]` : host)
+        return {
+            user,
+            domain,
+            authUser: authUser || user,
+            password,
+            displayName,
+            reliable: this.transport?.reliable ?? true,
+            contactUri: () => `sip:${user}@${bracket(contact().host)}:${contact().port};transport=${transport}`,
+            mediaAddress: () => contact().host,
+            viaHeader: () => {
+                const local = this.transport?.local ?? { address: '0.0.0.0', port: 0 }
+                return `SIP/2.0/${transport.toUpperCase()} ${bracket(local.address)}:${local.port};rport`
+            },
+            userAgent: () => this.config.userAgent ?? 'Iris',
+            transact: (request, onProvisional) => this.request(request, onProvisional),
+            sendDirect: (request) => {
+                const via = request.headers.find(([name]) => name === 'Via')!
+                if (!headerParams(via[1])['branch']) via[1] = `${via[1]};branch=z9hG4bK${token(8)}`
+                this.sendText(serializeMessage(request))
+            },
+            respond: (request, status, reason, options) => this.reply(request, status, reason, options),
+            log: (level, text) => this.events.log(level, 'event', text),
+            forget: (call) => {
+                if (this.calls.get(call.callId) === call) this.calls.delete(call.callId)
+            }
+        }
+    }
+
+    /** Liga para um número. Os cabeçalhos extras vêm como "Nome: valor". */
+    dial(destination: string, events: CallEvents, extraHeaders: string[] = []): SipCall {
+        if (this.state !== 'registered' || !this.transport) throw new Error('Registre a conta antes de ligar')
+        const call = new SipCall(this.host(), events, 'out', destination, undefined)
+        this.calls.set(call.callId, call)
+        const extra = extraHeaders
+            .map((line): [string, string] => [
+                line.slice(0, line.indexOf(':')).trim(),
+                line.slice(line.indexOf(':') + 1).trim()
+            ])
+            .filter(([name]) => name)
+        void call.start(extra)
+        return call
+    }
+
     private onRequest(request: SipRequest): void {
+        const call = this.calls.get(header(request, 'Call-ID') ?? '')
+        if (call) return call.onRequest(request)
         if (request.method === 'ACK') return
-        if (request.method === 'OPTIONS') return this.reply(request, 200, 'OK', [['Allow', ALLOW]])
+        if (request.method === 'INVITE' && this.events.incoming) return this.onInvite(request)
+        if (request.method === 'OPTIONS') return this.reply(request, 200, 'OK', { extra: [['Allow', ALLOW]] })
         if (request.method === 'NOTIFY') return this.reply(request, 200, 'OK')
         if (request.method === 'INVITE') {
-            this.events.log(
-                'warn',
-                'event',
-                'Chamada recebida e recusada: contas por SIP puro ainda só registram (chamadas na próxima entrega)'
-            )
+            this.events.log('warn', 'event', 'Chamada recebida e recusada: não há quem atenda nesta conta')
             return this.reply(request, 480, 'Temporarily Unavailable')
         }
         if (request.method === 'BYE' || request.method === 'CANCEL')
             return this.reply(request, 481, 'Call/Transaction Does Not Exist')
-        this.reply(request, 405, 'Method Not Allowed', [['Allow', ALLOW]])
+        this.reply(request, 405, 'Method Not Allowed', { extra: [['Allow', ALLOW]] })
     }
 
-    private reply(request: SipRequest, status: number, reason: string, extra: [string, string][] = []): void {
+    private onInvite(request: SipRequest): void {
+        const from = addressOf(header(request, 'From') ?? '')
+        const user = /^sips?:([^@;>]+)@/i.exec(from.uri)?.[1] ?? 'desconhecido'
+        const callId = header(request, 'Call-ID') ?? ''
+        // O `events` da chamada só existe depois que a interface a conhece; até lá, guarda o destino.
+        const sink: { target?: CallEvents } = {}
+        const relay: CallEvents = {
+            progress: (...args) => sink.target?.progress(...args),
+            established: () => sink.target?.established(),
+            ended: (end) => sink.target?.ended(end),
+            hold: (held) => sink.target?.hold(held),
+            dtmf: (tone) => sink.target?.dtmf(tone),
+            audio: (pcm) => sink.target?.audio(pcm)
+        }
+        const call = new SipCall(this.host(), relay, 'in', decodeURIComponent(user), from.display, callId)
+        this.calls.set(callId, call)
+        sink.target = this.events.incoming!(call)
+        call.ring(request)
+    }
+
+    private reply(request: SipRequest, status: number, reason: string, options: ResponseOptions = {}): void {
+        const extra = options.extra ?? []
         const to = header(request, 'To') ?? ''
         const list: [string, string][] = [
             ...headers(request, 'Via').map((v): [string, string] => ['Via', v]),
             ['From', header(request, 'From') ?? ''],
-            ['To', /;tag=/i.test(to) ? to : `${to};tag=${token(6)}`],
+            ['To', /;tag=/i.test(to) || status === 100 ? to : `${to};tag=${options.toTag ?? token(6)}`],
             ['Call-ID', header(request, 'Call-ID') ?? ''],
             ['CSeq', header(request, 'CSeq') ?? ''],
             ['User-Agent', this.config.userAgent ?? 'Iris'],
             ...extra
         ]
-        const text = serializeMessage({ kind: 'response', status, reason, headers: list, body: '' })
-        this.events.log('info', 'sip', `→ ${text.replace(/\r\n/g, '\n')}`)
-        this.transport?.send(text)
+        this.sendText(serializeMessage({ kind: 'response', status, reason, headers: list, body: options.body ?? '' }))
     }
 }

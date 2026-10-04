@@ -28,7 +28,7 @@ export const GUIDE: GuideSection[] = [
         blocks: [
             {
                 type: 'p',
-                text: 'A Íris é um softphone: um telefone que roda no computador e fala com a central por SIP. As chamadas usam SIP sobre WebSocket, com áudio por WebRTC. Ela foi feita para **testar** telefonia, não para atender clientes o dia todo.'
+                text: 'A Íris é um softphone: um telefone que roda no computador e fala com a central por SIP, sobre WebSocket com áudio WebRTC ou em SIP puro com áudio G.711. Ela foi feita para **testar** telefonia, não para atender clientes o dia todo.'
             },
             { type: 'h', text: 'Para que usar' },
             {
@@ -46,7 +46,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'O que a central precisa ter' },
             {
                 type: 'p',
-                text: 'Para **chamadas**, a central precisa aceitar **SIP sobre WebSocket seguro (WSS)** e áudio **WebRTC**. Asterisk (PJSIP com `transport` WSS), FreeSWITCH e Kamailio fazem isso. Numa central que só aceita **SIP puro por UDP, TCP ou TLS**, a Íris já **registra o ramal, mede a Saúde e mostra o SIP bruto**; as chamadas por SIP puro chegam numa próxima versão. Até lá, para ligar numa central assim, use um gateway WebRTC na frente, como o Kamailio ou um Asterisk fazendo a ponte.'
+                text: 'A Íris fala com a central de dois jeitos. O mais completo é **SIP sobre WebSocket seguro (WSS)** com áudio **WebRTC**: Asterisk (PJSIP com `transport` WSS), FreeSWITCH e Kamailio fazem isso. O outro é **SIP puro por UDP, TCP ou TLS**, para centrais sem WebSocket: a conta registra, liga e recebe chamadas com áudio **G.711** e DTMF. Em SIP puro ainda não há espera, transferência nem áudio cifrado (SRTP); isso chega numa próxima versão.'
             },
             {
                 type: 'note',
@@ -220,7 +220,7 @@ export const GUIDE: GuideSection[] = [
                     ],
                     [
                         'Transporte',
-                        '**WebSocket seguro (WebRTC)** é o padrão e o único que faz chamadas hoje. **SIP por UDP, TCP ou TLS** fala SIP puro com a central, sem WebRTC'
+                        '**WebSocket seguro (WebRTC)** é o padrão e o mais completo. **SIP por UDP, TCP ou TLS** fala SIP puro com a central, sem WebRTC, com áudio G.711'
                     ],
                     [
                         'WebSocket (WSS)',
@@ -235,14 +235,16 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'Contas por SIP puro (UDP, TCP ou TLS)' },
             {
                 type: 'p',
-                text: 'Servem para centrais que não têm WebSocket. Nesta versão a conta **registra**, renova o registro sozinha, responde ao `OPTIONS` da central, mede a **Saúde** e mostra o **SIP bruto** e o **Fluxo SIP** do registro. **Ainda não faz nem recebe chamadas**: uma chamada que chega é recusada com `480`, e o log avisa. As chamadas vêm numa próxima versão.'
+                text: 'Servem para centrais que não têm WebSocket. A conta **registra**, renova o registro sozinha, **liga e recebe chamadas** com áudio G.711 (PCMU ou PCMA), manda e recebe **DTMF** (por RTP ou SIP INFO), tem **mudo**, mede a **Saúde** e a qualidade (perda e variação do atraso) e mostra o **SIP bruto** e o **Fluxo SIP**. **Ainda não tem** espera, transferência nem áudio cifrado: os botões Espera e Transferir avisam no log que isso chega numa próxima versão.'
             },
             {
                 type: 'list',
                 items: [
                     'Em **TLS**, um certificado autoassinado é recusado e a tela oferece **Confiar neste host**, como no WebSocket.',
                     'Em **UDP**, a Íris repete o pedido se a central não responder e desiste depois de 32 segundos, com o erro `408`.',
-                    'Na primeira vez, o firewall do sistema pode perguntar se a Íris pode usar a rede. Permita.'
+                    'O áudio vai por **RTP sem cifra**. Use só em rede de confiança, ou prefira o WebSocket seguro.',
+                    'A central precisa aceitar **G.711**. Uma central que só oferece Opus ou G.729 para o ramal recusa a chamada com `488`.',
+                    'Na primeira vez, o firewall do sistema pode perguntar se a Íris pode usar a rede. Permita: sem isso o áudio não chega.'
                 ]
             },
             { type: 'h', text: 'Opções' },

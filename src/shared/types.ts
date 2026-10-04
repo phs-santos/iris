@@ -144,6 +144,33 @@ export interface NativeSipConfig {
 export type NativeSipEventBody =
     | { type: 'status'; status: { state: RegStateName; code?: number; reason?: string; final?: boolean } }
     | { type: 'log'; level: 'debug' | 'info' | 'warn' | 'error'; kind: 'event' | 'sip'; text: string }
+    | { type: 'call'; callId: string; event: NativeCallEvent }
+    /** 20 ms de áudio recebido: 160 amostras de 16 bits a 8000 Hz. */
+    | { type: 'audio'; callId: string; pcm: Int16Array }
+
+export type NativeCallEvent =
+    | { kind: 'incoming'; remote: string; remoteName?: string }
+    | { kind: 'progress'; code: number; reason: string; earlyMedia: boolean }
+    | { kind: 'established' }
+    | { kind: 'ended'; code?: number; reason?: string; by: 'local' | 'remote' | 'system' }
+    /** O outro lado pôs a chamada em espera ou retomou. */
+    | { kind: 'hold'; held: boolean }
+    | { kind: 'dtmf'; tone: string }
+
+export type NativeCallAction =
+    | { type: 'answer' }
+    | { type: 'reject' }
+    | { type: 'hangup' }
+    | { type: 'mute'; muted: boolean }
+    | { type: 'dtmf'; tone: string; mode: DtmfMode }
+
+export interface NativeCallStats {
+    packetsSent: number
+    packetsReceived: number
+    packetsLost: number
+    jitterMs: number
+    codec: string
+}
 
 export type RegStateName = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error'
 
@@ -245,6 +272,12 @@ export interface IrisApi {
         start(engineId: string, config: NativeSipConfig, password: string): Promise<void>
         stop(engineId: string): Promise<void>
         health(engineId: string): Promise<NativeSipHealth>
+        /** Liga e devolve o id da chamada; o andamento chega pelos eventos. */
+        dial(engineId: string, destination: string, headers?: string[]): Promise<string>
+        callAction(engineId: string, callId: string, action: NativeCallAction): Promise<void>
+        callStats(engineId: string, callId: string): Promise<NativeCallStats | null>
+        /** 20 ms do microfone para a chamada. */
+        sendAudio(engineId: string, callId: string, pcm: Int16Array): void
         onEvent(listener: (event: NativeSipEvent) => void): () => void
     }
     appInfo(): Promise<{ version: string; platform: string; electron: string; chrome: string }>
@@ -284,6 +317,10 @@ export const IPC = {
     sipStart: 'sip:start',
     sipStop: 'sip:stop',
     sipHealth: 'sip:health',
+    sipDial: 'sip:dial',
+    sipCallAction: 'sip:call-action',
+    sipCallStats: 'sip:call-stats',
+    sipAudio: 'sip:audio',
     sipEvent: 'sip:event',
     aiStatus: 'ai:status',
     aiSetKey: 'ai:set-key',

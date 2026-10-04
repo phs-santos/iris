@@ -4,6 +4,7 @@ import { cseqOf, header, parseMessage, serializeMessage, type SipRequest } from 
 import { TlsCertificateError, type SipTransport, type TransportOptions } from '../src/main/sip/transport'
 import { redact, SipUserAgent, T1, TIMER_F, type UaStatus, type UserAgentConfig } from '../src/main/sip/user-agent'
 import { parseSipServer } from '../src/shared/sip-target'
+import type { CallEvents, SipCall } from '../src/main/sip/call'
 
 /** PBX falso em memória: guarda o que o user-agent manda e responde o que o teste disser. */
 class FakeTransport implements SipTransport {
@@ -264,7 +265,7 @@ describe('motor próprio: registro por SIP puro (RF-39)', () => {
         expect(statuses.at(-1)?.state).toBe('error')
     })
 
-    it('responde ao OPTIONS do PBX com 200 e recusa INVITE com 480 nesta entrega', async () => {
+    it('responde ao OPTIONS do PBX com 200 e, sem ninguém para atender, recusa o INVITE com 480', async () => {
         const { agent, transport } = setup()
         await agent.start()
         const incoming = (method: string): string =>
@@ -329,5 +330,292 @@ describe('servidor SIP da conta', () => {
     it('recusa o que não é host', () => {
         for (const bad of ['sip:pbx', 'pbx empresa', 'pbx:99999', 'pbx:0', 'a\r\nVia: x', 'wss://pbx/ws'])
             expect(parseSipServer(bad, 'x', 'udp')).toBeNull()
+    })
+})
+
+// ─── Chamadas (segunda entrega) ────────────────────────────────────────────────
+
+const PBX_SDP = (direction = 'sendrecv'): string =>
+    [
+        'v=0',
+        'o=pbx 1 1 IN IP4 127.0.0.1',
+        's=-',
+        'c=IN IP4 127.0.0.1',
+        't=0 0',
+        'm=audio 30000 RTP/AVP 0 101',
+        'a=rtpmap:0 PCMU/8000',
+        'a=rtpmap:101 telephone-event/8000',
+        `a=${direction}`,
+        ''
+    ].join('\r\n')
+
+/** Espera uma condição com o relógio de verdade: as chamadas abrem uma porta UDP real para o áudio. */
+async function until(condition: () => boolean, what: string): Promise<void> {
+    for (let i = 0; i < 200; i++) {
+        if (condition()) return
+        await new Promise((done) => setTimeout(done, 5))
+    }
+    throw new Error(`não aconteceu: ${what}`)
+}
+
+function callRecorder() {
+    const seen: string[] = []
+    const events: CallEvents = {
+        progress: (code, reason, early) => seen.push(`progress ${code} ${reason}${early ? ' early' : ''}`),
+        established: () => seen.push('established'),
+        ended: (end) => seen.push(['ended', end.by, end.code, end.reason].filter(Boolean).join(' ')),
+        hold: (held) => seen.push(held ? 'hold' : 'unhold'),
+        dtmf: (tone) => seen.push(`dtmf ${tone}`),
+        audio: () => undefined
+    }
+    return { seen, events }
+}
+
+async function registered(overrides: Partial<UserAgentConfig> = {}) {
+    const incoming: { call?: SipCall; seen: string[] } = { seen: [] }
+    let transport!: FakeTransport
+    const agent = new SipUserAgent({ ...config, ...overrides }, (options) => (transport = new FakeTransport(options)), {
+        status: () => undefined,
+        log: () => undefined,
+        certificate: () => undefined,
+        incoming: (call) => {
+            const recorder = callRecorder()
+            incoming.call = call
+            incoming.seen = recorder.seen
+            return recorder.events
+        }
+    })
+    await agent.start()
+    transport.answer = () => null
+    return { agent, transport, incoming }
+}
+
+const sentOf = (transport: FakeTransport, method: string): SipRequest[] =>
+    transport.sent.filter((r) => r.method === method)
+const inbound = (method: string, callId: string, extra: string[] = [], body = ''): string =>
+    [
+        `${method} sip:2001@192.168.0.10:50600 SIP/2.0`,
+        `Via: SIP/2.0/UDP pbx.teste:5060;branch=z9hG4bK${method}${callId}${extra.length}`,
+        'From: "Ana" <sip:1001@pbx.teste>;tag=pbxtag',
+        `To: <sip:2001@pbx.teste>${method === 'INVITE' && !extra.includes('reinvite') ? '' : ';tag=local'}`,
+        `Call-ID: ${callId}`,
+        `CSeq: ${method === 'INVITE' && extra.includes('reinvite') ? 2 : 1} ${method}`,
+        'Contact: <sip:pbx@pbx.teste:5060>',
+        ...(body ? ['Content-Type: application/sdp'] : []),
+        `Content-Length: ${Buffer.byteLength(body)}`,
+        '',
+        body
+    ].join('\r\n')
+
+describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
+    beforeEach(() => vi.useRealTimers())
+
+    it('liga: INVITE com SDP, toca, atende, manda ACK e desliga com BYE', async () => {
+        const { agent, transport } = await registered()
+        const { seen, events } = callRecorder()
+        const call = agent.dial('600', events, ['X-Teste: 1'])
+        await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
+        const invite = sentOf(transport, 'INVITE')[0]!
+        expect(invite.uri).toBe('sip:600@pbx.teste')
+        expect(header(invite, 'X-Teste')).toBe('1')
+        expect(header(invite, 'Content-Type')).toBe('application/sdp')
+        expect(invite.body).toContain('RTP/AVP 0 8 101')
+
+        transport.respond(invite, 100, 'Trying')
+        transport.respond(invite, 180, 'Ringing')
+        transport.respond(invite, 200, 'OK', [
+            ['Contact', '<sip:600@10.0.0.9:5060>'],
+            ['Record-Route', '<sip:proxy.teste;lr>'],
+            ['Content-Type', 'application/sdp'],
+            ['Content-Length', '0']
+        ])
+        // O FakeTransport não leva corpo: a resposta sem SDP encerra a chamada com 488 e BYE.
+        await until(() => seen.some((line) => line.startsWith('ended')), 'chamada encerrada')
+        expect(seen).toEqual(['progress 180 Ringing', expect.stringMatching(/^ended system 488/)])
+        const ack = sentOf(transport, 'ACK')[0]!
+        expect(ack.uri).toBe('sip:600@10.0.0.9:5060')
+        expect(header(ack, 'Route')).toBe('<sip:proxy.teste;lr>')
+        expect(header(ack, 'To')).toContain(';tag=pbx')
+        expect(cseqOf(ack).seq).toBe(cseqOf(invite).seq)
+        expect(header(ack, 'Via')).not.toBe(header(invite, 'Via'))
+        expect(sentOf(transport, 'BYE')).toHaveLength(1)
+        expect(call.ended).toBe(true)
+        await agent.stop()
+    })
+
+    it('atende com SDP: fica em andamento, recebe espera, DTMF por INFO e o BYE do outro lado', async () => {
+        const { agent, transport } = await registered()
+        const { seen, events } = callRecorder()
+        agent.dial('1002', events)
+        await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
+        const invite = sentOf(transport, 'INVITE')[0]!
+        const callId = header(invite, 'Call-ID')!
+        // Resposta com corpo, escrita à mão.
+        const ok = (body: string): string =>
+            [
+                'SIP/2.0 200 OK',
+                `Via: ${header(invite, 'Via')}`,
+                `From: ${header(invite, 'From')}`,
+                `To: ${header(invite, 'To')};tag=pbx`,
+                `Call-ID: ${callId}`,
+                `CSeq: ${header(invite, 'CSeq')}`,
+                'Contact: <sip:1002@pbx.teste:5060>',
+                'Content-Type: application/sdp',
+                `Content-Length: ${Buffer.byteLength(body)}`,
+                '',
+                body
+            ].join('\r\n')
+        transport.onMessage(ok(PBX_SDP()))
+        await until(() => seen.includes('established'), 'chamada em andamento')
+        // O 200 repetido (o ACK se perdeu) faz o ACK sair de novo.
+        transport.onMessage(ok(PBX_SDP()))
+        expect(sentOf(transport, 'ACK')).toHaveLength(2)
+
+        const inDialog = (method: string, cseq: number, body = '', type = 'application/sdp'): string =>
+            [
+                `${method} sip:2001@192.168.0.10:50600 SIP/2.0`,
+                `Via: SIP/2.0/UDP pbx.teste:5060;branch=z9hG4bK${method}${cseq}`,
+                `From: ${header(invite, 'To')};tag=pbx`,
+                `To: ${header(invite, 'From')}`,
+                `Call-ID: ${callId}`,
+                `CSeq: ${cseq} ${method}`,
+                ...(body ? [`Content-Type: ${type}`] : []),
+                `Content-Length: ${Buffer.byteLength(body)}`,
+                '',
+                body
+            ].join('\r\n')
+        const lastReply = () => parseMessage(transport.raw.at(-1)!)
+
+        transport.onMessage(inDialog('INVITE', 10, PBX_SDP('sendonly')))
+        expect(lastReply()).toMatchObject({ kind: 'response', status: 200 })
+        expect(lastReply().body).toContain('a=recvonly')
+        transport.onMessage(inDialog('INVITE', 11, PBX_SDP()))
+        expect(lastReply().body).toContain('a=sendrecv')
+        transport.onMessage(inDialog('INFO', 12, 'Signal=7\r\nDuration=160\r\n', 'application/dtmf-relay'))
+        transport.onMessage(inDialog('MESSAGE', 13))
+        expect(lastReply()).toMatchObject({ status: 501 })
+        transport.onMessage(inDialog('BYE', 14))
+        expect(lastReply()).toMatchObject({ status: 200 })
+        expect(seen).toEqual(['established', 'hold', 'unhold', 'dtmf 7', 'ended remote'])
+        await agent.stop()
+    })
+
+    it('ocupado: manda o ACK da recusa e encerra com o código', async () => {
+        const { agent, transport } = await registered()
+        const { seen, events } = callRecorder()
+        agent.dial('486', events)
+        await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
+        const invite = sentOf(transport, 'INVITE')[0]!
+        transport.respond(invite, 486, 'Busy Here')
+        await until(() => seen.length === 1, 'chamada encerrada')
+        expect(seen).toEqual(['ended remote 486 Busy Here'])
+        const ack = sentOf(transport, 'ACK')[0]!
+        // ACK de recusa: mesma transação, então o mesmo branch do INVITE.
+        expect(header(ack, 'Via')).toBe(header(invite, 'Via'))
+        await agent.stop()
+    })
+
+    it('o PBX pede a senha no INVITE (407): repete com Proxy-Authorization', async () => {
+        const { agent, transport } = await registered()
+        const { seen, events } = callRecorder()
+        agent.dial('600', events)
+        await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
+        transport.respond(sentOf(transport, 'INVITE')[0]!, 407, 'Proxy Authentication Required', [
+            ['Proxy-Authenticate', CHALLENGE]
+        ])
+        await until(() => sentOf(transport, 'INVITE').length === 2, 'INVITE repetido')
+        const second = sentOf(transport, 'INVITE')[1]!
+        expect(header(second, 'Proxy-Authorization')).toContain('uri="sip:600@pbx.teste"')
+        expect(cseqOf(second).seq).toBe(cseqOf(sentOf(transport, 'INVITE')[0]!).seq + 1)
+        transport.respond(second, 403, 'Forbidden')
+        await until(() => seen.length === 1, 'chamada encerrada')
+        expect(seen).toEqual(['ended remote 403 Forbidden'])
+        await agent.stop()
+    })
+
+    it('desistir antes de atender manda CANCEL depois do primeiro provisório', async () => {
+        const { agent, transport } = await registered()
+        const { seen, events } = callRecorder()
+        const call = agent.dial('1002', events)
+        await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
+        const invite = sentOf(transport, 'INVITE')[0]!
+        void call.hangup()
+        // Sem provisório ainda, o CANCEL espera (RFC 3261, 9.1).
+        expect(sentOf(transport, 'CANCEL')).toHaveLength(0)
+        transport.respond(invite, 100, 'Trying')
+        await until(() => sentOf(transport, 'CANCEL').length === 1, 'CANCEL enviado')
+        const cancel = sentOf(transport, 'CANCEL')[0]!
+        expect(header(cancel, 'Via')).toBe(header(invite, 'Via'))
+        expect(cseqOf(cancel)).toEqual({ seq: cseqOf(invite).seq, method: 'CANCEL' })
+        transport.respond(cancel, 200, 'OK')
+        transport.respond(invite, 487, 'Request Terminated')
+        await until(() => seen.length === 1, 'chamada encerrada')
+        expect(seen).toEqual(['ended local 487 Request Terminated'])
+        await agent.stop()
+    })
+
+    it('recebe: toca com 100 e 180, atende com 200 e SDP, e o BYE encerra', async () => {
+        const { agent, transport, incoming } = await registered()
+        transport.onMessage(inbound('INVITE', 'entrada-1', [], PBX_SDP()))
+        const call = incoming.call!
+        expect(call).toMatchObject({ direction: 'in', remote: '1001', remoteName: 'Ana' })
+        const replies = () => transport.raw.map((text) => parseMessage(text)).filter((m) => m.kind === 'response')
+        expect(
+            replies()
+                .slice(-2)
+                .map((r) => (r.kind === 'response' ? r.status : 0))
+        ).toEqual([100, 180])
+
+        await call.answer()
+        const ok = replies().at(-1)!
+        expect(ok).toMatchObject({ status: 200 })
+        expect(ok.body).toContain('RTP/AVP 0 101')
+        expect(header(ok, 'Contact')).toContain('sip:2001@')
+        // O mesmo INVITE repetido recebe a mesma resposta.
+        transport.onMessage(inbound('INVITE', 'entrada-1', [], PBX_SDP()))
+        expect(replies().at(-1)).toMatchObject({ status: 200 })
+        transport.onMessage(inbound('ACK', 'entrada-1'))
+        transport.onMessage(inbound('BYE', 'entrada-1'))
+        expect(incoming.seen).toEqual(['established', 'ended remote'])
+        await agent.stop()
+    })
+
+    it('recebe e recusa com 486; quem liga desiste e a chamada some com 487', async () => {
+        const { agent, transport, incoming } = await registered()
+        const statuses = () =>
+            transport.raw.map((text) => parseMessage(text)).flatMap((m) => (m.kind === 'response' ? [m.status] : []))
+        transport.onMessage(inbound('INVITE', 'entrada-2', [], PBX_SDP()))
+        incoming.call!.reject()
+        expect(statuses().at(-1)).toBe(486)
+        expect(incoming.seen).toEqual(['ended local 486 Recusada'])
+
+        transport.onMessage(inbound('INVITE', 'entrada-3', [], PBX_SDP()))
+        transport.onMessage(inbound('CANCEL', 'entrada-3'))
+        expect(statuses().slice(-2)).toEqual([200, 487])
+        expect(incoming.seen).toEqual(['ended remote Chamada cancelada por quem ligou'])
+        await agent.stop()
+    })
+
+    it('oferta sem codec em comum é recusada com 488 ao atender', async () => {
+        const { agent, transport, incoming } = await registered()
+        transport.onMessage(
+            inbound(
+                'INVITE',
+                'entrada-4',
+                [],
+                'v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/AVP 111\r\na=rtpmap:111 opus/48000/2\r\n'
+            )
+        )
+        await incoming.call!.answer()
+        expect(incoming.seen[0]).toMatch(/^ended system 488/)
+        await agent.stop()
+    })
+
+    it('a queda do transporte encerra as chamadas abertas', async () => {
+        const { agent, transport, incoming } = await registered({ transport: 'tcp' })
+        transport.onMessage(inbound('INVITE', 'entrada-5', [], PBX_SDP()).replace(/UDP/g, 'TCP'))
+        transport.onClose(new Error('ECONNRESET'))
+        expect(incoming.seen).toEqual(['ended system A conexão com o PBX caiu'])
+        expect(() => agent.dial('600', callRecorder().events)).toThrow(/Registre a conta/)
     })
 })

@@ -5,13 +5,17 @@
 import { app, type WebContents } from 'electron'
 import {
     IPC,
+    type NativeCallAction,
+    type NativeCallEvent,
+    type NativeCallStats,
     type NativeSipConfig,
     type NativeSipEvent,
     type NativeSipEventBody,
     type NativeSipHealth
 } from '@shared/types'
 import { isSipTransportKind, parseSipServer } from '@shared/sip-target'
-import { check, handle, isPlainObject, isString } from './ipc-guard'
+import { check, handle, isPlainObject, isString, on } from './ipc-guard'
+import type { CallEvents, SipCall } from './sip/call'
 import { createTransport } from './sip/transport'
 import { SipUserAgent } from './sip/user-agent'
 
@@ -22,6 +26,9 @@ interface Options {
 }
 
 const agents = new Map<string, SipUserAgent>()
+/** Chamadas em andamento, por motor e id da chamada. */
+const calls = new Map<string, SipCall>()
+const callKey = (engineId: string, callId: string): string => `${engineId}|${callId}`
 const MAX_AGENTS = 200
 const PING_TIMEOUT_MS = 5000
 
@@ -45,6 +52,29 @@ function isConfig(v: unknown): v is NativeSipConfig {
 }
 
 const isEngineId = (v: unknown): v is string => isString(v, 100) && /^[\w:-]+$/.test(v)
+const isCallId = (v: unknown): v is string => isString(v, 200) && v.length > 0
+
+/** Cabeçalhos que só o motor escreve: um cabeçalho extra não pode trocar a rota nem a identidade. */
+const RESERVED =
+    /^(via|from|to|call-id|cseq|contact|route|record-route|max-forwards|content-length|content-type|authorization|proxy-authorization|[vftimlck])$/i
+const isExtraHeader = (v: unknown): v is string => {
+    if (!isString(v, 500) || /[\r\n\0]/.test(v)) return false
+    const name = v.slice(0, v.indexOf(':')).trim()
+    return v.includes(':') && /^[A-Za-z0-9!#$%&'*+.^_`|~-]+$/.test(name) && !RESERVED.test(name)
+}
+const DTMF_MODES = ['auto', 'sip-info', 'rtp-event']
+
+function isCallAction(v: unknown): v is NativeCallAction {
+    if (!isPlainObject(v)) return false
+    if (v.type === 'answer' || v.type === 'reject' || v.type === 'hangup') return true
+    if (v.type === 'mute') return typeof v.muted === 'boolean'
+    return (
+        v.type === 'dtmf' &&
+        isString(v.tone, 1) &&
+        /^[0-9*#A-Da-d]$/.test(v.tone) &&
+        DTMF_MODES.includes(v.mode as string)
+    )
+}
 
 export function registerNativeSipIpc(options: Options): void {
     const send = (sender: WebContents, engineId: string, body: NativeSipEventBody): void => {
@@ -75,7 +105,16 @@ export function registerNativeSipIpc(options: Options): void {
             {
                 status: (status) => send(sender, engineId, { type: 'status', status }),
                 log: (level, kind, text) => send(sender, engineId, { type: 'log', level, kind, text }),
-                certificate: (host, error) => options.onCertificateError(host, error)
+                certificate: (host, error) => options.onCertificateError(host, error),
+                incoming: (call) => {
+                    calls.set(callKey(engineId, call.callId), call)
+                    send(sender, engineId, {
+                        type: 'call',
+                        callId: call.callId,
+                        event: { kind: 'incoming', remote: call.remote, remoteName: call.remoteName }
+                    })
+                    return callEvents(sender, engineId, call.callId)
+                }
             }
         )
         agents.set(engineId, agent)
@@ -89,6 +128,73 @@ export function registerNativeSipIpc(options: Options): void {
         check(isEngineId(engineId), 'id do motor SIP')
         const agent = agents.get(engineId)
         if (agent) await stop(engineId, agent)
+    })
+
+    /** Leva os eventos de uma chamada para a interface e tira a chamada da lista quando ela termina. */
+    const callEvents = (sender: WebContents, engineId: string, callId: string): CallEvents => {
+        const emit = (event: NativeCallEvent): void => send(sender, engineId, { type: 'call', callId, event })
+        return {
+            progress: (code, reason, earlyMedia) => emit({ kind: 'progress', code, reason, earlyMedia }),
+            established: () => emit({ kind: 'established' }),
+            ended: (end) => {
+                calls.delete(callKey(engineId, callId))
+                emit({ kind: 'ended', ...end })
+            },
+            hold: (held) => emit({ kind: 'hold', held }),
+            dtmf: (tone) => emit({ kind: 'dtmf', tone }),
+            audio: (pcm) => send(sender, engineId, { type: 'audio', callId, pcm })
+        }
+    }
+
+    handle(IPC.sipDial, (event, engineId: string, destination: string, headers?: string[]): string => {
+        check(
+            isEngineId(engineId) &&
+                isSipUser(destination) &&
+                (headers === undefined ||
+                    (Array.isArray(headers) && headers.length <= 20 && headers.every(isExtraHeader))),
+            'chamada SIP'
+        )
+        const agent = agents.get(engineId)
+        if (!agent) throw new Error('Registre a conta antes de ligar')
+        // O id nasce aqui para os eventos já saírem com ele, antes de a interface receber a resposta.
+        let callId = ''
+        const call = agent.dial(
+            destination,
+            {
+                progress: (...args) => callEvents(event.sender, engineId, callId).progress(...args),
+                established: () => callEvents(event.sender, engineId, callId).established(),
+                ended: (end) => callEvents(event.sender, engineId, callId).ended(end),
+                hold: (held) => callEvents(event.sender, engineId, callId).hold(held),
+                dtmf: (tone) => callEvents(event.sender, engineId, callId).dtmf(tone),
+                audio: (pcm) => callEvents(event.sender, engineId, callId).audio(pcm)
+            },
+            headers ?? []
+        )
+        callId = call.callId
+        if (!call.ended) calls.set(callKey(engineId, callId), call)
+        return callId
+    })
+
+    handle(IPC.sipCallAction, async (_e, engineId: string, callId: string, action: NativeCallAction) => {
+        check(isEngineId(engineId) && isCallId(callId) && isCallAction(action), 'ação da chamada')
+        const call = calls.get(callKey(engineId, callId))
+        if (!call) return
+        if (action.type === 'answer') await call.answer()
+        else if (action.type === 'reject') call.reject()
+        else if (action.type === 'hangup') await call.hangup()
+        else if (action.type === 'mute') call.setMuted(action.muted)
+        else await call.sendDtmf(action.tone.toUpperCase(), action.mode)
+    })
+
+    handle(IPC.sipCallStats, (_e, engineId: string, callId: string): NativeCallStats | null => {
+        check(isEngineId(engineId) && isCallId(callId), 'chamada SIP')
+        return calls.get(callKey(engineId, callId))?.stats() ?? null
+    })
+
+    // 50 blocos por segundo por chamada: sem resposta e sem log, só confere o tamanho.
+    on(IPC.sipAudio, (_e, engineId: unknown, callId: unknown, pcm: unknown) => {
+        if (!isEngineId(engineId) || !isCallId(callId) || !(pcm instanceof Int16Array) || pcm.length > 1920) return
+        calls.get(callKey(engineId, callId))?.sendPcm(pcm)
     })
 
     handle(IPC.sipHealth, async (_e, engineId: string): Promise<NativeSipHealth> => {
