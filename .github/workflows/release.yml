@@ -27,8 +27,7 @@ jobs:
               shell: bash
               run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
             - run: npm ci
-            - run: npm run typecheck
-            - run: npm test
+            # Typecheck e testes já rodaram no CI da main; aqui fica só o que depende do pacote.
             - run: npm run build
             # Antes de gerar os instaladores, abre o app empacotado neste sistema: a janela em branco da
             # 1.0.0 e o erro de IPC da 1.0.4 passaram em todos os testes que rodam o app sem empacotar.

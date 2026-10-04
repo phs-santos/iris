@@ -24,7 +24,7 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 1. **[x] RNF-05 (recursos).** Fechado em 03/10/2026 com a CPU aprovada e a memória reprovada no macOS, por decisão do usuário.
     - CPU ociosa com 10 contas registradas: 0,1% (limite de 2%).
     - Memória com 10 contas e 1 chamada: de 331 a 389 MB no macOS com tela retina (limite de 300 MB). Veja as pendências conhecidas.
-    - `npm run test:resources` mede os dois e roda no CI (job `e2e`). Ele falha na memória no macOS e no Linux do CI (350 MB por PSS); no CI o passo tem `continue-on-error` para não bloquear.
+    - `npm run test:resources` mede os dois. Ele falha na memória no macOS e no Linux (350 MB por PSS); saiu do CI em 04/10/2026.
 2. **[ ] RF-35 (atualização automática).** O código está pronto: `electron-updater` com GitHub Releases em `phs-santos/iris` (repositório público), canais estável e beta, e a tela "Atualização".
     - Onde está: regras em `src/shared/update.ts` (com `tests/updater.test.ts`), ligação com o Electron em `src/main/updater.ts`, tela em `UpdateDialog.vue`, `publish` no `electron-builder.yml`.
     - Restrições que valem: sem atualizar no modo CLI, sem baixar nada sem o usuário pedir e com a verificação de assinatura mantida.
@@ -106,7 +106,8 @@ Pendências conhecidas, que não precisam ser feitas agora:
     - só faça o commit quando o usuário pedir.
 - **Requisitos no código:** cite o RF/RNF no comentário quando ele explica uma decisão, por exemplo `// … (RNF-19)`. Comente o *porquê*, com a mesma densidade do código ao redor.
 - **Formato:** Prettier, com 4 espaços, sem ponto e vírgula, aspas simples e 120 colunas. Rode `npm run format` antes do commit.
-- **Antes de dar algo por pronto:** rode `npm run typecheck`, `npm run lint`, `npm run test:coverage` e `npm run format:check`. Se mexer na interface, rode também `npm run test:e2e` e `npm run test:a11y`. Se mexer no SIP, rode `test:pbx` com o Asterisk. Informe o que rodou e o que não rodou.
+- **Testes por publicação (decisão do usuário em 04/10/2026: "não precisa de todos esses testes em todas as publicações"):** no PR, o CI roda só a verificação rápida (lint, typecheck, unidade) nos três sistemas; o e2e com o Asterisk roda na main e sob pedido, sem bloquear; o release só gera, abre o app empacotado e cria os instaladores. Antes de publicar, rode localmente `test:pacote` e os testes da área que mudou, não a bateria inteira. O passo de memória (RNF-05) saiu do CI; `npm run test:resources` continua existindo.
+- **Antes de dar algo por pronto:** rode `npm run typecheck`, `npm run lint`, `npm run test:coverage` e `npm run format:check`. Se mexer na interface, rode também `npm run test:e2e` e `npm run test:a11y`. Se mexer no SIP, rode `test:pbx` ou `test:sip` com o Asterisk. Só o que tem a ver com a mudança. Informe o que rodou e o que não rodou.
 - **Arquitetura que deve ser mantida:**
     - a interface só conhece `SipEngine` (`src/renderer/src/sip/engine.ts`, RNF-16). O motor real é `easysip-engine.ts`; o simulado é `mock-engine.ts`. Recursos novos entram nos dois;
     - o IPC passa só pelos canais fixos de `src/preload`, registrados com `handle`/`on` de `src/main/ipc-guard.ts`, e os argumentos são conferidos (veja `docs/SEGURANCA.md`);
