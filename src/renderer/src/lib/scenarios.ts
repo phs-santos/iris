@@ -12,7 +12,11 @@ export const STEP_TYPES: Array<{ type: ScenarioStepType; label: string }> = [
     { type: 'dtmf', label: 'DTMF' },
     { type: 'transfer', label: 'Transferir' },
     { type: 'hangup', label: 'Desligar' },
-    { type: 'verify', label: 'Verificar' }
+    { type: 'verify', label: 'Verificar' },
+    { type: 'playTone', label: 'Tocar tom' },
+    { type: 'playFile', label: 'Tocar arquivo WAV' },
+    { type: 'waitAudio', label: 'Esperar áudio' },
+    { type: 'waitSilence', label: 'Esperar silêncio' }
 ]
 
 export const CALL_STATES: Array<{ state: ScenarioCallState; label: string }> = [
@@ -54,6 +58,13 @@ export function newStep(type: ScenarioStepType, call = 'c1'): ScenarioStep {
             return { type, call }
         case 'verify':
             return { type, call, check: 'code', expected: '' }
+        case 'playTone':
+            return { type, call, hz: 440, ms: 1000 }
+        case 'playFile':
+            return { type, call, path: '' }
+        case 'waitAudio':
+        case 'waitSilence':
+            return { type, call, timeoutMs: 5000 }
     }
 }
 
@@ -90,6 +101,14 @@ export function describeStep(step: ScenarioStep, accountName: (id?: string) => s
             const check = CHECKS.find((c) => c.check === step.check)?.label ?? step.check
             return `Verificar ${check} "${step.expected}"${step.check === 'log' ? '' : ` em ${step.call}`}`
         }
+        case 'playTone':
+            return `Tocar tom de ${step.hz} Hz por ${step.ms} ms em ${step.call}`
+        case 'playFile':
+            return `Tocar ${step.path.split(/[\\/]/).pop() || 'arquivo'} em ${step.call}`
+        case 'waitAudio':
+            return `Esperar áudio em ${step.call}`
+        case 'waitSilence':
+            return `Esperar silêncio em ${step.call}`
     }
 }
 
@@ -122,6 +141,14 @@ export function validateStep(step: ScenarioStep, known: Set<string>): string | n
         case 'verify':
             if (!step.expected.trim()) return 'Informe o valor esperado'
             return step.check === 'log' ? null : needsCall(step.call)
+        case 'playTone':
+            if (!(step.hz >= 100 && step.hz <= 3400)) return 'Use uma frequência de 100 a 3400 Hz'
+            return needsCall(step.call) ?? (step.ms > 0 && step.ms <= 120_000 ? null : 'Use de 1 ms a 2 minutos')
+        case 'playFile':
+            return needsCall(step.call) ?? (/\.wav$/i.test(step.path.trim()) ? null : 'Escolha um arquivo .wav')
+        case 'waitAudio':
+        case 'waitSilence':
+            return needsCall(step.call) ?? (step.timeoutMs <= 0 ? 'Tempo inválido' : null)
     }
 }
 

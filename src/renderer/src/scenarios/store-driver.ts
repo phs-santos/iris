@@ -45,6 +45,9 @@ export function storeDriver(): ScenarioDriver {
         hangup: (id) => calls.hangup(id),
         sendDtmf: (id, digits) => calls.sendDtmf(id, digits),
         transfer: (id, to) => calls.transfer(id, to),
+        playAudio: (id, pcm) => calls.playAudio(id, pcm),
+        audioLevel: (id) => calls.audioLevel(id),
+        loadWav: (path) => window.iris.audio.loadWav(path),
         logSince: (since, accountId) =>
             log.entries.filter((e) => e.ts >= since && (!accountId || e.accountId === accountId)).map((e) => e.text),
         accountName: (id) => accounts.nameOf(id)

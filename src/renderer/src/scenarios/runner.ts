@@ -4,6 +4,7 @@
 import type { Scenario, ScenarioCallState, ScenarioStep } from '@shared/types'
 import type { RegStatus } from '@renderer/sip/engine'
 import { describeStep, stateLabel } from '@renderer/lib/scenarios'
+import { AUDIO_THRESHOLD_DB, SAMPLE_RATE, toneSamples } from '@shared/audio'
 
 /** O que o executor precisa saber de uma chamada. */
 export interface DriverCall {
@@ -32,6 +33,12 @@ export interface ScenarioDriver {
     hangup(id: string): Promise<void>
     sendDtmf(id: string, digits: string): Promise<void>
     transfer(id: string, to: string): Promise<void>
+    /** Toca um áudio na chamada, no lugar do microfone (RF-41). */
+    playAudio(id: string, pcm: Int16Array): Promise<void>
+    /** Volume do que chega na chamada, em dBFS; null quando o motor não mede. */
+    audioLevel(id: string): Promise<number | null>
+    /** Lê um WAV como PCM de 16 bits a 8000 Hz. */
+    loadWav(path: string): Promise<Int16Array>
     /** Linhas de log desde `since` (ms), opcionalmente de uma conta. */
     logSince(since: number, accountId?: string): string[]
     accountName(id: string): string
@@ -67,6 +74,9 @@ export const REGISTER_TIMEOUT_MS = 15_000
 export const TRANSFER_TIMEOUT_MS = 15_000
 /** Duração de um tom RTP (100 ms) mais o intervalo depois dele, com folga. */
 export const DTMF_SETTLE_MS = 300
+/** Intervalo entre as medidas de volume e quantas seguidas confirmam áudio ou silêncio (RF-41). */
+export const AUDIO_POLL_MS = 100
+export const AUDIO_READS = 3
 
 class StepFailure extends Error {}
 class Stopped extends Error {}
@@ -233,6 +243,46 @@ export async function runScenario(
                 const t = callOf(step.call).transfer!
                 if (t.code >= 300) throw new StepFailure(`Transferência recusada: ${t.code} ${t.reason}`)
                 return `${t.code} ${t.reason}`
+            }
+            case 'playTone':
+            case 'playFile': {
+                const c = callOf(step.call)
+                if (c.state !== 'established')
+                    throw new StepFailure(`A chamada está ${describeCall(c)}, não em chamada`)
+                const pcm =
+                    step.type === 'playTone'
+                        ? toneSamples(step.hz, step.ms)
+                        : await driver.loadWav(step.path.trim()).catch((error: Error) => {
+                              throw new StepFailure(`Não foi possível ler o arquivo: ${error.message}`)
+                          })
+                await driver.playAudio(c.id, pcm).catch((error: Error) => {
+                    throw new StepFailure(error.message)
+                })
+                return `${Math.round((pcm.length / SAMPLE_RATE) * 1000)} ms de áudio`
+            }
+            case 'waitAudio':
+            case 'waitSilence': {
+                const wantAudio = step.type === 'waitAudio'
+                const deadline = Date.now() + step.timeoutMs
+                let streak = 0
+                let last: number | null = null
+                // Uma medida só não basta: um estalo conta como áudio e uma pausa entre palavras, como silêncio.
+                for (;;) {
+                    const c = callOf(step.call)
+                    if (c.state !== 'established')
+                        throw new StepFailure(`A chamada está ${describeCall(c)}, não em chamada`)
+                    last = await driver.audioLevel(c.id)
+                    if (last === null) throw new StepFailure('Esta conta não mede o áudio da chamada')
+                    streak = last >= AUDIO_THRESHOLD_DB === wantAudio ? streak + 1 : 0
+                    if (streak >= AUDIO_READS) return `${last} dBFS`
+                    if (Date.now() >= deadline)
+                        throw new StepFailure(
+                            wantAudio
+                                ? `Sem áudio em ${step.timeoutMs / 1000} s (volume: ${last} dBFS)`
+                                : `O áudio não parou em ${step.timeoutMs / 1000} s (volume: ${last} dBFS)`
+                        )
+                    await sleep(Math.min(AUDIO_POLL_MS, pollMs * 2), signal)
+                }
             }
             case 'hangup': {
                 const c = callOf(step.call)
