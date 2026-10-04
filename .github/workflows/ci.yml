@@ -7,6 +7,8 @@ on:
 
 jobs:
     check:
+        # Um passo travado reprova em minutos, em vez de segurar o CI até o limite de 6 horas.
+        timeout-minutes: 20
         strategy:
             fail-fast: false
             matrix:
@@ -35,6 +37,7 @@ jobs:
     # Abre o app EMPACOTADO nos três sistemas (RNF-01) e mede a abertura e o registro (RNF-04).
     # Os outros testes rodam o app sem empacotar e não veem defeitos que só existem no pacote.
     pacote:
+        timeout-minutes: 30
         needs: check
         strategy:
             fail-fast: false
@@ -60,6 +63,7 @@ jobs:
               run: node tests/e2e/pacote.mjs
 
     e2e:
+        timeout-minutes: 60
         runs-on: ubuntu-latest
         needs: check
         steps:
