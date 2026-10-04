@@ -88,6 +88,8 @@ jobs:
               run: xvfb-run -a node tests/e2e/ai.mjs
             - name: Arquivos de dados estragados, gravação em fila e log interno (RNF-14, RNF-19)
               run: xvfb-run -a node tests/e2e/arquivos.mjs
+            - name: Monitor com webhook num servidor local (RF-43)
+              run: xvfb-run -a node tests/e2e/monitor.mjs
             - name: Subir Asterisk de teste
               run: |
                   ./docker/asterisk/gen-cert.sh

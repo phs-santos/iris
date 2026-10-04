@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, Menu, nativeImage, net, Notification, session, shell, Tray } from 'electron'
 import { promises as fs } from 'node:fs'
 import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
@@ -24,6 +24,7 @@ import { AI_SECRET_PREFIX, registerAiIpc } from './ai'
 import { isAppearance, isProfile } from '@shared/appearance'
 import { isReconnect } from '@shared/reconnect'
 import { parseWav, SAMPLE_RATE } from '@shared/audio'
+import { isWebhookPayload, isWebhookUrl, type WebhookPayload } from '@shared/monitor'
 import { HISTORY_LIMIT, isHistoryEntry, type HistoryEntry } from '@shared/history'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { appLog, describeError, startAppLog } from './app-log'
@@ -281,6 +282,25 @@ function registerIpc(): void {
         const notification = new Notification({ title, body })
         notification.on('click', showWindow)
         notification.show()
+    })
+
+    // Webhook do monitor (RF-43): só http e https, com o corpo conferido e prazo de 10 s. A interface
+    // não abre conexões por conta própria (CSP), então o POST sai daqui.
+    handle(IPC.monitorWebhook, async (_e, url: string, payload: WebhookPayload) => {
+        check(isString(url, 2000) && isWebhookUrl(url) && isWebhookPayload(payload), 'webhook do monitor')
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 10_000)
+        try {
+            const response = await net.fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'User-Agent': `Iris/${app.getVersion()}` },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            })
+            return response.status
+        } finally {
+            clearTimeout(timer)
+        }
     })
 
     on(IPC.tray, (_e, counts: unknown) => {

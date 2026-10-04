@@ -1,5 +1,6 @@
 // Definição dos passos de cenário (RF-28): rótulos, valores padrão, validação e leitura de arquivo.
 
+import { normalizeMonitor } from '@shared/monitor'
 import type { Scenario, ScenarioCallState, ScenarioCheck, ScenarioStep, ScenarioStepType } from '@shared/types'
 import { parseDtmfSequence } from './dtmf'
 
@@ -184,7 +185,8 @@ export function normalizeScenarios(data: unknown): Scenario[] {
                 accountId: typeof raw.accountId === 'string' ? raw.accountId : '',
                 steps: steps
                     .filter((s): s is ScenarioStep => STEP_TYPES.some((t) => t.type === (s as ScenarioStep)?.type))
-                    .map((s) => ({ ...newStep(s.type), ...s }) as ScenarioStep)
+                    .map((s) => ({ ...newStep(s.type), ...s }) as ScenarioStep),
+                ...(normalizeMonitor(raw.monitor) ? { monitor: normalizeMonitor(raw.monitor) } : {})
             }
         })
 }

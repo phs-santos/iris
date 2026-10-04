@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { DEFAULT_MONITOR, isWebhookUrl, MAX_MONITOR_MINUTES, type MonitorSettings } from '@shared/monitor'
+import { useMonitorStore } from '@renderer/stores/monitor'
 import { t } from '@renderer/i18n'
 import { computed, ref, watch } from 'vue'
 import type { Scenario, ScenarioStep, ScenarioStepType } from '@shared/types'
@@ -128,7 +130,7 @@ const statusMark = (r?: StepResult): { text: string; cls: string } => {
 
 const summary = computed(() => {
     const run = store.lastRun
-    if (!run || store.batch) return null
+    if (!run || store.batch || run.scenarioId !== store.selected?.id) return null
     return run.passed
         ? t('scenariosPane.passou_em_ms', { ms: run.ms })
         : t('scenariosPane.falhou_no_passo_ms', { p: (run.failedAt ?? 0) + 1, ms: run.ms })
@@ -148,6 +150,44 @@ const accountOptions = computed(() =>
 )
 const field = (step: ScenarioStep) => step as Record<string, any>
 /** Passos que podem usar outra conta além da de origem. */
+/** Resultado ao vivo do passo, só quando a execução é do cenário aberto. */
+const liveAt = (i: number): StepResult | undefined => (store.liveId === store.selected?.id ? store.live[i] : undefined)
+
+// ─── Monitor (RF-43) ───
+const monitor = useMonitorStore()
+const webhookError = ref(false)
+const monitorOf = (s: Scenario): MonitorSettings => s.monitor ?? DEFAULT_MONITOR
+
+function toggleMonitor(s: Scenario): void {
+    s.monitor = { ...monitorOf(s), enabled: !monitorOf(s).enabled }
+}
+
+function setMonitorMinutes(s: Scenario, text: string): void {
+    const minutes = Math.round(Number(text))
+    if (minutes >= 1 && minutes <= MAX_MONITOR_MINUTES) s.monitor = { ...monitorOf(s), everyMinutes: minutes }
+}
+
+function setMonitorWebhook(s: Scenario, text: string): void {
+    const url = text.trim()
+    webhookError.value = Boolean(url) && !isWebhookUrl(url)
+    if (!webhookError.value) s.monitor = { ...monitorOf(s), webhook: url || undefined }
+}
+
+/** "passou às 14:02 · próxima às 14:07", para saber que o monitor está vivo. */
+const monitorText = computed(() => {
+    const s = store.selected
+    const state = s ? monitor.states[s.id] : undefined
+    if (!s?.monitor?.enabled || !state) return ''
+    const hour = (ts: number): string =>
+        new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    const next = t('scenariosPane.monitor_proxima', { hora: hour(state.nextAt) })
+    if (state.lastAt === undefined) return next
+    const last = state.passed
+        ? t('scenariosPane.monitor_passou', { hora: hour(state.lastAt) })
+        : t('scenariosPane.monitor_falhou', { hora: hour(state.lastAt) })
+    return `${last} · ${next}`
+})
+
 /** Diálogo do sistema para escolher o WAV de um passo "Tocar arquivo" (RF-41). */
 async function pickWav(step: ScenarioStep): Promise<void> {
     const path = await window.iris.audio.pickWav()
@@ -209,9 +249,36 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                     </select>
                 </label>
             </fieldset>
+            <fieldset class="monitor" :disabled="store.running">
+                <label class="check">
+                    <input type="checkbox" :checked="monitorOf(scenario).enabled" @change="toggleMonitor(scenario)" />
+                    {{ $t('scenariosPane.monitorar_a_cada') }}
+                </label>
+                <input
+                    class="input mono tiny"
+                    type="number"
+                    min="1"
+                    :max="MAX_MONITOR_MINUTES"
+                    step="1"
+                    :value="monitorOf(scenario).everyMinutes"
+                    :aria-label="$t('scenariosPane.minutos_do_monitor')"
+                    @change="setMonitorMinutes(scenario, ($event.target as HTMLInputElement).value)"
+                />
+                <span class="muted">{{ $t('scenariosPane.min') }}</span>
+                <input
+                    class="input mono webhook"
+                    :class="{ invalid: webhookError }"
+                    :value="monitorOf(scenario).webhook ?? ''"
+                    :placeholder="$t('scenariosPane.webhook_opcional')"
+                    :aria-label="$t('scenariosPane.webhook_do_monitor')"
+                    @change="setMonitorWebhook(scenario, ($event.target as HTMLInputElement).value)"
+                />
+                <span v-if="webhookError" class="bad">{{ $t('scenariosPane.webhook_invalido') }}</span>
+                <span v-else-if="monitorText" class="muted" role="status">{{ monitorText }}</span>
+            </fieldset>
 
             <ol class="steps">
-                <li v-for="(step, i) in scenario.steps" :key="i" class="step" :class="statusMark(store.live[i]).cls">
+                <li v-for="(step, i) in scenario.steps" :key="i" class="step" :class="statusMark(liveAt(i)).cls">
                     <fieldset class="row" :disabled="store.running">
                         <span class="num tabular">{{ i + 1 }}</span>
                         <div class="params">
@@ -391,7 +458,7 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                         </div>
                         <div class="side">
                             <span class="mark mono tabular" :data-testid="`resultado-${i + 1}`">
-                                {{ statusMark(store.live[i]).text }}
+                                {{ statusMark(liveAt(i)).text }}
                             </span>
                             <button
                                 class="btn small ghost"
@@ -418,8 +485,8 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                             </button>
                         </div>
                     </fieldset>
-                    <p v-if="store.live[i]?.message" class="msg" :class="statusMark(store.live[i]).cls">
-                        {{ store.live[i].message }}
+                    <p v-if="liveAt(i)?.message" class="msg" :class="statusMark(liveAt(i)).cls">
+                        {{ liveAt(i)?.message }}
                     </p>
                     <p v-else-if="errors[i]" class="msg warn">{{ errors[i] }}</p>
                 </li>
@@ -680,5 +747,21 @@ fieldset {
     padding-left: 18px;
     color: var(--bad);
     font-size: 12px;
+}
+.monitor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    margin: 0;
+    padding: 0 14px 8px;
+}
+.monitor .webhook {
+    flex: 1;
+    min-width: 180px;
+}
+.monitor .bad {
+    color: var(--bad);
 }
 </style>

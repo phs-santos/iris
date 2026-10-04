@@ -19,6 +19,7 @@ import ScenariosPane from './components/ScenariosPane.vue'
 import PhoneView from './components/PhoneView.vue'
 import HistoryPane from './components/HistoryPane.vue'
 import { useHistoryStore } from './stores/history'
+import { useMonitorStore } from './stores/monitor'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
@@ -192,6 +193,7 @@ onMounted(async () => {
     const main = prefs.profile.mainAccountId
     if (main && accounts.accounts.some((a) => a.id === main)) accounts.selectedId = main
     await scenarios.load()
+    useMonitorStore().start()
     await history.load()
     await accounts.refreshProblems()
 })
