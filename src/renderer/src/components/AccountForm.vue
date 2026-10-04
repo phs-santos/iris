@@ -6,6 +6,8 @@ import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { ACCOUNT_COLORS, describeStatus, validateAccount } from '@renderer/lib/accounts'
 import { createEngine, isNativeAccount, type RegStatus } from '@renderer/sip'
+import { useServersStore } from '@renderer/stores/servers'
+import { applyServer, serverFromAccount } from '@shared/servers'
 
 const props = defineProps<{ account: Account }>()
 const emit = defineEmits<{ close: [] }>()
@@ -27,6 +29,26 @@ const quickDialsText = ref(form.quickDials.map((q) => `${q.number} ${q.label}`).
 
 /** SIP puro por UDP, TCP ou TLS (RF-39): some o que é só do WebRTC. */
 const native = computed(() => isNativeAccount(form))
+
+// ─── Servidores cadastrados (RF-51) ───
+const servers = useServersStore()
+/** Com servidor, os dados de conexão vêm dele e ficam travados aqui; mudam em Configurações → Servidores. */
+const linked = computed(() => servers.byId(form.serverId))
+const serverSaved = ref('')
+
+function chooseServer(id: string): void {
+    const server = servers.byId(id)
+    if (server) Object.assign(form, applyServer(JSON.parse(JSON.stringify(form)), server))
+    else delete form.serverId
+}
+
+/** Cadastra os dados de conexão desta conta como servidor, para as próximas contas escolherem. */
+async function saveAsServer(): Promise<void> {
+    const server = serverFromAccount(JSON.parse(JSON.stringify(form)), crypto.randomUUID())
+    await servers.save(server)
+    form.serverId = server.id
+    serverSaved.value = t('accountForm.servidor_salvo', { name: server.name })
+}
 
 const title = computed(() =>
     isNew ? t('accountForm.nova_conta') : t('accountForm.editar', { name: props.account.name })
@@ -124,6 +146,34 @@ async function save(register: boolean): Promise<void> {
             </header>
 
             <div class="body">
+                <div v-if="!form.simulated" class="server">
+                    <label class="field">
+                        <span class="label">{{ $t('accountForm.servidor') }}</span>
+                        <select
+                            class="input"
+                            :value="form.serverId ?? ''"
+                            @change="chooseServer(($event.target as HTMLSelectElement).value)"
+                        >
+                            <option value="">{{ $t('accountForm.servidor_manual') }}</option>
+                            <option v-for="srv in servers.servers" :key="srv.id" :value="srv.id">
+                                {{ srv.name }} · {{ srv.domain }} · {{ srv.transport.toUpperCase() }}
+                            </option>
+                        </select>
+                    </label>
+                    <small v-if="linked" class="note">{{
+                        $t('accountForm.servidor_ligado', { name: linked.name })
+                    }}</small>
+                    <button
+                        v-else
+                        type="button"
+                        class="btn small"
+                        :disabled="!form.domain.trim()"
+                        @click="saveAsServer"
+                    >
+                        {{ $t('accountForm.salvar_como_servidor') }}
+                    </button>
+                    <small v-if="serverSaved" class="note" role="status">{{ serverSaved }}</small>
+                </div>
                 <div class="grid">
                     <label class="field">
                         <span class="label">{{ $t('accountForm.nome') }}</span>
@@ -149,6 +199,7 @@ async function save(register: boolean): Promise<void> {
                         <span class="label">{{ $t('accountForm.dominio_sip') }}</span>
                         <input
                             v-model="form.domain"
+                            :disabled="Boolean(linked)"
                             class="input mono"
                             :class="{ invalid: errors.domain }"
                             :placeholder="$t('accountForm.pbx_empresa_com')"
@@ -169,7 +220,7 @@ async function save(register: boolean): Promise<void> {
                     </label>
                     <label class="field wide">
                         <span class="label">{{ $t('accountForm.transporte') }}</span>
-                        <select v-model="form.transport" class="input" :disabled="form.simulated">
+                        <select v-model="form.transport" class="input" :disabled="form.simulated || Boolean(linked)">
                             <option value="ws">{{ $t('accountForm.websocket_seguro_webrtc') }}</option>
                             <option value="udp">{{ $t('accountForm.sip_por_udp') }}</option>
                             <option value="tcp">{{ $t('accountForm.sip_por_tcp') }}</option>
@@ -183,6 +234,7 @@ async function save(register: boolean): Promise<void> {
                         <span class="label">{{ $t('accountForm.servidor_sip_host_e_porta') }}</span>
                         <input
                             v-model="form.sipServer"
+                            :disabled="Boolean(linked)"
                             class="input mono"
                             :class="{ invalid: errors.sipServer }"
                             :placeholder="
@@ -195,6 +247,7 @@ async function save(register: boolean): Promise<void> {
                         <span class="label">{{ $t('accountForm.websocket_wss') }}</span>
                         <input
                             v-model="form.wssUrl"
+                            :disabled="Boolean(linked)"
                             class="input mono"
                             :class="{ invalid: errors.wssUrl }"
                             :placeholder="$t('accountForm.wss_pbx_empresa_com_8089')"
@@ -227,7 +280,8 @@ async function save(register: boolean): Promise<void> {
                         {{ $t('accountForm.ms') }}
                     </label>
                     <label v-if="native" class="check">
-                        <input v-model="form.srtp" type="checkbox" /> {{ $t('accountForm.audio_cifrado') }}
+                        <input v-model="form.srtp" type="checkbox" :disabled="Boolean(linked)" />
+                        {{ $t('accountForm.audio_cifrado') }}
                     </label>
                     <label class="check">
                         <input v-model="form.rawSipLog" type="checkbox" />
@@ -242,7 +296,7 @@ async function save(register: boolean): Promise<void> {
                 <div v-if="showAdvanced" class="grid">
                     <label v-if="!native" class="field">
                         <span class="label">{{ $t('accountForm.preset') }}</span>
-                        <select v-model="form.preset" class="input">
+                        <select v-model="form.preset" class="input" :disabled="Boolean(linked)">
                             <option value="asterisk">{{ $t('accountForm.asterisk') }}</option>
                             <option value="kamailio">{{ $t('accountForm.kamailio') }}</option>
                             <option value="generic">{{ $t('accountForm.generico') }}</option>
@@ -302,6 +356,7 @@ async function save(register: boolean): Promise<void> {
                         <span class="label">{{ $t('accountForm.stun_turn_separados_por_virgula') }}</span>
                         <input
                             v-model="form.iceServers"
+                            :disabled="Boolean(linked)"
                             class="input mono"
                             :placeholder="$t('accountForm.stun_stun_l_google_com')"
                         />
@@ -413,5 +468,16 @@ async function save(register: boolean): Promise<void> {
 }
 .spacer {
     flex: 1;
+}
+.server {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.server .field {
+    flex: 1;
+    min-width: 240px;
 }
 </style>

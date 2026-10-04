@@ -3,6 +3,87 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    contactsPane: {
+        buscar: 'Buscar por nome, número ou empresa',
+        novo: '+ Novo contato',
+        importar: 'Importar CSV',
+        exportar: 'Exportar CSV',
+        vazio: 'Nenhum contato ainda. Crie um aqui, salve a partir do Histórico ou importe uma planilha (colunas nome;numero;empresa;observacao;favorito).',
+        nada: 'Nenhum contato com "{query}".',
+        favorito_de: 'Favorito: {name}',
+        ligar: 'Ligar',
+        ligar_para: 'Ligar para {name}',
+        registre: 'Registre a conta do contato, ou escolha uma conta registrada no discador',
+        editar: 'Editar',
+        editar_nome: 'Editar {name}',
+        excluir: 'Excluir',
+        excluir_nome: 'Excluir {name}',
+        confirmar: 'Excluir mesmo',
+        cancelar: 'Cancelar',
+        importados:
+            '{added} contatos importados; {repeated} já existiam e {skipped} linhas sem nome ou número foram puladas.',
+        exportados: 'Contatos exportados para {path}'
+    },
+    contactForm: {
+        novo: 'Novo contato',
+        editar: 'Editar {name}',
+        fechar: 'Fechar',
+        nome: 'Nome',
+        numero: 'Número ou ramal',
+        empresa: 'Empresa',
+        conta: 'Ligar pela conta',
+        conta_do_discador: 'A escolhida no discador',
+        observacao: 'Observação',
+        favorito: 'Favorito: aparece primeiro e vira atalho no discador',
+        cancelar: 'Cancelar',
+        salvar: 'Salvar',
+        erro_nome: 'Dê um nome ao contato',
+        erro_numero: 'Informe o número ou ramal'
+    },
+    serversSection: {
+        servidores: 'Servidores',
+        explicacao:
+            'Os dados de conexão de cada PBX, escritos uma vez só. Na conta, escolha o servidor e preencha só o ramal e a senha. Editar um servidor muda todas as contas dele, e as que estão no ar registram de novo.',
+        vazio: 'Nenhum servidor cadastrado. Cadastre aqui ou, no formulário de uma conta, use "Salvar conexão como servidor".',
+        usado_por: 'usado por {n} conta(s)',
+        novo: '+ Novo servidor',
+        editar: 'Editar',
+        editar_nome: 'Editar {name}',
+        excluir: 'Excluir',
+        excluir_nome: 'Excluir {name}',
+        confirmar: 'Excluir mesmo',
+        cancelar: 'Cancelar',
+        salvar: 'Salvar',
+        aviso_exclusao:
+            'As contas deste servidor continuam funcionando com os dados que têm; só deixam de mudar junto com ele.',
+        nome: 'Nome',
+        nome_exemplo: 'PBX da matriz',
+        dominio: 'Domínio SIP',
+        transporte: 'Transporte',
+        ws: 'WebSocket seguro (WebRTC)',
+        udp: 'SIP por UDP',
+        tcp: 'SIP por TCP',
+        tls: 'SIP por TLS',
+        websocket: 'WebSocket (WSS)',
+        endereco: 'Servidor SIP (host e porta)',
+        endereco_exemplo: 'igual ao domínio',
+        stun_turn: 'STUN / TURN',
+        wss_exemplo: 'wss://pbx.empresa.com:8089/ws',
+        dominio_exemplo: 'pbx.empresa.com',
+        stun_exemplo: 'stun:stun.l.google.com:19302',
+        preset: 'Preset',
+        asterisk: 'Asterisk',
+        kamailio: 'Kamailio',
+        generico: 'Genérico',
+        srtp: 'Exigir áudio cifrado (SRTP)',
+        erro_nome: 'Dê um nome ao servidor',
+        erro_dominio: 'Informe o domínio SIP',
+        erro_wss: 'Use um endereço como wss://pbx.empresa.com:8089/ws',
+        erro_endereco: 'Use o host e, se precisar, a porta: pbx.empresa.com:5060',
+        salvo: 'Servidor salvo.',
+        contas_atualizadas: 'Servidor salvo e {n} conta(s) atualizada(s).',
+        apagado: 'Servidor excluído. As contas dele mantêm os dados.'
+    },
     loadDialog: {
         log_resultado:
             'Teste de carga para {destination}: {established} de {requested} atendidas, {withAudio} com áudio',
@@ -41,6 +122,8 @@ export const ptBR = {
         registre_antes: 'Registre a conta antes de mandar um pedido'
     },
     historyPane: {
+        salvar_contato: 'Salvar contato',
+        salvar_contato_de: 'Salvar {remote} nos contatos',
         chamadas: '{length} chamadas',
         limpar: 'Limpar histórico',
         confirmar_limpeza: 'Apagar tudo',
@@ -95,6 +178,7 @@ export const ptBR = {
         importacao_invalida: 'Este arquivo não é uma exportação de contas da Íris'
     },
     app: {
+        contatos: 'Contatos',
         historico: 'Histórico',
         iris: 'Íris',
         contas_pbx_registradas_chamadas:
@@ -131,6 +215,12 @@ export const ptBR = {
         iris_electron_chromium: 'Íris {version} · Electron {electron} · Chromium {chrome} · {platform}'
     },
     accountForm: {
+        servidor: 'Servidor',
+        servidor_manual: 'Nenhum: preencher a conexão à mão',
+        servidor_ligado:
+            'Domínio, transporte, endereço, STUN/TURN e SRTP vêm do servidor "{name}". Para mudar, edite o servidor em Configurações → Servidores: todas as contas dele mudam juntas.',
+        salvar_como_servidor: 'Salvar conexão como servidor',
+        servidor_salvo: 'Servidor "{name}" cadastrado e ligado a esta conta.',
         blf_ramais: 'Ramais para acompanhar (BLF), separados por vírgula',
         blf_exemplo: '1002, 1003',
         audio_cifrado: 'Exigir áudio cifrado (SRTP)',
@@ -633,6 +723,7 @@ export const ptBR = {
         certificado_de_nao_e_mais: 'Certificado de {host} não é mais aceito'
     },
     settingsDialog: {
+        servidores: 'Servidores',
         configuracoes: 'Configurações',
         fechar: 'Fechar',
         contas_pbx: '{length} contas · {length2} PBX',

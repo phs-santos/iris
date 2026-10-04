@@ -18,6 +18,9 @@ import { useAiStore } from './stores/ai'
 import ScenariosPane from './components/ScenariosPane.vue'
 import PhoneView from './components/PhoneView.vue'
 import HistoryPane from './components/HistoryPane.vue'
+import ContactsPane from './components/ContactsPane.vue'
+import { useContactsStore } from './stores/contacts'
+import { useServersStore } from './stores/servers'
 import { useHistoryStore } from './stores/history'
 import { useMonitorStore } from './stores/monitor'
 import { useScenariosStore } from './stores/scenarios'
@@ -34,7 +37,7 @@ const scenarios = useScenariosStore()
 const ai = useAiStore()
 const prefs = usePreferencesStore()
 const history = useHistoryStore()
-const centerTab = ref<'phone' | 'scenarios' | 'history'>('phone')
+const centerTab = ref<'phone' | 'contacts' | 'scenarios' | 'history'>('phone')
 /** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
 const mode = ref<WindowMode>('bench')
 const phone = ref<InstanceType<typeof PhoneView> | null>(null)
@@ -195,6 +198,8 @@ onMounted(async () => {
     await scenarios.load()
     useMonitorStore().start()
     await history.load()
+    await useContactsStore().load()
+    await useServersStore().load()
     await accounts.refreshProblems()
 })
 onUnmounted(() => {
@@ -274,6 +279,15 @@ onUnmounted(() => {
                     <button
                         role="tab"
                         class="ctab"
+                        :class="{ on: centerTab === 'contacts' }"
+                        :aria-selected="centerTab === 'contacts'"
+                        @click="centerTab = 'contacts'"
+                    >
+                        {{ $t('app.contatos') }}
+                    </button>
+                    <button
+                        role="tab"
+                        class="ctab"
                         :class="{ on: centerTab === 'scenarios' }"
                         :aria-selected="centerTab === 'scenarios'"
                         @click="centerTab = 'scenarios'"
@@ -321,6 +335,7 @@ onUnmounted(() => {
                     </div>
                 </template>
                 <HistoryPane v-else-if="centerTab === 'history'" @dialed="centerTab = 'phone'" />
+                <ContactsPane v-else-if="centerTab === 'contacts'" @dialed="centerTab = 'phone'" />
                 <ScenariosPane v-else />
             </section>
 

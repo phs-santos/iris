@@ -5,6 +5,8 @@ import type { CliConfig } from './cli'
 import type { Appearance, Profile } from './appearance'
 import type { TrayCounts } from './tray'
 import type { HistoryEntry } from './history'
+import type { Contact } from './contacts'
+import type { SipServer } from './servers'
 import type { MonitorSettings, WebhookPayload } from './monitor'
 import type { NetDiagRequest, NetDiagResult } from './net-diag'
 import type { LoadProgress, LoadReport, LoadSpec } from './load'
@@ -39,6 +41,8 @@ export interface Account {
     srtp?: boolean
     /** Ramais cujo estado acompanhar (BLF, RF-27), separados por vírgula ou espaço. */
     blf?: string
+    /** Servidor cadastrado de onde vêm os dados de conexão (RF-51). */
+    serverId?: string
     /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */
     iceServers: string
     dtmfMode: DtmfMode
@@ -268,6 +272,15 @@ export interface IrisApi {
         load(): Promise<Scenario[]>
         save(scenarios: Scenario[]): Promise<void>
     }
+    /** Agenda de contatos (RF-50) e servidores cadastrados (RF-51). */
+    contacts: {
+        load(): Promise<Contact[]>
+        save(contacts: Contact[]): Promise<void>
+    }
+    servers: {
+        load(): Promise<SipServer[]>
+        save(servers: SipServer[]): Promise<void>
+    }
     /** Histórico de chamadas (RF-40). */
     history: {
         load(): Promise<HistoryEntry[]>
@@ -379,6 +392,10 @@ export const IPC = {
     scenariosLoad: 'scenarios:load',
     scenariosSave: 'scenarios:save',
     historyLoad: 'history:load',
+    contactsLoad: 'contacts:load',
+    contactsSave: 'contacts:save',
+    serversLoad: 'servers:load',
+    serversSave: 'servers:save',
     historySave: 'history:save',
     secretsGet: 'secrets:get',
     secretsSet: 'secrets:set',

@@ -7,6 +7,10 @@ import {
     getSecret,
     loadAccounts,
     loadHistory,
+    loadContacts,
+    saveContacts,
+    loadServers,
+    saveServers,
     saveHistory,
     loadScenarios,
     loadSettings,
@@ -26,6 +30,8 @@ import { isReconnect } from '@shared/reconnect'
 import { parseWav, SAMPLE_RATE } from '@shared/audio'
 import { isWebhookPayload, isWebhookUrl, type WebhookPayload } from '@shared/monitor'
 import { HISTORY_LIMIT, isHistoryEntry, type HistoryEntry } from '@shared/history'
+import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
+import { isSipServer, type SipServer } from '@shared/servers'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
@@ -199,6 +205,16 @@ function registerIpc(): void {
     handle(IPC.scenariosSave, (_e, scenarios: Scenario[]) => {
         check(isList(scenarios) && scenarios.every((s) => isPlainObject(s) && isId(s.id)), 'lista de cenários')
         return saveScenarios(scenarios)
+    })
+    handle(IPC.contactsLoad, () => loadContacts())
+    handle(IPC.contactsSave, (_e, contacts: Contact[]) => {
+        check(isList(contacts, CONTACTS_LIMIT) && contacts.every(isContact), 'lista de contatos')
+        return saveContacts(contacts)
+    })
+    handle(IPC.serversLoad, () => loadServers())
+    handle(IPC.serversSave, (_e, servers: SipServer[]) => {
+        check(isList(servers, 500) && servers.every(isSipServer), 'lista de servidores')
+        return saveServers(servers)
     })
     handle(IPC.historyLoad, () => loadHistory())
     handle(IPC.historySave, (_e, entries: HistoryEntry[]) => {

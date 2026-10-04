@@ -12,6 +12,14 @@ const api: IrisApi = {
         load: () => ipcRenderer.invoke(IPC.scenariosLoad),
         save: (scenarios) => ipcRenderer.invoke(IPC.scenariosSave, scenarios)
     },
+    contacts: {
+        load: () => ipcRenderer.invoke(IPC.contactsLoad),
+        save: (contacts) => ipcRenderer.invoke(IPC.contactsSave, contacts)
+    },
+    servers: {
+        load: () => ipcRenderer.invoke(IPC.serversLoad),
+        save: (servers) => ipcRenderer.invoke(IPC.serversSave, servers)
+    },
     history: {
         load: () => ipcRenderer.invoke(IPC.historyLoad),
         save: (entries) => ipcRenderer.invoke(IPC.historySave, entries)
