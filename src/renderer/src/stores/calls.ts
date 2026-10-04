@@ -5,6 +5,7 @@ import { ringer } from '@renderer/sip/audio'
 import { parseDtmfSequence, runDtmfSequence } from '@renderer/lib/dtmf'
 import { useAccountsStore } from './accounts'
 import { useLogStore } from './log'
+import { useHistoryStore } from './history'
 
 export type CallState = 'dialing' | 'ringing' | 'early' | 'established' | 'ended'
 
@@ -120,6 +121,19 @@ export const useCallsStore = defineStore('calls', () => {
                 end.by === 'local' ? 'Encerrada por você' : end.by === 'remote' ? 'Encerrada pelo outro lado' : 'Falhou'
             c.endText = code ? `${who} · ${code}` : who
             log.add(accountId, c.failed ? 'warn' : 'info', 'event', `Chamada ${label()}: ${c.endText}`)
+            useHistoryStore().add({
+                id: `${c.startedAt}-${call.id}`,
+                startedAt: c.startedAt,
+                accountId,
+                accountName: useAccountsStore().nameOf(accountId),
+                direction: c.direction,
+                remote: c.remote,
+                remoteName: c.remoteName,
+                durationMs: c.establishedAt ? c.endedAt - c.establishedAt : 0,
+                answered: Boolean(c.establishedAt),
+                failed: c.failed,
+                result: c.endText
+            })
             setTimeout(() => {
                 calls.value = calls.value.filter((x) => x.id !== call.id)
                 if (selectedId.value === call.id) selectedId.value = active.value[0]?.id ?? null

@@ -29,6 +29,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
+| RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |
 | RF-39 | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde, liga e recebe chamadas com áudio G.711, DTMF por RTP ou SIP INFO, mudo, espera, transferência cega e assistida, SRTP (SDES, AES_CM_128_HMAC_SHA1_80) e qualidade com perda, jitter e tempo de ida e volta (RTCP). Não tem: RTCP cifrado (com SRTP o RTT fica em 0), INVITE sem SDP, temporizador de sessão e DNS SRV |
 | RNF-13 | Textos da interface em arquivos de tradução (`src/renderer/src/i18n`), em português e prontos para inglês |
 | RNF-14 | Log interno do app em arquivo rotativo (5 × 10 MB) em `logs/` na pasta de dados |
@@ -168,7 +169,7 @@ Os componentes não têm texto fixo (RNF-13): pedem cada texto pelo nome a `$t()
 
 ## Guia de uso
 
-O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 23 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
+O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 24 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
 
 O texto fica em `src/renderer/src/i18n/guide.pt-BR.ts`. As capturas são geradas do próprio app: depois de mudar a interface, rode `npm run guide:shots`.
 
@@ -226,7 +227,7 @@ O easy-sipjs 2.7.6 registra com `transport=wss` no Contact. O Asterisk responde 
 
 ## Dados e segurança
 
-- Contas em `accounts.json` e preferências em `settings.json`, na pasta de dados do usuário.
+- Contas em `accounts.json`, preferências em `settings.json` e histórico de chamadas em `history.json`, na pasta de dados do usuário.
 - Senhas em `senhas.json`, cifradas com AES-256-GCM por uma chave própria (`chave-local.bin`), os dois legíveis só pela sua conta. O cofre do sistema não é usado, para o macOS não pedir a senha de login. Trate a pasta de dados como confidencial.
 - Um arquivo de dados estragado nunca é sobrescrito: vai para o lado (`accounts.json.corrompido-<data>`), a tela avisa e o app abre.
 - O log interno do app fica em `logs/iris.log` na pasta de dados (5 arquivos de 10 MB). Guarda só falhas do próprio app, sem SIP e sem senha; é o primeiro lugar para olhar quando algo não abre.

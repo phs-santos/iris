@@ -11,6 +11,10 @@ const api: IrisApi = {
         load: () => ipcRenderer.invoke(IPC.scenariosLoad),
         save: (scenarios) => ipcRenderer.invoke(IPC.scenariosSave, scenarios)
     },
+    history: {
+        load: () => ipcRenderer.invoke(IPC.historyLoad),
+        save: (entries) => ipcRenderer.invoke(IPC.historySave, entries)
+    },
     secrets: {
         get: (id) => ipcRenderer.invoke(IPC.secretsGet, id),
         set: (id, password) => ipcRenderer.invoke(IPC.secretsSet, id, password),

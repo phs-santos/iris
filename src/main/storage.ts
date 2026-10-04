@@ -2,6 +2,7 @@ import { app, safeStorage } from 'electron'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
+import { isHistoryEntry, type HistoryEntry, type HistoryFile } from '@shared/history'
 import type {
     Account,
     AccountsFile,
@@ -113,6 +114,20 @@ export async function loadScenarios(): Promise<Scenario[]> {
 export async function saveScenarios(scenarios: Scenario[]): Promise<void> {
     const data: ScenariosFile = { schemaVersion: 1, scenarios }
     await writeJson('scenarios.json', data)
+}
+
+export async function loadHistory(): Promise<HistoryEntry[]> {
+    const data = await readDataFile<HistoryFile>(
+        'history.json',
+        'histórico de chamadas',
+        (d) => isObject(d) && Array.isArray(d.entries)
+    )
+    return (data?.entries ?? []).filter(isHistoryEntry)
+}
+
+export async function saveHistory(entries: HistoryEntry[]): Promise<void> {
+    const data: HistoryFile = { schemaVersion: 1, entries }
+    await writeJson('history.json', data)
 }
 
 const defaultSettings: Settings = { schemaVersion: 1, trustedHosts: [] }

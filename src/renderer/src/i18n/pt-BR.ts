@@ -3,6 +3,20 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    historyPane: {
+        chamadas: '{length} chamadas',
+        limpar: 'Limpar histórico',
+        confirmar_limpeza: 'Apagar tudo',
+        cancelar: 'Cancelar',
+        vazio: 'Nenhuma chamada ainda. As chamadas encerradas aparecem aqui e continuam depois de fechar o app.',
+        feita: 'Chamada feita',
+        recebida: 'Chamada recebida',
+        nao_atendida: 'não atendida',
+        ligar_de_novo: 'Ligar de novo',
+        ligar_de_novo_para: 'Ligar de novo para {remote}',
+        fluxo_sip: 'Fluxo SIP',
+        fluxo_sip_da_conta: 'Fluxo SIP da conta {accountName}'
+    },
     // Motor próprio de SIP puro (sip/native-engine.ts).
     nativeEngine: {
         consulta_outra_conta: 'A consulta precisa ser feita pela mesma conta da chamada'
@@ -39,6 +53,7 @@ export const ptBR = {
         importacao_invalida: 'Este arquivo não é uma exportação de contas da Íris'
     },
     app: {
+        historico: 'Histórico',
         iris: 'Íris',
         contas_pbx_registradas_chamadas:
             '{length} contas · {pbxCount} PBX · {registeredCount} registradas · {length2} chamadas',

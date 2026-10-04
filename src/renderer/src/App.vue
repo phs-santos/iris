@@ -17,6 +17,8 @@ import GuideDialog from './components/GuideDialog.vue'
 import { useAiStore } from './stores/ai'
 import ScenariosPane from './components/ScenariosPane.vue'
 import PhoneView from './components/PhoneView.vue'
+import HistoryPane from './components/HistoryPane.vue'
+import { useHistoryStore } from './stores/history'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
@@ -30,7 +32,8 @@ const devices = useDevicesStore()
 const scenarios = useScenariosStore()
 const ai = useAiStore()
 const prefs = usePreferencesStore()
-const centerTab = ref<'phone' | 'scenarios'>('phone')
+const history = useHistoryStore()
+const centerTab = ref<'phone' | 'scenarios' | 'history'>('phone')
 /** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
 const mode = ref<WindowMode>('bench')
 const phone = ref<InstanceType<typeof PhoneView> | null>(null)
@@ -189,6 +192,7 @@ onMounted(async () => {
     const main = prefs.profile.mainAccountId
     if (main && accounts.accounts.some((a) => a.id === main)) accounts.selectedId = main
     await scenarios.load()
+    await history.load()
     await accounts.refreshProblems()
 })
 onUnmounted(() => {
@@ -275,6 +279,15 @@ onUnmounted(() => {
                         {{ $t('app.cenarios') }}
                         <span v-if="scenarios.running" class="count run">{{ $t('app.rodando') }}</span>
                     </button>
+                    <button
+                        role="tab"
+                        class="ctab"
+                        :class="{ on: centerTab === 'history' }"
+                        :aria-selected="centerTab === 'history'"
+                        @click="centerTab = 'history'"
+                    >
+                        {{ $t('app.historico') }}
+                    </button>
                 </div>
                 <!-- Chamada recebida em destaque, acima de tudo, em qualquer aba (RF-10). -->
                 <div
@@ -305,6 +318,7 @@ onUnmounted(() => {
                         </p>
                     </div>
                 </template>
+                <HistoryPane v-else-if="centerTab === 'history'" @dialed="centerTab = 'phone'" />
                 <ScenariosPane v-else />
             </section>
 

@@ -6,6 +6,8 @@ import { IPC, type Account, type Scenario, type SettingsPatch, type WindowMode }
 import {
     getSecret,
     loadAccounts,
+    loadHistory,
+    saveHistory,
     loadScenarios,
     loadSettings,
     saveAccounts,
@@ -21,6 +23,7 @@ import { setupUpdater } from './updater'
 import { AI_SECRET_PREFIX, registerAiIpc } from './ai'
 import { isAppearance, isProfile } from '@shared/appearance'
 import { isReconnect } from '@shared/reconnect'
+import { HISTORY_LIMIT, isHistoryEntry, type HistoryEntry } from '@shared/history'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
@@ -192,6 +195,11 @@ function registerIpc(): void {
     handle(IPC.scenariosSave, (_e, scenarios: Scenario[]) => {
         check(isList(scenarios) && scenarios.every((s) => isPlainObject(s) && isId(s.id)), 'lista de cenários')
         return saveScenarios(scenarios)
+    })
+    handle(IPC.historyLoad, () => loadHistory())
+    handle(IPC.historySave, (_e, entries: HistoryEntry[]) => {
+        check(isList(entries, HISTORY_LIMIT) && entries.every(isHistoryEntry), 'histórico de chamadas')
+        return saveHistory(entries)
     })
     handle(IPC.secretsGet, (_e, id: string) => {
         check(isAccountId(id), 'id da conta')
