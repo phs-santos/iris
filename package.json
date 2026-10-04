@@ -1,7 +1,7 @@
 {
     "name": "iris",
     "productName": "Iris",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "description": "Softphone desktop para testes de telefonia: várias contas, vários PBX, log SIP lado a lado.",
     "main": "out/main/index.js",
     "license": "MIT",
