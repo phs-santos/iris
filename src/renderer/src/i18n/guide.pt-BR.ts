@@ -198,6 +198,7 @@ export const GUIDE: GuideSection[] = [
                     '**⋯ → Saúde**: roda as verificações da conta. Veja "Saúde e diagnóstico".',
                     '**⋯ → Duplicar**: cria uma cópia, para cadastrar vários ramais parecidos sem redigitar tudo.',
                     '**⋯ → Requisição SIP…** (contas de SIP puro registradas e simuladas): manda um pedido avulso, como `OPTIONS`, `MESSAGE` ou `SUBSCRIBE`, com os cabeçalhos e o corpo que você escrever, e mostra a resposta inteira do PBX e o tempo que levou.',
+                    '**⋯ → Teste de carga…** (contas de SIP puro registradas): faz várias chamadas ao mesmo tempo pela conta, cada uma tocando um tom, para um destino que atenda sozinho (um número de eco, uma URA). No fim mostra quantas foram atendidas, em quantas chegou áudio, o tempo até atender, a perda de pacotes e o jitter, e deixa salvar o relatório. Vai até 200 chamadas. Elas não aparecem nos cartões nem no histórico, e fechar a tela encerra todas.',
                     '**⋯ → Exportar PCAP** (contas de SIP puro registradas): salva o que passou pela rede daquela conta desde o registro, para abrir no Wireshark. "Só SIP" leva a sinalização; "com áudio" leva também os pacotes RTP. A captura guarda os 30 MB mais recentes.',
                     '**⋯ → Excluir**: pede confirmação e apaga a conta e a senha guardada.'
                 ]

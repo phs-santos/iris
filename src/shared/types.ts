@@ -7,6 +7,7 @@ import type { TrayCounts } from './tray'
 import type { HistoryEntry } from './history'
 import type { MonitorSettings, WebhookPayload } from './monitor'
 import type { NetDiagRequest, NetDiagResult } from './net-diag'
+import type { LoadProgress, LoadReport, LoadSpec } from './load'
 import type { AccountTransport, SipTransportKind } from './sip-target'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
@@ -349,6 +350,10 @@ export interface IrisApi {
         request(engineId: string, request: SipManualRequest): Promise<SipManualResponse>
         /** Salva a captura da conta em PCAP (RF-44); devolve o caminho, ou null se o usuário cancelou. */
         exportPcap(engineId: string, withRtp: boolean): Promise<string | null>
+        /** Teste de carga (RF-42): resolve com o relatório quando todas as chamadas terminam. */
+        loadStart(engineId: string, spec: LoadSpec): Promise<LoadReport>
+        loadStop(engineId: string): Promise<void>
+        onLoadProgress(listener: (engineId: string, progress: LoadProgress) => void): () => void
         /** 20 ms do microfone para a chamada. */
         sendAudio(engineId: string, callId: string, pcm: Int16Array): void
         onEvent(listener: (event: NativeSipEvent) => void): () => void
@@ -403,6 +408,9 @@ export const IPC = {
     sipRecord: 'sip:record',
     sipRequest: 'sip:request',
     sipPcap: 'sip:pcap',
+    sipLoadStart: 'sip:load-start',
+    sipLoadStop: 'sip:load-stop',
+    sipLoadProgress: 'sip:load-progress',
     sipAudio: 'sip:audio',
     sipEvent: 'sip:event',
     aiStatus: 'ai:status',

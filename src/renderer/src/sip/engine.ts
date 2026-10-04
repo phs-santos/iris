@@ -2,6 +2,7 @@
 // o easy-sipjs e o simulador são duas implementações intercambiáveis.
 
 import type { DtmfMode, SipManualRequest, SipManualResponse } from '@shared/types'
+import type { LoadProgress, LoadReport, LoadSpec } from '@shared/load'
 
 export type RegState = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error'
 
@@ -103,6 +104,9 @@ export interface SipEngine {
     health(): Promise<HealthReport>
     /** Pedido SIP manual, fora de chamada (RF-45). Só nos motores que conseguem. */
     request?(spec: SipManualRequest): Promise<SipManualResponse>
+    /** Teste de carga com várias chamadas ao mesmo tempo (RF-42). Só no motor próprio. */
+    loadTest?(spec: LoadSpec, onProgress: (progress: LoadProgress) => void): Promise<LoadReport>
+    stopLoadTest?(): Promise<void>
     /** Salva em PCAP o que passou pela rede desta conta (RF-44). Só no motor próprio. */
     exportCapture?(withRtp: boolean): Promise<string | null>
     dispose(): Promise<void>
