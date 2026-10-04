@@ -41,6 +41,7 @@ function moreActions(account: Account): Array<{ label: string; action: () => voi
     }
     return [
         { label: t('accountsPane.saude'), action: () => emit('health', account.id) },
+        { label: t('accountsPane.duplicar'), action: () => void accounts.duplicate(account.id) },
         // Só com a conta registrada num motor que sabe fazer isso (RF-44, RF-45).
         ...(engine?.request
             ? [{ label: t('accountsPane.requisicao_sip'), action: () => (requestFor.value = account.id) }]
@@ -51,7 +52,6 @@ function moreActions(account: Account): Array<{ label: string; action: () => voi
                   { label: t('accountsPane.exportar_pcap_com_audio'), action: () => void exportPcap(true) }
               ]
             : []),
-        { label: t('accountsPane.duplicar'), action: () => void accounts.duplicate(account.id) },
         { label: t('accountsPane.excluir'), action: () => (confirmDelete.value = account.id), danger: true }
     ]
 }
