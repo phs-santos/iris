@@ -294,7 +294,7 @@ async function save(register: boolean): Promise<void> {
                             ></button>
                         </div>
                     </label>
-                    <label v-if="!native" class="field wide">
+                    <label class="field wide">
                         <span class="label">{{ $t('accountForm.stun_turn_separados_por_virgula') }}</span>
                         <input
                             v-model="form.iceServers"

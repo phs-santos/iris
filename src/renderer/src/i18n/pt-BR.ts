@@ -296,6 +296,16 @@ export const ptBR = {
         atencao: 'Atenção'
     },
     healthDialog: {
+        srv_encontrados: 'DNS: {domain} tem registros SRV de SIP',
+        srv_nenhum: 'DNS: {domain} não tem registros SRV de SIP; vale o nome e a porta da conta',
+        srv_erro: 'DNS: a busca dos registros SRV falhou ({error})',
+        tls_confiavel: 'Certificado TLS confiável: {subject}',
+        tls_nao_confiavel: 'Certificado TLS não confiável: {subject} ({problem})',
+        tls_detalhes: 'emitido por {issuer} · vale até {until} · nomes: {names}',
+        tls_erro: 'Não foi possível ler o certificado TLS ({error})',
+        stun_endereco: 'STUN: a rede sai para fora como {address}:{port}',
+        stun_erro: 'STUN: o servidor da conta não respondeu ({error})',
+        stun_sem_servidor: 'STUN: sem servidor na conta, o endereço público não foi medido',
         saude: 'Saúde · {name}',
         fechar: 'Fechar',
         verificando: 'Verificando…',
