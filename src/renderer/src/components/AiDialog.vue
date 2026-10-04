@@ -122,8 +122,8 @@ onMounted(refresh)
                 </label>
                 <p v-if="keyError" class="error" role="alert">{{ keyError }}</p>
                 <p class="hint">
-                    A chave fica no cofre de senhas do sistema, junto com as senhas das contas. Ela não aparece de novo
-                    na tela nem entra em exportações.
+                    A chave fica no arquivo de senhas da Íris, cifrada, junto com as senhas das contas. Ela não aparece
+                    de novo na tela nem entra em exportações.
                 </p>
             </div>
 

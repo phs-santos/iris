@@ -708,7 +708,7 @@ export const GUIDE: GuideSection[] = [
             },
             {
                 type: 'p',
-                text: 'A chave fica no cofre de senhas do sistema, não aparece de novo na tela e não entra em exportações. **Remover chave** apaga.'
+                text: 'A chave fica no arquivo de senhas da Íris, cifrada, não aparece de novo na tela e não entra em exportações. **Remover chave** apaga.'
             }
         ]
     },
@@ -808,7 +808,7 @@ export const GUIDE: GuideSection[] = [
                     ['Contas (sem senha)', '`accounts.json`, na pasta de dados'],
                     [
                         'Senhas dos ramais e chave da IA',
-                        'No cofre de senhas do sistema (Chaves no macOS, DPAPI no Windows, libsecret no Linux)'
+                        '`senhas.json`, cifrado com uma chave própria (`chave-local.bin`); os dois só podem ser lidos pela sua conta do sistema'
                     ],
                     ['Cenários', '`scenarios.json`'],
                     ['Preferências', '`settings.json`: áudio, canal de atualização, hosts confiáveis, opções da IA'],
@@ -823,7 +823,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'list',
                 items: [
-                    'Não grava senha em arquivo em texto puro. Se o sistema não tiver cofre, a senha fica só na memória e é pedida de novo ao reabrir.',
+                    'Não grava senha em texto puro: o arquivo de senhas é cifrado. Quem tiver a pasta de dados inteira, porém, consegue ler as senhas; trate essa pasta como confidencial.',
                     'Não põe senha, hash nem nonce no log, nem na tela nem nos arquivos salvos.',
                     'Não manda nada para fora além do que você pede: o registro e as chamadas com a sua central, a busca por atualização no GitHub e, se você usar, o texto da prévia para a OpenRouter.',
                     'Não aceita certificado inválido sem você mandar, e só para o host escolhido.'
@@ -832,7 +832,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'note',
                 kind: 'dica',
-                text: 'No macOS, enquanto o app não for assinado, o sistema pode pedir a senha de login para liberar as Chaves depois de uma atualização. Digite e escolha **Permitir Sempre**. A Íris mostra um aviso enquanto espera.'
+                text: 'A Íris não usa mais o cofre de senhas do sistema, então o macOS não pede a senha de login ao abrir. Quem veio de uma versão até a 1.0.5 pode ver esse pedido uma última vez, enquanto as senhas antigas são trazidas para o arquivo novo.'
             }
         ]
     },
@@ -887,7 +887,7 @@ export const GUIDE: GuideSection[] = [
                     ],
                     [
                         'Aparece "0 contas" e um aviso amarelo ao abrir',
-                        'O sistema está pedindo a senha do cofre',
+                        'O sistema está pedindo a senha para liberar as senhas antigas (só na primeira abertura depois de atualizar da 1.0.5 ou anterior)',
                         'Responda ao pedido do sistema; no macOS, escolha Permitir Sempre'
                     ],
                     [

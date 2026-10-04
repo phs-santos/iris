@@ -45,7 +45,7 @@ Os instaladores ainda não são assinados (RNF-17), então o sistema avisa na pr
 
 - **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. Se aparecer "O controle inteligente de aplicativos bloqueou um aplicativo", não há botão para liberar: esse recurso do Windows 11 só deixa rodar instalador assinado. Enquanto a Íris não for assinada, ela não instala nessas máquinas, a não ser que o Controle Inteligente de Aplicativos seja desligado em **Segurança do Windows → Controle de aplicativos e do navegador** (o Windows não deixa religar depois sem reinstalar o sistema).
 - **macOS:** depois de arrastar a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Se o macOS disser que o app está danificado, rode `xattr -dr com.apple.quarantine /Applications/Iris.app`.
-- **macOS, senha das Chaves:** a Íris guarda as senhas das contas nas Chaves do sistema. Sem assinatura, o macOS pede a senha de login depois de cada atualização do app: digite e escolha **Permitir Sempre**. Enquanto o pedido está aberto, a Íris mostra um aviso e as contas ainda não aparecem.
+- **macOS, senha das Chaves:** quem atualiza de uma versão até a 1.0.5 pode ver uma última vez o pedido de senha das Chaves, enquanto a Íris traz as senhas antigas para o arquivo próprio. Digite a senha de login do Mac e confirme. Depois disso o pedido não volta.
 
 ## Rodar a partir do código
 
@@ -111,7 +111,8 @@ npm test            # testes de unidade (Vitest)
 npm run test:e2e    # ponta a ponta no modo simulado (abre o app)
 npm run test:scenarios   # cenários: executa, força falha, repete 20× e exporta relatório
 npm run test:cli    # linha de comando: códigos de saída 0, 1 e 2
-npm run test:ai     # ajuda da IA com uma OpenRouter falsa: máscara, chave no cofre e resposta na tela
+npm run test:senhas # senhas cifradas em arquivo local e migração do cofre do sistema
+npm run test:ai     # ajuda da IA com uma OpenRouter falsa: máscara, chave cifrada e resposta na tela
 npm run test:a11y   # acessibilidade: axe (WCAG A/AA) em todas as telas e atalhos de teclado
 npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:pbx    # integração com o Asterisk do docker compose
@@ -145,7 +146,7 @@ A Íris pode pedir a um modelo de IA que explique o log. É opcional e só funci
 - **O que sai da máquina:** só o texto que a tela mostra antes de você clicar em **Enviar para a OpenRouter**, mais uma instrução fixa de como responder. Vão no máximo as 400 linhas mais novas do recorte.
 - **Máscara:** ligada por padrão. Ramais, números, IPs, domínios e nomes de conta viram marcadores como `[NÚMERO-1]` e `[HOST-1]`. Dá para desligar na própria tela.
 - **Senhas e autenticação** nunca são enviadas, com ou sem máscara.
-- **A chave** fica no cofre de senhas do sistema, não aparece de novo na tela e não entra em exportações. **Remover chave** apaga.
+- **A chave** fica no arquivo de senhas da Íris, cifrada, não aparece de novo na tela e não entra em exportações. **Remover chave** apaga.
 - A IA pode errar: confira a explicação com o log antes de mexer no PBX.
 
 ## Atualização automática
@@ -190,7 +191,7 @@ O easy-sipjs 2.7.6 registra com `transport=wss` no Contact. O Asterisk responde 
 ## Dados e segurança
 
 - Contas em `accounts.json` e preferências em `settings.json`, na pasta de dados do usuário.
-- Senhas criptografadas pelo sistema (Keychain, DPAPI ou libsecret). Sem criptografia disponível, ficam só na memória.
+- Senhas em `senhas.json`, cifradas com AES-256-GCM por uma chave própria (`chave-local.bin`), os dois legíveis só pela sua conta. O cofre do sistema não é usado, para o macOS não pedir a senha de login. Trate a pasta de dados como confidencial.
 - A interface roda isolada (`contextIsolation`, `sandbox`, CSP) e só fala com o sistema pelos canais de `src/preload`.
 
 ## Licença

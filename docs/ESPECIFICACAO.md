@@ -144,7 +144,7 @@ Os números abaixo são metas iniciais para validar no M0 e ajustar se necessár
 | RNF-04 | Desempenho | Abre em até 3 s; interface responde em até 100 ms; registro de uma conta saudável em até 2 s | Medição automatizada no CI |
 | RNF-05 | Recursos | Usa até 300 MB de RAM com 10 contas e 1 chamada; CPU ociosa abaixo de 2% | Monitor do sistema em teste de 1 h |
 | RNF-06 | Confiabilidade | Reconecta após queda de rede ou reinício do PBX, com espera crescente e limite de tentativas configurável | Teste derrubando o contêiner do PBX |
-| RNF-07 | Segurança | Senhas guardadas com a criptografia do sistema (Keychain, DPAPI, libsecret) via `safeStorage`; nunca em texto puro em disco | Inspeção do arquivo de dados |
+| RNF-07 | Segurança | Senhas guardadas em arquivo local cifrado (AES-256-GCM) na pasta de dados, legível só pelo usuário; nunca em texto puro em disco. O cofre do sistema foi deixado de lado em 04/10/2026, por decisão do usuário, porque pedia a senha de login a cada versão sem assinatura | Inspeção do arquivo de dados |
 | RNF-08 | Segurança | Renderer isolado: `contextIsolation` ligado, `nodeIntegration` desligado, sandbox ativo, CSP restrita e IPC com lista fechada de canais | Checklist de segurança do Electron no code review |
 | RNF-09 | Segurança | Certificados inválidos recusados por padrão; exceção apenas por host, escolhida pelo usuário (RF-37) | Teste com certificado autoassinado |
 | RNF-10 | Privacidade | Logs, arquivos exportados e relatórios não contêm senha, Authorization nem nonce; o app não envia telemetria sem consentimento | Teste automatizado que procura esses campos no log |
@@ -319,7 +319,7 @@ O próprio produto é uma ferramenta de teste, então a base dos testes é um PB
 - Produto desktop, multiplataforma (pedido do usuário em 3 de outubro de 2026)
 - Electron em vez de Tauri, pela consistência do WebRTC
 - easy-sipjs como motor SIP, atrás da interface `SipEngine`
-- Contas guardadas localmente, senhas no cofre do sistema, importação e exportação em JSON
+- Contas e senhas guardadas localmente (senhas cifradas em arquivo, sem o cofre do sistema, desde 04/10/2026), importação e exportação em JSON
 
 **Em aberto**
 

@@ -106,7 +106,7 @@ function onKey(event: KeyboardEvent): void {
     event.preventDefault()
 }
 
-// O cofre de senhas pode ficar esperando o usuário (no macOS, o pedido de senha do Keychain).
+// Ao trazer as senhas do formato antigo, o macOS pode pedir a senha de login uma última vez (RNF-07).
 const VAULT_NOTICE_DELAY_MS = 1500
 const vaultSlow = ref(false)
 const waitingVault = computed(() => vaultSlow.value && !accounts.loaded)
@@ -145,7 +145,7 @@ onMounted(async () => {
         `Íris ${info.version} · Electron ${info.electron} · Chromium ${info.chrome} · ${info.platform}`
     )
     await devices.load()
-    // As contas leem o cofre de senhas do sistema: a interface aparece antes, com um aviso se demorar.
+    // As contas leem as senhas: a interface aparece antes, com um aviso se demorar.
     await firstPaint()
     setTimeout(() => (vaultSlow.value = true), VAULT_NOTICE_DELAY_MS)
     await accounts.load()
@@ -187,8 +187,8 @@ onUnmounted(() => {
         </div>
 
         <div v-if="waitingVault" class="banner warn" role="status">
-            Esperando o sistema liberar o cofre de senhas. Se aparecer um pedido de senha do sistema (no macOS, o das
-            Chaves), digite a senha de login do computador e escolha "Permitir Sempre". As contas aparecem em seguida.
+            Trazendo as senhas salvas por uma versão anterior. Se o sistema pedir a senha de login (no macOS, o pedido
+            das Chaves), digite e confirme; isso acontece só uma vez. As contas aparecem em seguida.
         </div>
 
         <div v-if="accounts.loaded && !accounts.encryptionAvailable" class="banner warn" role="status">

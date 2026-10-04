@@ -99,7 +99,7 @@ try {
     if (/1234/.test(sent.body) || sent.body.includes(KEY)) fail('o pedido levou senha ou a chave no corpo')
     step('o pedido leva o texto da prévia, sem senha, e a resposta aparece na tela')
 
-    // A chave fica só no cofre: a interface não lê, e os arquivos não a guardam em texto puro.
+    // A chave fica só no arquivo de senhas, cifrada: a interface não lê, e os arquivos não a guardam em texto puro.
     const leak = await page.evaluate(() =>
         window.iris.secrets.get('ai:openrouter').then(
             (v) => `devolveu ${v}`,
@@ -107,7 +107,7 @@ try {
         )
     )
     if (leak !== 'recusado') fail(`a interface conseguiu ler a chave: ${leak}`)
-    for (const name of ['settings.json', 'secrets.json', 'accounts.json']) {
+    for (const name of ['settings.json', 'senhas.json', 'accounts.json']) {
         const file = join(userData, name)
         if (existsSync(file) && readFileSync(file, 'utf8').includes(KEY)) fail(`a chave está em texto puro em ${name}`)
     }

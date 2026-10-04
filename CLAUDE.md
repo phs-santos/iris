@@ -58,7 +58,7 @@ Pendências conhecidas, que não precisam ser feitas agora:
 - A primeira conexão não tenta de novo: com muitas contas no mesmo host, o Chromium abre os WebSockets um de cada vez, e a última da fila pode passar dos 5 s do SIP.js e ficar em erro (`1006`). Entra no RNF-06.
 - Todo canal de IPC que a interface chama ao abrir tem que ser registrado **antes** de `createWindow()` e sem `await` na frente. A 1.0.4 foi publicada e recolhida em minutos porque o canal `update:info` só era registrado depois de rodar o `codesign`, e a falha dele impedia as contas de carregar. Antes de publicar, leia o log do app gerado pelo CI.
 - Os testes e2e rodam o app sem empacotar, e os fuses impedem o Playwright de abrir o app empacotado. Antes de um release, abra o app empacotado e **olhe a janela**: a tela em branco do Keychain passou por todos os testes. Para inspecionar, gere um pacote de diagnóstico com `npx electron-builder --dir -c.electronFuses.enableNodeCliInspectArguments=true -c.directories.output=<pasta>` e abra com `electron.launch({ executablePath })`.
-- No macOS sem assinatura, o Keychain pede a senha de login a cada build novo ("Iris Safe Storage"). O cofre usa as funções assíncronas do `safeStorage` para não travar a janela.
+- Senhas: desde 04/10/2026 ficam em `senhas.json` cifrado por `chave-local.bin` (decisão do usuário, para o macOS sem assinatura não pedir a senha das Chaves). O `secrets.json` antigo (cofre do sistema) é migrado por conta na primeira leitura e depois apagado.
 - O terminal do VSCode exporta `ELECTRON_RUN_AS_NODE=1`, e os testes e2e falham com "Process failed to launch". Rode com `env -u ELECTRON_RUN_AS_NODE`.
 - Fechar o app no meio de uma chamada de teste deixa canais presos no Asterisk, e o `test:pbx` seguinte falha. Limpe com `docker exec iris-asterisk-1 asterisk -rx 'channel request hangup all'`.
 - `grantFileProtocolExtraPrivileges` continua ligado. Para desligar, a interface teria que ser servida por um protocolo próprio (`app://`).
@@ -67,7 +67,7 @@ Pendências conhecidas, que não precisam ser feitas agora:
 
 ## Releases
 
-- O repositório é público: `github.com/phs-santos/iris`. A versão pública atual é a 1.0.5 (a 1.0.3 trouxe IA, guia e avisos do Windows; a 1.0.5, o aviso de atualização manual no macOS). A 1.0.4 foi recolhida: tinha um erro de IPC que impedia as contas de carregar; a primeira foi a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
+- O repositório é público: `github.com/phs-santos/iris`. A versão pública atual é a 1.0.6 (a 1.0.3 trouxe IA, guia e avisos do Windows; a 1.0.5, o aviso de atualização manual no macOS; a 1.0.6, as senhas em arquivo local). A 1.0.4 foi recolhida: tinha um erro de IPC que impedia as contas de carregar; a primeira foi a 1.0.2 (decisão do usuário em 03/10/2026, com o M4 ainda aberto e os instaladores sem assinatura). As tags `v1.0.0` e `v1.0.1` existem, mas os releases delas nunca foram publicados: a primeira tinha a janela em branco no macOS e a segunda saiu sem o `.deb`.
 - Uma tag `v` + versão dispara `.github/workflows/release.yml`, que gera os instaladores dos três sistemas e cria um release **em rascunho**. Publicar o rascunho é com o usuário. O passo a passo está no README, em "Atualização automática".
 - Dar push na `main` e criar tag só com autorização do usuário para aquele release.
 

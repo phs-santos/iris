@@ -1,4 +1,5 @@
 import { app, safeStorage } from 'electron'
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import type { Account, AccountsFile, Scenario, ScenariosFile, Settings } from '@shared/types'
@@ -58,41 +59,126 @@ export async function saveSettings(settings: Settings): Promise<void> {
 }
 
 // ─── Senhas ────────────────────────────────────────────────────────────────
-// Guardadas com a criptografia do sistema (Keychain, DPAPI, libsecret). Quando o
-// sistema não oferece criptografia, a senha fica só na memória desta execução:
-// nunca vai para o disco em texto puro (RNF-07).
-// Usa as funções assíncronas do safeStorage: as síncronas travam o processo principal enquanto o
-// macOS mostra o pedido de senha do Keychain, e a janela ficava em branco até o usuário responder.
+// Guardadas num arquivo local da pasta de dados (`senhas.json`), cifradas com AES-256-GCM por uma
+// chave aleatória em `chave-local.bin`; os dois só podem ser lidos pelo usuário (0600). Decisão do
+// usuário em 04/10/2026 (RNF-07): o cofre do sistema pedia a senha de login do macOS a cada versão
+// nova, porque o app não é assinado. A cifra evita que a senha apareça ao abrir ou copiar só o
+// arquivo de senhas; quem tem acesso à pasta de dados inteira consegue ler as duas coisas.
 
-type SecretsFile = Record<string, string>
-const memorySecrets = new Map<string, string>()
-
-export function encryptionAvailable(): Promise<boolean> {
-    return safeStorage.isAsyncEncryptionAvailable()
+interface LocalSecretsFile {
+    schemaVersion: 1
+    /** id → base64 de iv (12 bytes) + etiqueta (16 bytes) + texto cifrado. */
+    entries: Record<string, string>
 }
 
-export async function getSecret(accountId: string): Promise<string | null> {
-    if (memorySecrets.has(accountId)) return memorySecrets.get(accountId) ?? null
-    if (!(await encryptionAvailable())) return null
-    const secrets = (await readJson<SecretsFile>('secrets.json')) ?? {}
-    const encrypted = secrets[accountId]
-    if (!encrypted) return null
+const SECRETS_FILE = 'senhas.json'
+const KEY_FILE = 'chave-local.bin'
+/** Formato antigo, cifrado pelo cofre do sistema: lido uma vez e migrado (RNF-19). */
+const LEGACY_SECRETS_FILE = 'secrets.json'
+const memorySecrets = new Map<string, string>()
+let keyPromise: Promise<Buffer> | null = null
+let queue: Promise<unknown> = Promise.resolve()
+
+/** Uma operação de cada vez: as contas registram juntas e duas gravações ao mesmo tempo perdem senhas. */
+function serial<T>(task: () => Promise<T>): Promise<T> {
+    const run = queue.then(task, task)
+    queue = run.catch(() => undefined)
+    return run
+}
+
+/** Lê a chave local ou cria uma na primeira vez. */
+function localKey(): Promise<Buffer> {
+    keyPromise ??= (async () => {
+        const path = file(KEY_FILE)
+        try {
+            const key = await fs.readFile(path)
+            if (key.length === 32) return key
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+        }
+        await fs.mkdir(dataDir(), { recursive: true })
+        const key = randomBytes(32)
+        await fs.writeFile(path, key, { mode: 0o600 })
+        return key
+    })()
+    return keyPromise
+}
+
+async function encrypt(text: string): Promise<string> {
+    const iv = randomBytes(12)
+    const cipher = createCipheriv('aes-256-gcm', await localKey(), iv)
+    const body = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()])
+    return Buffer.concat([iv, cipher.getAuthTag(), body]).toString('base64')
+}
+
+async function decrypt(encoded: string): Promise<string | null> {
     try {
-        const { result } = await safeStorage.decryptStringAsync(Buffer.from(encrypted, 'base64'))
-        memorySecrets.set(accountId, result)
-        return result
+        const raw = Buffer.from(encoded, 'base64')
+        const decipher = createDecipheriv('aes-256-gcm', await localKey(), raw.subarray(0, 12))
+        decipher.setAuthTag(raw.subarray(12, 28))
+        return Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8')
     } catch {
-        // O usuário negou o acesso ao cofre ou a chave mudou: a senha precisa ser digitada de novo.
+        // Chave trocada ou arquivo mexido: a senha precisa ser digitada de novo.
         return null
     }
 }
 
-export async function setSecret(accountId: string, password: string | null, persist = true): Promise<void> {
+async function readSecrets(): Promise<LocalSecretsFile> {
+    const data = await readJson<LocalSecretsFile>(SECRETS_FILE)
+    return { schemaVersion: 1, entries: { ...(data?.entries ?? {}) } }
+}
+
+async function writeSecrets(data: LocalSecretsFile): Promise<void> {
+    await writeJson(SECRETS_FILE, data)
+    await fs.chmod(file(SECRETS_FILE), 0o600)
+}
+
+/**
+ * Traz uma senha do formato antigo. Só acontece com quem usou uma versão até a 1.0.5, e pode
+ * mostrar o pedido de senha do sistema uma última vez. Se falhar, a senha é pedida de novo na tela.
+ */
+async function migrateLegacy(accountId: string): Promise<string | null> {
+    const legacy = await readJson<Record<string, string>>(LEGACY_SECRETS_FILE)
+    const encrypted = legacy?.[accountId]
+    if (!legacy || !encrypted) return null
+    let password: string | null = null
+    try {
+        if (await safeStorage.isAsyncEncryptionAvailable())
+            password = (await safeStorage.decryptStringAsync(Buffer.from(encrypted, 'base64'))).result
+    } catch {
+        password = null
+    }
+    if (password !== null) await storeSecret(accountId, password)
+    delete legacy[accountId]
+    if (Object.keys(legacy).length) await writeJson(LEGACY_SECRETS_FILE, legacy)
+    else await fs.rm(file(LEGACY_SECRETS_FILE), { force: true })
+    return password
+}
+
+/** O arquivo local sempre existe; o canal continua para a interface não mudar. */
+export function encryptionAvailable(): Promise<boolean> {
+    return Promise.resolve(true)
+}
+
+export function getSecret(accountId: string): Promise<string | null> {
+    return serial(async () => {
+        if (memorySecrets.has(accountId)) return memorySecrets.get(accountId) ?? null
+        const encoded = (await readSecrets()).entries[accountId]
+        const password = encoded ? await decrypt(encoded) : await migrateLegacy(accountId)
+        if (password !== null) memorySecrets.set(accountId, password)
+        return password
+    })
+}
+
+export function setSecret(accountId: string, password: string | null, persist = true): Promise<void> {
     if (password === null) memorySecrets.delete(accountId)
     else memorySecrets.set(accountId, password)
-    if (!persist || !(await encryptionAvailable())) return
-    const secrets = (await readJson<SecretsFile>('secrets.json')) ?? {}
-    if (password === null) delete secrets[accountId]
-    else secrets[accountId] = (await safeStorage.encryptStringAsync(password)).toString('base64')
-    await writeJson('secrets.json', secrets)
+    return persist ? serial(() => storeSecret(accountId, password)) : Promise.resolve()
+}
+
+async function storeSecret(accountId: string, password: string | null): Promise<void> {
+    const data = await readSecrets()
+    if (password === null) delete data.entries[accountId]
+    else data.entries[accountId] = await encrypt(password)
+    await writeSecrets(data)
 }

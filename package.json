@@ -1,7 +1,7 @@
 {
     "name": "iris",
     "productName": "Iris",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "description": "Softphone desktop para testes de telefonia: várias contas, vários PBX, log SIP lado a lado.",
     "main": "out/main/index.js",
     "license": "MIT",
@@ -28,6 +28,7 @@
         "test:cli": "electron-vite build && node tests/e2e/cli.mjs",
         "test:a11y": "electron-vite build && node tests/e2e/a11y.mjs",
         "test:ai": "electron-vite build && node tests/e2e/ai.mjs",
+        "test:senhas": "electron-vite build && node tests/e2e/senhas.mjs",
         "test:pbx": "electron-vite build && node tests/e2e/asterisk.mjs",
         "test:load": "electron-vite build && node tests/e2e/load.mjs",
         "test:resources": "electron-vite build && node tests/e2e/resources.mjs",
