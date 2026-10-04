@@ -189,7 +189,12 @@ export interface IrisApi {
         explain(request: AiRequest): Promise<AiResult>
     }
     appInfo(): Promise<{ version: string; platform: string; electron: string; chrome: string }>
+    /** Ajusta a janela ao modo da tela: estreita no Telefone, larga na Bancada. */
+    setWindowMode(mode: WindowMode): Promise<void>
 }
+
+/** Telefone: só o discador e a chamada. Bancada: contas, telefone e log lado a lado. */
+export type WindowMode = 'phone' | 'bench'
 
 export const IPC = {
     accountsLoad: 'accounts:load',
@@ -206,6 +211,7 @@ export const IPC = {
     filesOpenText: 'files:open-text',
     notify: 'app:notify',
     appInfo: 'app:info',
+    windowMode: 'window:mode',
     certificateError: 'cert:error',
     updateInfo: 'update:info',
     updateSetChannel: 'update:set-channel',

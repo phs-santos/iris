@@ -135,6 +135,7 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     '**Registrar todas**: registra as contas que ainda não estão registradas. Útil depois de abrir o app ou de a rede voltar.',
                     '**Desregistrar todas**: tira todos os ramais do ar de uma vez, por exemplo antes de mexer na central.',
+                    '**Modo Telefone**: troca a janela por um telefone simples, só com o teclado e a chamada. Veja "Modo Telefone".',
                     '**Atualização disponível**: aparece só quando há versão nova. Veja "Atualização".',
                     '**Guia**: abre esta tela. A tecla **F1** também abre.',
                     '**Configurações**: perfil, cores, áudio, IA, certificados, importar e exportar e atualização. O atalho é **Ctrl+,** (no macOS, **Cmd+,**).'
@@ -502,6 +503,43 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'p',
                 text: '✓ é aprovado, ✗ é reprovado e ! é um aviso. **Verificar de novo** repete tudo; **Copiar relatório** leva o resultado em texto, pronto para colar num chamado.'
+            }
+        ]
+    },
+    {
+        id: 'telefone',
+        title: 'Modo Telefone',
+        summary: 'Uma janela estreita, como um celular, para quem só quer ligar e atender.',
+        blocks: [
+            { type: 'image', name: 'telefone', alt: 'Modo Telefone durante uma chamada' },
+            {
+                type: 'p',
+                text: 'O botão **Modo Telefone**, na barra de cima, encolhe a janela e mostra só o essencial. O botão **Bancada** volta para as três colunas, no mesmo tamanho de antes. O app sempre abre na Bancada.'
+            },
+            {
+                type: 'table',
+                head: ['Tela', 'O que aparece'],
+                rows: [
+                    [
+                        'Teclado',
+                        'A conta escolhida no topo, o número com o nome quando ele é conhecido, o teclado e o botão verde de ligar'
+                    ],
+                    [
+                        'Em chamada',
+                        'Quem está do outro lado, o tempo, a qualidade em barrinhas e os botões Mudo, Espera, Teclado (DTMF), Transferir, Outra chamada e Ver o log'
+                    ],
+                    ['Chamada recebida', 'Ocupa a tela inteira, com Recusar e Atender']
+                ]
+            },
+            {
+                type: 'list',
+                items: [
+                    'Troque a conta pelo menu do topo. O ponto ao lado mostra se ela está registrada.',
+                    'Dá para digitar o número pelo teclado do computador e ligar com **Enter**.',
+                    'Passe o mouse nas barrinhas para ver a qualidade em números (jitter, perda, RTT e codec).',
+                    '**Outra chamada** volta ao teclado sem desligar; as chamadas em andamento ficam listadas embaixo e voltam com um clique.',
+                    'A transferência do modo Telefone é a cega. Para a assistida, use a Bancada.'
+                ]
             }
         ]
     },

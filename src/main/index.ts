@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, Menu, nativeImage, Notification, session, s
 import { promises as fs } from 'node:fs'
 import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
-import { IPC, type Account, type Scenario, type Settings } from '@shared/types'
+import { IPC, type Account, type Scenario, type Settings, type WindowMode } from '@shared/types'
 import {
     getSecret,
     loadAccounts,
@@ -23,6 +23,13 @@ import { isAppearance, isProfile } from '@shared/appearance'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+
+/** Tamanho da Bancada antes de virar Telefone, para voltar ao mesmo lugar. */
+let benchBounds: Electron.Rectangle | null = null
+const PHONE_SIZE = { width: 380, height: 720 }
+const PHONE_MIN = { width: 340, height: 580 }
+const BENCH_MIN = { width: 1024, height: 640 }
+
 let quitting = false
 let trustedHosts = new Set<string>()
 
@@ -43,8 +50,8 @@ function createWindow(): void {
     mainWindow = new BrowserWindow({
         width: 1360,
         height: 820,
-        minWidth: 1024,
-        minHeight: 640,
+        minWidth: BENCH_MIN.width,
+        minHeight: BENCH_MIN.height,
         title: 'Íris',
         icon: appIcon,
         backgroundColor: '#0f1720',
@@ -241,6 +248,29 @@ function registerIpc(): void {
         electron: process.versions.electron,
         chrome: process.versions.chrome
     }))
+
+    handle(IPC.windowMode, (_e, mode: WindowMode) => {
+        check(mode === 'phone' || mode === 'bench', 'modo da janela')
+        setWindowMode(mode)
+    })
+}
+
+function setWindowMode(mode: WindowMode): void {
+    if (!mainWindow) return
+    const win = mainWindow
+    if (win.isFullScreen()) win.setFullScreen(false)
+    if (win.isMaximized()) win.unmaximize()
+    if (mode === 'phone') {
+        if (!benchBounds) benchBounds = win.getBounds()
+        const { x, y, width } = win.getBounds()
+        win.setMinimumSize(PHONE_MIN.width, PHONE_MIN.height)
+        // Encolhe para a direita, onde o telefone fica do lado do que a pessoa estiver fazendo.
+        win.setBounds({ x: x + width - PHONE_SIZE.width, y, ...PHONE_SIZE }, true)
+    } else {
+        win.setMinimumSize(BENCH_MIN.width, BENCH_MIN.height)
+        if (benchBounds) win.setBounds(benchBounds, true)
+        benchBounds = null
+    }
 }
 
 app.on('second-instance', showWindow)

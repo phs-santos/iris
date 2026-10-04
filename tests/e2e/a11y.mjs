@@ -131,6 +131,26 @@ try {
     await page.getByText(/^Passou em/).waitFor({ timeout: 20000 })
     await scan('cenários')
 
+    // Modo Telefone: teclado, chamada recebida e chamada em andamento.
+    await page.getByRole('tab', { name: 'Telefone' }).click()
+    await page.getByRole('button', { name: 'Modo Telefone' }).click()
+    await page.getByRole('region', { name: 'Discar' }).waitFor()
+    await scan('telefone, teclado')
+    await page.getByLabel('Conta').selectOption({ label: 'Vendas 1002 · 1002' })
+    await page.getByLabel('Número').fill('1001')
+    await page.getByRole('button', { name: 'Ligar' }).click()
+    await page.getByRole('region', { name: 'Chamada recebida' }).waitFor()
+    await scan('telefone, chamada recebida')
+    await page.getByRole('button', { name: 'Atender' }).click()
+    await page.getByRole('region', { name: 'Chamada em andamento' }).waitFor()
+    await page.getByRole('button', { name: 'Teclado' }).click()
+    await scan('telefone, em chamada com o teclado DTMF')
+    await page.getByRole('button', { name: 'Desligar' }).click()
+    await page.getByRole('region', { name: 'Discar' }).waitFor()
+    await page.getByLabel('Conta').selectOption({ label: 'Suporte 1001 · 1001' })
+    await page.getByRole('button', { name: 'Bancada', exact: true }).click()
+    await page.getByRole('tab', { name: 'Telefone' }).waitFor()
+
     // Atalhos da especificação (RNF-12).
     await page.getByRole('tab', { name: 'Telefone' }).click()
     await page.keyboard.press('ControlOrMeta+l')

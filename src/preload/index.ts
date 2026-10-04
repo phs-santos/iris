@@ -32,6 +32,7 @@ const api: IrisApi = {
         writeReport: (content) => ipcRenderer.invoke(IPC.cliReport, content),
         finish: (code) => ipcRenderer.send(IPC.cliFinish, code)
     },
+    setWindowMode: (mode) => ipcRenderer.invoke(IPC.windowMode, mode),
     onCertificateError: (listener) => {
         const handler = (_e: Electron.IpcRendererEvent, event: CertificateErrorEvent): void => listener(event)
         ipcRenderer.on(IPC.certificateError, handler)

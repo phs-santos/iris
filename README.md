@@ -133,13 +133,17 @@ npm run dist:mac     # .dmg e .zip (rodar no macOS)
 
 Os instaladores ainda não são assinados (RNF-17). O `.dmg` e o `.zip` saem para Apple Silicon e para Intel.
 
+## Modo Telefone
+
+O botão **Modo Telefone** na barra de cima troca a Bancada por uma janela estreita, como um celular: a conta no topo, o teclado, a chamada ocupando a tela e a chamada recebida em destaque. O botão **Bancada** volta para as três colunas. O app sempre abre na Bancada.
+
 ## Configurações
 
 O botão **Configurações** na barra de cima (ou **Ctrl+,**, no macOS **Cmd+,**) abre uma tela única com Perfil (seu nome e a conta principal), Aparência (seis paletas de cor ou a sua própria cor, e o tamanho da interface), Áudio, Ajuda da IA, Certificados aceitos, Importar e exportar e Atualização.
 
 ## Guia de uso
 
-O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 22 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
+O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 23 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
 
 O texto fica em `src/renderer/src/guide/content.ts`. As capturas são geradas do próprio app: depois de mudar a interface, rode `npm run guide:shots`.
 

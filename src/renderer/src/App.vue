@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-import type { Account, CertificateErrorEvent, UpdateChannel, UpdateInfo } from '@shared/types'
+import type { Account, CertificateErrorEvent, UpdateChannel, UpdateInfo, WindowMode } from '@shared/types'
 import { useAccountsStore } from './stores/accounts'
 import { useCallsStore } from './stores/calls'
 import { useLogStore } from './stores/log'
@@ -15,6 +15,7 @@ import AiDialog from './components/AiDialog.vue'
 import GuideDialog from './components/GuideDialog.vue'
 import { useAiStore } from './stores/ai'
 import ScenariosPane from './components/ScenariosPane.vue'
+import PhoneView from './components/PhoneView.vue'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
@@ -28,6 +29,14 @@ const scenarios = useScenariosStore()
 const ai = useAiStore()
 const prefs = usePreferencesStore()
 const centerTab = ref<'phone' | 'scenarios'>('phone')
+/** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
+const mode = ref<WindowMode>('bench')
+const phone = ref<InstanceType<typeof PhoneView> | null>(null)
+
+function setMode(next: WindowMode): void {
+    mode.value = next
+    void window.iris.setWindowMode(next)
+}
 
 const editing = ref<Account | null>(null)
 /** Seção aberta da tela de Configurações; null com a tela fechada. */
@@ -97,7 +106,7 @@ function onKey(event: KeyboardEvent): void {
     const key = event.key.toLowerCase()
     if (key === 'l') {
         centerTab.value = 'phone'
-        void nextTick(() => dialer.value?.focus())
+        void nextTick(() => (mode.value === 'phone' ? phone.value : dialer.value)?.focus())
     } else if (key === 'enter' && calls.ringingIncoming[0]) void calls.answer(calls.ringingIncoming[0].id)
     else if (key === 'e' && selectedCall) void calls.hangup(selectedCall.id)
     else if (key === 'm' && selectedCall) calls.toggleMute(selectedCall.id)
@@ -166,13 +175,16 @@ onUnmounted(() => {
 
 <template>
     <div class="shell">
-        <header class="topbar">
+        <header v-if="mode === 'bench'" class="topbar">
             <span class="brand"><img class="brand-mark" :src="logoMark" alt="" />Íris</span>
             <span class="summary mono tabular">
                 {{ accounts.accounts.length }} contas · {{ pbxCount }} PBX · {{ registeredCount }} registradas ·
                 {{ calls.active.length }} chamadas
             </span>
             <span class="spacer"></span>
+            <button class="btn small" title="Só o discador e a chamada, numa janela estreita" @click="setMode('phone')">
+                Modo Telefone
+            </button>
             <button class="btn small" @click="accounts.registerAll()">Registrar todas</button>
             <button class="btn small" @click="accounts.unregisterAll()">Desregistrar todas</button>
             <button v-if="updatePending" class="btn small primary" @click="openUpdate">Atualização disponível</button>
@@ -201,7 +213,14 @@ onUnmounted(() => {
             <button class="btn small" @click="accounts.secretsProblem = null">Entendi</button>
         </div>
 
-        <main class="columns">
+        <PhoneView
+            v-if="mode === 'phone'"
+            ref="phone"
+            class="phone-mode"
+            @bench="setMode('bench')"
+            @settings="settingsAt = 'profile'"
+        />
+        <main v-else class="columns">
             <AccountsPane @new="newAccount" @edit="(a) => (editing = a)" @health="(id) => (healthFor = id)" />
 
             <section class="center">
@@ -306,6 +325,9 @@ onUnmounted(() => {
 .banner.warn {
     background: rgba(240, 177, 62, 0.1);
     border-bottom-color: rgba(240, 177, 62, 0.4);
+}
+.phone-mode {
+    flex: 1;
 }
 .columns {
     flex: 1;
