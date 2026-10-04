@@ -396,6 +396,11 @@ export const ptBR = {
         qualidade_jitter_ms_perda_rtt: 'Qualidade {score}: jitter {jitterMs} ms, perda {p}%, RTT {rttMs} ms, {p2}'
     },
     scenariosPane: {
+        frequencia_do_passo: 'Frequência do passo {p}',
+        hz_por: 'Hz por',
+        caminho_do_wav: 'caminho do arquivo .wav',
+        arquivo_do_passo: 'Arquivo do passo {p}',
+        escolher: 'Escolher…',
         cenario: 'Cenário',
         nenhum_cenario_ainda: 'Nenhum cenário ainda',
         novo: '+ Novo',

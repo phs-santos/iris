@@ -107,6 +107,8 @@ jobs:
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/cli.mjs
             - name: SIP puro por UDP, TCP e TLS com o motor próprio (RF-39)
               run: xvfb-run -a node tests/e2e/sip-puro.mjs
+            - name: Verificação de áudio nos cenários, pela linha de comando (RF-41)
+              run: xvfb-run -a node tests/e2e/audio.mjs
             # Por último: este teste para e religa o contêiner do PBX.
             - name: Reconexão derrubando o contêiner do PBX (RNF-06)
               run: xvfb-run -a node tests/e2e/reconexao.mjs

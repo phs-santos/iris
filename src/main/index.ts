@@ -23,6 +23,7 @@ import { setupUpdater } from './updater'
 import { AI_SECRET_PREFIX, registerAiIpc } from './ai'
 import { isAppearance, isProfile } from '@shared/appearance'
 import { isReconnect } from '@shared/reconnect'
+import { parseWav, SAMPLE_RATE } from '@shared/audio'
 import { HISTORY_LIMIT, isHistoryEntry, type HistoryEntry } from '@shared/history'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { appLog, describeError, startAppLog } from './app-log'
@@ -252,6 +253,22 @@ function registerIpc(): void {
         })
         if (result.canceled || !result.filePaths[0]) return null
         return fs.readFile(result.filePaths[0], 'utf8')
+    })
+
+    // WAV dos cenários (RF-41): só arquivos .wav, até 20 MB e 2 minutos de áudio.
+    handle(IPC.audioPickWav, async () => {
+        if (!mainWindow) return null
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile'],
+            filters: [{ name: 'WAV', extensions: ['wav'] }]
+        })
+        return result.canceled ? null : (result.filePaths[0] ?? null)
+    })
+    handle(IPC.audioLoadWav, async (_e, path: string) => {
+        check(isString(path, 2000) && /\.wav$/i.test(path), 'arquivo WAV')
+        const info = await fs.stat(path)
+        check(info.isFile() && info.size <= 20_000_000, 'arquivo WAV de até 20 MB')
+        return parseWav(await fs.readFile(path)).subarray(0, SAMPLE_RATE * 120)
     })
 
     on(IPC.notify, (_e, title: string, body: string) => {

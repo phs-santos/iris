@@ -29,6 +29,10 @@ const api: IrisApi = {
         saveText: (name, content) => ipcRenderer.invoke(IPC.filesSaveText, name, content),
         openText: () => ipcRenderer.invoke(IPC.filesOpenText)
     },
+    audio: {
+        pickWav: () => ipcRenderer.invoke(IPC.audioPickWav),
+        loadWav: (path) => ipcRenderer.invoke(IPC.audioLoadWav, path)
+    },
     notify: (title, body) => ipcRenderer.send(IPC.notify, title, body),
     setTray: (counts) => ipcRenderer.send(IPC.tray, counts),
     logError: (text) => ipcRenderer.send(IPC.logError, text),

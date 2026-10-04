@@ -130,6 +130,88 @@ describe('Cenários: execução no PBX simulado (RF-29, RF-30)', () => {
         ])
     })
 
+    const between = (steps: Scenario['steps']): Scenario => ({
+        id: 'audio',
+        name: 'Áudio',
+        accountId: 'a',
+        steps: [
+            { type: 'register' },
+            { type: 'register', account: 'b' },
+            { type: 'dial', to: '1002', call: 'saida' },
+            { type: 'answer', account: 'b', call: 'entrada', timeoutMs: 5000 },
+            { type: 'waitState', call: 'saida', state: 'established', timeoutMs: 5000 },
+            ...steps
+        ]
+    })
+    const two = () =>
+        mockDriver([
+            { id: 'a', extension: '1001' },
+            { id: 'b', extension: '1002' }
+        ])
+
+    it('áudio (RF-41): espera o áudio chegar, toca tom e arquivo e mostra a duração', async () => {
+        const result = await run(
+            between([
+                { type: 'waitAudio', call: 'entrada', timeoutMs: 2000 },
+                { type: 'playTone', call: 'saida', hz: 440, ms: 300 },
+                { type: 'playFile', call: 'saida', path: '/tmp/teste.wav' },
+                { type: 'hangup', call: 'saida' }
+            ]),
+            two()
+        )
+        expect(result.passed).toBe(true)
+        expect(result.steps.slice(5).map((s) => s.message ?? s.status)).toEqual([
+            '-30 dBFS',
+            '300 ms de áudio',
+            '200 ms de áudio',
+            'passed'
+        ])
+    })
+
+    it('áudio (RF-41): "esperar silêncio" falha com o volume quando o outro lado continua falando', async () => {
+        const result = await run(between([{ type: 'waitSilence', call: 'saida', timeoutMs: 500 }]), two())
+        expect(result.failedAt).toBe(5)
+        expect(result.steps[5]!.message).toBe('O áudio não parou em 0.5 s (volume: -30 dBFS)')
+    })
+
+    it('áudio (RF-41): arquivo que não abre e chamada que não foi atendida falham no passo', async () => {
+        const missing = await run(between([{ type: 'playFile', call: 'saida', path: '/tmp/outro.wav' }]), two())
+        expect(missing.steps[5]!.message).toBe('Não foi possível ler o arquivo: arquivo não encontrado')
+
+        const notAnswered = await run({
+            id: 'x',
+            name: 'x',
+            accountId: 'a',
+            steps: [
+                { type: 'register' },
+                { type: 'dial', to: '408', call: 'c1' },
+                { type: 'waitAudio', call: 'c1', timeoutMs: 1000 }
+            ]
+        })
+        expect(notAnswered.steps[2]!.message).toMatch(/não em chamada/)
+    })
+
+    it('áudio (RF-41): valida a frequência, a duração e o arquivo', () => {
+        const errors = validateScenario({
+            ...newScenario('a'),
+            steps: [
+                newStep('dial'),
+                { type: 'playTone', call: 'c1', hz: 50, ms: 1000 },
+                { type: 'playTone', call: 'c1', hz: 440, ms: 0 },
+                { type: 'playFile', call: 'c1', path: 'som.mp3' },
+                { type: 'waitAudio', call: 'c9', timeoutMs: 1000 },
+                { type: 'playTone', call: 'c1', hz: 440, ms: 500 }
+            ]
+        })
+        expect(errors.slice(1)).toEqual([
+            'Use uma frequência de 100 a 3400 Hz',
+            'Use de 1 ms a 2 minutos',
+            'Escolha um arquivo .wav',
+            'A chamada c9 ainda não existe neste ponto',
+            null
+        ])
+    })
+
     it('transferência cega espera a resposta final do PBX', async () => {
         const driver = mockDriver([{ id: 'a', extension: '1001' }])
         const scenario: Scenario = {

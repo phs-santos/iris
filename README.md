@@ -29,6 +29,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
+| RF-41 | Áudio nos cenários: passos Tocar tom, Tocar arquivo WAV, Esperar áudio e Esperar silêncio. Pega chamada muda, que o código SIP não mostra. Tocar só em SIP puro e no simulado; medir, em qualquer conta |
 | RF-36 | Gravação da chamada em WAV estéreo (um lado em cada canal), por enquanto só em SIP puro |
 | RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |
 | RF-39 | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde, liga e recebe chamadas com áudio G.711, DTMF por RTP ou SIP INFO, mudo, espera, transferência cega e assistida, SRTP (SDES, AES_CM_128_HMAC_SHA1_80) e qualidade com perda, jitter e tempo de ida e volta (RTCP). Não tem: RTCP cifrado (com SRTP o RTT fica em 0), INVITE sem SDP, temporizador de sessão e DNS SRV |
@@ -81,6 +82,7 @@ Na aba **Cenários** (ao lado de **Telefone**) você monta um roteiro de passos 
 - Cada chamada aberta por **Discar** ou **Atender** ganha um apelido (`c1`); os passos seguintes usam esse apelido.
 - **Aguardar estado** falha se a chamada terminar antes, mostrando o código (ex.: `486 Busy Here`).
 - **Verificar** confere um código SIP, o DTMF recebido ou um texto no log.
+- **Tocar tom**, **Tocar arquivo WAV**, **Esperar áudio** e **Esperar silêncio** conferem o som da chamada: um cenário contra o eco passa quando o tom volta e falha quando a chamada fica muda.
 - **Repetir N×** roda em sequência e mostra a taxa de sucesso, a média e o p95; o relatório sai em `.txt` ou `.json`.
 - Os cenários ficam em `scenarios.json` na pasta de dados e são salvos a cada edição.
 
@@ -117,7 +119,7 @@ No Docker Desktop (macOS e Windows) a rede do host não fica exposta, então o `
 
 Cadastre contas com domínio `127.0.0.1`, WebSocket `wss://127.0.0.1:8089/ws`, ramais `1001` a `1020` e senha `1234`. Na primeira conexão o app recusa o certificado e oferece **Confiar neste host**.
 
-Números do plano de discagem: `1001`–`1020` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `486` (ocupado).
+Números do plano de discagem: `1001`–`1020` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `601` (atende e fica mudo), `486` (ocupado).
 
 Para SIP puro (RF-39), o mesmo Asterisk atende em UDP e TCP na porta `5060` e em TLS na `5061`, com os ramais `2001` a `2005` (senha `1234`); o `2005` exige SRTP. Na conta, escolha o transporte e use o domínio `127.0.0.1`. O ramal `1021` é WebRTC só com G.711, para ligar entre SIP puro e WebRTC: esta imagem do Asterisk não converte Opus, e os ramais `1001` a `1020` preferem Opus. Depois de mudar um arquivo de `docker/asterisk`, recrie o contêiner (`docker compose … up -d --force-recreate`): no Docker Desktop, o contêiner pode continuar vendo o arquivo antigo.
 
@@ -138,6 +140,7 @@ npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
 npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
+npm run test:audio  # áudio nos cenários pela linha de comando: tom e WAV no eco, e um ramal mudo (RF-41)
 npm run test:sip    # SIP puro no Asterisk: registro por UDP, TCP e TLS, chamadas com áudio, DTMF, cancelar, recusar, espera, transferência e SRTP (RF-39)
 npm run test:reconexao  # derruba o contêiner do PBX e confere que as contas voltam sozinhas (RNF-06)
 npm run test:load   # carga: 20 contas e 4 chamadas no Asterisk, mede a resposta da interface

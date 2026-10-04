@@ -719,7 +719,28 @@ export const GUIDE: GuideSection[] = [
                     ['DTMF', 'Manda uma sequência de dígitos, com a mesma sintaxe do cartão de chamada'],
                     ['Transferir', 'Transfere a chamada para um destino'],
                     ['Desligar', 'Encerra a chamada'],
-                    ['Verificar', 'Confere um código SIP, o DTMF recebido ou um texto no log']
+                    ['Verificar', 'Confere um código SIP, o DTMF recebido ou um texto no log'],
+                    ['Tocar tom', 'Toca um tom (frequência e duração) na chamada, no lugar do microfone'],
+                    ['Tocar arquivo WAV', 'Toca um arquivo WAV de PCM de 16 bits, de até 2 minutos'],
+                    [
+                        'Esperar áudio',
+                        'Passa quando chega áudio na chamada; falha se ela ficar muda até o tempo limite'
+                    ],
+                    ['Esperar silêncio', 'Passa quando o áudio para; falha se continuar chegando até o tempo limite']
+                ]
+            },
+            { type: 'h', text: 'Conferir o áudio' },
+            {
+                type: 'p',
+                text: 'Código SIP certo não garante que há som: a chamada muda, ou com áudio só de um lado, completa do mesmo jeito. Os passos de áudio pegam isso. Um roteiro típico contra um número de eco: **Discar**, **Aguardar estado** em chamada, **Tocar tom** de 1 s e **Esperar áudio**. Se o tom não voltar, o passo falha e mostra o volume medido.'
+            },
+            {
+                type: 'list',
+                items: [
+                    '**Esperar áudio** e **Esperar silêncio** funcionam em qualquer conta. O limite entre os dois é −50 dBFS, e o passo exige três medidas seguidas, para um estalo não contar como áudio.',
+                    '**Tocar tom** e **Tocar arquivo** só funcionam em contas de **SIP puro** e no **PBX simulado**: em WebRTC a Íris não troca o que o microfone manda, e o passo falha dizendo isso.',
+                    'Enquanto um tom ou arquivo toca, o microfone não vai para a chamada.',
+                    'O arquivo WAV fica onde está no disco; o cenário guarda só o caminho. Ao levar o cenário para outra máquina, leve o arquivo junto.'
                 ]
             },
             {

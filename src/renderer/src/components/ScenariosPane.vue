@@ -148,6 +148,12 @@ const accountOptions = computed(() =>
 )
 const field = (step: ScenarioStep) => step as Record<string, any>
 /** Passos que podem usar outra conta além da de origem. */
+/** Diálogo do sistema para escolher o WAV de um passo "Tocar arquivo" (RF-41). */
+async function pickWav(step: ScenarioStep): Promise<void> {
+    const path = await window.iris.audio.pickWav()
+    if (path && step.type === 'playFile') step.path = path
+}
+
 const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || type === 'dial' || type === 'answer'
 </script>
 
@@ -248,7 +254,16 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
 
                             <template
                                 v-if="
-                                    ['waitState', 'dtmf', 'transfer', 'hangup'].includes(step.type) ||
+                                    [
+                                        'waitState',
+                                        'dtmf',
+                                        'transfer',
+                                        'hangup',
+                                        'playTone',
+                                        'playFile',
+                                        'waitAudio',
+                                        'waitSilence'
+                                    ].includes(step.type) ||
                                     (step.type === 'verify' && step.check !== 'log')
                                 "
                             >
@@ -301,6 +316,41 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                     :aria-label="$t('scenariosPane.valor_esperado_do_passo', { p: i + 1 })"
                                 />
                             </template>
+                            <template v-if="step.type === 'playTone'">
+                                <input
+                                    v-model.number="step.hz"
+                                    class="input mono tiny"
+                                    type="number"
+                                    min="100"
+                                    max="3400"
+                                    step="10"
+                                    :aria-label="$t('scenariosPane.frequencia_do_passo', { p: i + 1 })"
+                                />
+                                <span class="muted">{{ $t('scenariosPane.hz_por') }}</span>
+                                <input
+                                    class="input mono tiny"
+                                    type="number"
+                                    min="0.1"
+                                    step="0.1"
+                                    :value="step.ms / 1000"
+                                    :aria-label="$t('scenariosPane.segundos_do_passo', { p: i + 1 })"
+                                    @input="
+                                        step.ms = Math.round(Number(($event.target as HTMLInputElement).value) * 1000)
+                                    "
+                                />
+                                <span class="muted">{{ $t('scenariosPane.s') }}</span>
+                            </template>
+                            <template v-if="step.type === 'playFile'">
+                                <input
+                                    v-model="step.path"
+                                    class="input mono short"
+                                    :placeholder="$t('scenariosPane.caminho_do_wav')"
+                                    :aria-label="$t('scenariosPane.arquivo_do_passo', { p: i + 1 })"
+                                />
+                                <button type="button" class="btn small" @click="pickWav(step)">
+                                    {{ $t('scenariosPane.escolher') }}
+                                </button>
+                            </template>
                             <template v-if="step.type === 'wait'">
                                 <input
                                     class="input mono tiny"
@@ -315,7 +365,14 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                 />
                                 <span class="muted">{{ $t('scenariosPane.s') }}</span>
                             </template>
-                            <template v-if="step.type === 'waitState' || step.type === 'answer'">
+                            <template
+                                v-if="
+                                    step.type === 'waitState' ||
+                                    step.type === 'answer' ||
+                                    step.type === 'waitAudio' ||
+                                    step.type === 'waitSilence'
+                                "
+                            >
                                 <span class="muted">{{ $t('scenariosPane.ate') }}</span>
                                 <input
                                     class="input mono tiny"

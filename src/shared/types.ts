@@ -66,6 +66,11 @@ export type ScenarioStep =
     | { type: 'transfer'; call: string; to: string }
     | { type: 'hangup'; call: string }
     | { type: 'verify'; call: string; check: ScenarioCheck; expected: string }
+    // Áudio (RF-41): tocar no lugar do microfone e conferir o que chega.
+    | { type: 'playTone'; call: string; hz: number; ms: number }
+    | { type: 'playFile'; call: string; path: string }
+    | { type: 'waitAudio'; call: string; timeoutMs: number }
+    | { type: 'waitSilence'; call: string; timeoutMs: number }
 
 export type ScenarioStepType = ScenarioStep['type']
 
@@ -252,6 +257,12 @@ export interface IrisApi {
         saveText(defaultName: string, content: string): Promise<string | null>
         openText(): Promise<string | null>
     }
+    /** Arquivos WAV para os cenários (RF-41): o processo principal lê e devolve PCM de 16 bits a 8000 Hz. */
+    audio: {
+        /** Abre o diálogo e devolve o caminho escolhido, ou null. */
+        pickWav(): Promise<string | null>
+        loadWav(path: string): Promise<Int16Array>
+    }
     notify(title: string, body: string): void
     /** Estado geral para o ícone da bandeja (RF-33). */
     setTray(counts: TrayCounts): void
@@ -327,6 +338,8 @@ export const IPC = {
     settingsUpdate: 'settings:update',
     filesSaveText: 'files:save-text',
     filesOpenText: 'files:open-text',
+    audioPickWav: 'audio:pick-wav',
+    audioLoadWav: 'audio:load-wav',
     notify: 'app:notify',
     tray: 'app:tray',
     logError: 'app:log-error',

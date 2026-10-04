@@ -1,4 +1,5 @@
 // Driver de cenários para testes: contas no PBX simulado, sem Vue nem Pinia.
+import { toneSamples } from '@shared/audio'
 import { MockEngine } from '@renderer/sip/mock-engine'
 import type { EngineCall, RegStatus } from '@renderer/sip/engine'
 import { newAccount } from '@renderer/lib/accounts'
@@ -88,6 +89,12 @@ export function mockDriver(list: MockAccount[]): ScenarioDriver & { engines: Map
         sendDtmf: (id, digits) =>
             runDtmfSequence(parseDtmfSequence(digits), (t) => call(id).sendDtmf(t, 'sip-info'), undefined, 10),
         transfer: (id, to) => call(id).transfer(to),
+        playAudio: (id, pcm) => call(id).playAudio!(pcm),
+        audioLevel: (id) => call(id).audioLevel(),
+        loadWav: async (path) => {
+            if (!path.endsWith('teste.wav')) throw new Error('arquivo não encontrado')
+            return toneSamples(600, 200)
+        },
         logSince: (since, accountId) =>
             log.filter((l) => l.ts >= since && (!accountId || l.accountId === accountId)).map((l) => l.text),
         accountName: (id) => `Conta ${list.find((a) => a.id === id)?.extension ?? '?'}`
