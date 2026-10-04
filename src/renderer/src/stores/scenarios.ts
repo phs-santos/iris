@@ -23,6 +23,8 @@ export const useScenariosStore = defineStore('scenarios', () => {
 
     /** Resultado ao vivo da execução atual (ou da última), passo a passo. */
     const live = ref<StepResult[]>([])
+    /** De qual cenário é o resultado ao vivo: o monitor (RF-43) roda cenários que não estão abertos. */
+    const liveId = ref<string | null>(null)
     const running = ref(false)
     const batch = ref<{ done: number; total: number; passed: number } | null>(null)
     const lastRun = ref<RunResult | null>(null)
@@ -89,6 +91,7 @@ export const useScenariosStore = defineStore('scenarios', () => {
         controller = new AbortController()
         running.value = true
         resetResults()
+        liveId.value = id
         batch.value = times > 1 ? { done: 0, total: times, passed: 0 } : null
         log.add(null, 'info', 'event', `Cenário "${snapshot.name}": ${times > 1 ? `${times} execuções` : 'executando'}`)
         try {
@@ -133,6 +136,7 @@ export const useScenariosStore = defineStore('scenarios', () => {
         selected,
         loaded,
         live,
+        liveId,
         running,
         batch,
         lastRun,

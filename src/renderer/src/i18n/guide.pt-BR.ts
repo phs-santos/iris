@@ -729,6 +729,20 @@ export const GUIDE: GuideSection[] = [
                     ['Esperar silêncio', 'Passa quando o áudio para; falha se continuar chegando até o tempo limite']
                 ]
             },
+            { type: 'h', text: 'Monitor: deixar um cenário de vigia' },
+            {
+                type: 'p',
+                text: 'Marque **Monitorar** no alto do cenário e diga o intervalo em minutos: a Íris passa a rodá-lo sozinha, com o app aberto ou na bandeja. Ela avisa só quando o resultado **muda**: uma notificação do sistema e uma linha no log quando o cenário passa a falhar, e outra quando volta a passar. Enquanto continua falhando, não repete o aviso.'
+            },
+            {
+                type: 'list',
+                items: [
+                    'No campo **webhook** você pode pôr um endereço `http://` ou `https://`. A cada mudança, a Íris manda um `POST` com JSON: `event` (`failed` ou `recovered`), `scenario`, `failedStep`, `message`, `durationMs` e `at`. Serve para avisar num canal de chat ou abrir um chamado.',
+                    'Ao lado aparece a hora da última execução e da próxima.',
+                    'Se você estiver rodando outro cenário na hora, o monitor espera terminar.',
+                    'O monitor só roda com a Íris aberta. Para vigiar sem ninguém logado, use a linha de comando num agendador (cron).'
+                ]
+            },
             { type: 'h', text: 'O mesmo roteiro para várias contas' },
             {
                 type: 'p',

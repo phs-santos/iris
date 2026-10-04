@@ -401,6 +401,15 @@ export const ptBR = {
         qualidade_jitter_ms_perda_rtt: 'Qualidade {score}: jitter {jitterMs} ms, perda {p}%, RTT {rttMs} ms, {p2}'
     },
     scenariosPane: {
+        monitorar_a_cada: 'Monitorar: rodar sozinho a cada',
+        minutos_do_monitor: 'Minutos entre as execuções do monitor',
+        min: 'min',
+        webhook_opcional: 'webhook (opcional): https://…',
+        webhook_do_monitor: 'Endereço do webhook do monitor',
+        webhook_invalido: 'Use um endereço http:// ou https://',
+        monitor_proxima: 'próxima às {hora}',
+        monitor_passou: 'passou às {hora}',
+        monitor_falhou: 'falhou às {hora}',
         frequencia_do_passo: 'Frequência do passo {p}',
         hz_por: 'Hz por',
         caminho_do_wav: 'caminho do arquivo .wav',

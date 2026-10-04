@@ -29,6 +29,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
+| RF-43 | Monitor: um cenário roda sozinho a cada N minutos e avisa por notificação e webhook quando passa a falhar ou volta a passar |
 | RF-48 | Contas em lote por planilha CSV e variáveis nos cenários (`{ramal}`, `{dominio}`, `{nome}` da conta de origem); `--conta` na linha de comando roda o mesmo roteiro com outra conta |
 | RF-49 | Relatório JUnit (`.xml`) na linha de comando |
 | RF-41 | Áudio nos cenários: passos Tocar tom, Tocar arquivo WAV, Esperar áudio e Esperar silêncio. Pega chamada muda, que o código SIP não mostra. Tocar só em SIP puro e no simulado; medir, em qualquer conta |
@@ -144,6 +145,7 @@ npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
 npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
+npm run test:monitor    # monitor: cenário que falha sozinho, aviso no log e webhook num servidor local (RF-43)
 npm run test:audio  # áudio nos cenários pela linha de comando: tom e WAV no eco, e um ramal mudo (RF-41)
 npm run test:sip    # SIP puro no Asterisk: registro por UDP, TCP e TLS, chamadas com áudio, DTMF, cancelar, recusar, espera, transferência e SRTP (RF-39)
 npm run test:reconexao  # derruba o contêiner do PBX e confere que as contas voltam sozinhas (RNF-06)

@@ -5,6 +5,7 @@ import type { CliConfig } from './cli'
 import type { Appearance, Profile } from './appearance'
 import type { TrayCounts } from './tray'
 import type { HistoryEntry } from './history'
+import type { MonitorSettings, WebhookPayload } from './monitor'
 import type { AccountTransport, SipTransportKind } from './sip-target'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
@@ -80,6 +81,8 @@ export interface Scenario {
     /** Conta de origem: usada pelos passos que não escolhem outra. */
     accountId: string
     steps: ScenarioStep[]
+    /** Execução automática de tempos em tempos, com aviso quando o resultado muda (RF-43). */
+    monitor?: MonitorSettings
 }
 
 export interface ScenariosFile {
@@ -265,6 +268,10 @@ export interface IrisApi {
         loadWav(path: string): Promise<Int16Array>
     }
     notify(title: string, body: string): void
+    /** Monitor (RF-43): o POST do webhook sai do processo principal; devolve o código HTTP da resposta. */
+    monitor: {
+        webhook(url: string, payload: WebhookPayload): Promise<number>
+    }
     /** Estado geral para o ícone da bandeja (RF-33). */
     setTray(counts: TrayCounts): void
     /** Erro da interface para o log interno do app (RNF-14). */
@@ -342,6 +349,7 @@ export const IPC = {
     audioPickWav: 'audio:pick-wav',
     audioLoadWav: 'audio:load-wav',
     notify: 'app:notify',
+    monitorWebhook: 'monitor:webhook',
     tray: 'app:tray',
     logError: 'app:log-error',
     appInfo: 'app:info',

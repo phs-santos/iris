@@ -34,6 +34,9 @@ const api: IrisApi = {
         loadWav: (path) => ipcRenderer.invoke(IPC.audioLoadWav, path)
     },
     notify: (title, body) => ipcRenderer.send(IPC.notify, title, body),
+    monitor: {
+        webhook: (url, payload) => ipcRenderer.invoke(IPC.monitorWebhook, url, payload)
+    },
     setTray: (counts) => ipcRenderer.send(IPC.tray, counts),
     logError: (text) => ipcRenderer.send(IPC.logError, text),
     cli: {
