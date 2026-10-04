@@ -178,8 +178,11 @@ const monitorText = computed(() => {
     const s = store.selected
     const state = s ? monitor.states[s.id] : undefined
     if (!s?.monitor?.enabled || !state) return ''
-    const hour = (ts: number): string =>
-        new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    // Relógio de 24 horas, como o resto do app, qualquer que seja o idioma do sistema.
+    const hour = (ts: number): string => {
+        const d = new Date(ts)
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    }
     const next = t('scenariosPane.monitor_proxima', { hora: hour(state.nextAt) })
     if (state.lastAt === undefined) return next
     const last = state.passed
