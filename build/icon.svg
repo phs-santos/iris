@@ -1,37 +1,46 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-    <!-- Íris: o arco-íris da mensageira (três bandas) envolvendo o fone. Grade de ícone do macOS: placa de 824 px. -->
+    <!-- Íris: o fone com a asa da mensageira (três penas). Grade de ícone do macOS: placa de 824 px. -->
+    <!-- As formas do fone e das penas são as mesmas de src/renderer/src/assets/logo-mark.svg. -->
     <defs>
         <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stop-color="#1d2a37" />
             <stop offset="1" stop-color="#0b1117" />
         </linearGradient>
-        <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#6aa3ff" />
-            <stop offset="1" stop-color="#3f7fe8" />
+        <linearGradient id="blue" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#3f7fe8" />
+            <stop offset="1" stop-color="#6aa3ff" />
         </linearGradient>
-        <linearGradient id="lavender" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#c3d0ff" />
-            <stop offset="1" stop-color="#97a9f5" />
+        <linearGradient id="lavender" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#97a9f5" />
+            <stop offset="1" stop-color="#c3d0ff" />
         </linearGradient>
-        <linearGradient id="green" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#5fe0a0" />
-            <stop offset="1" stop-color="#2fb874" />
+        <linearGradient id="green" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#2fb874" />
+            <stop offset="1" stop-color="#5fe0a0" />
         </linearGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.35" />
-        </filter>
+        <!-- Os dois cortes que separam o bocal e o auricular do cabo. -->
+        <mask id="cuts">
+            <rect width="1024" height="1024" fill="#fff" />
+            <path d="M262 364 L356 500 M540 662 L672 756" stroke="#000" stroke-width="15" />
+        </mask>
     </defs>
     <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#tile)" />
     <rect x="101.5" y="101.5" width="821" height="821" rx="183.5" fill="none" stroke="#2c3d4f" stroke-width="3" />
-    <g fill="none" stroke-linecap="round" stroke-width="56" filter="url(#shadow)">
-        <path d="M182 670 A330 330 0 0 1 842 670" stroke="url(#blue)" />
-        <path d="M267 670 A245 245 0 0 1 757 670" stroke="url(#lavender)" />
-        <path d="M352 670 A160 160 0 0 1 672 670" stroke="url(#green)" />
-    </g>
     <path
-        filter="url(#shadow)"
         fill="url(#blue)"
-        transform="translate(512 628) scale(7.5) translate(-12 -12)"
-        d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"
+        d="M452 580 C430 480 450 390 520 355 L780 205 Q800 195 804 218 C810 270 780 315 735 335 L565 418 C510 445 480 500 462 580 Q457 590 452 580 Z"
+    />
+    <path
+        fill="url(#lavender)"
+        d="M474 602 C478 520 510 460 565 438 L760 345 Q780 338 782 360 C785 405 760 440 715 458 L590 505 C540 525 510 560 486 604 Q479 612 474 602 Z"
+    />
+    <path
+        fill="url(#green)"
+        d="M492 630 C505 580 540 545 590 528 L725 488 Q745 483 745 503 C742 545 715 575 670 580 L590 588 C550 592 525 610 502 633 Q495 638 492 630 Z"
+    />
+    <path
+        fill="#fff"
+        mask="url(#cuts)"
+        d="M300 352 Q325 345 340 365 L392 440 Q402 460 385 475 L345 508 Q335 525 345 545 C385 615 440 670 490 700 Q510 712 525 695 L555 660 Q572 640 595 652 L668 705 Q690 722 680 745 C660 790 620 825 575 822 C470 815 300 690 235 500 C205 420 250 365 300 352 Z"
     />
 </svg>
