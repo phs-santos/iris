@@ -3,6 +3,7 @@ import { decodeG711, encodeG711 } from '../src/main/sip/g711'
 import { buildRtp, parseRtp, RtpSession } from '../src/main/sip/rtp'
 import { answerDirection, buildSdp, parseSdp, SdpError } from '../src/main/sip/sdp'
 import { deriveKey, newSrtpKey, SrtpContext } from '../src/main/sip/srtp'
+import { createCodec } from '../src/main/sip/codec'
 import { PacketCapture, udpPacket } from '../src/main/sip/pcap'
 import { createSocket } from 'node:dgram'
 import { stunQuery } from '../src/main/net-diag'
@@ -59,6 +60,7 @@ describe('SDP (RF-39)', () => {
             codec: 'PCMU',
             payload: 0,
             dtmfPayload: 101,
+            dtmfRate: 8000,
             direction: 'sendrecv'
         })
     })
@@ -79,6 +81,44 @@ describe('SDP (RF-39)', () => {
         expect(media.dtmfPayload).toBeUndefined()
     })
 
+    it('Opus (RF-47): a oferta lista o G.711 primeiro, depois o Opus e o telephone-event dos dois relógios', () => {
+        const sdp = buildSdp({ ...local, codecs: ['PCMU', 'PCMA', 'opus'], dtmf48Payload: 110 })
+        expect(sdp).toContain('m=audio 20000 RTP/AVP 0 8 111 101 110')
+        expect(sdp).toContain('a=rtpmap:111 opus/48000/2')
+        expect(sdp).toContain('a=rtpmap:110 telephone-event/48000')
+        // Lendo a própria oferta, vale a ordem: G.711 e o DTMF de 8000 Hz.
+        expect(parseSdp(sdp)).toMatchObject({ codec: 'PCMU', payload: 0, dtmfPayload: 101, dtmfRate: 8000 })
+    })
+
+    it('Opus (RF-47): um lado que só tem Opus é aceito, e a resposta usa os números dele', () => {
+        const offer = [
+            'v=0',
+            'c=IN IP4 10.0.0.1',
+            'm=audio 4000 RTP/AVP 107 96 97',
+            'a=rtpmap:107 opus/48000/2',
+            'a=rtpmap:96 telephone-event/8000',
+            'a=rtpmap:97 telephone-event/48000',
+            ''
+        ].join('\r\n')
+        const media = parseSdp(offer)
+        expect(media).toMatchObject({ codec: 'opus', payload: 107, dtmfPayload: 97, dtmfRate: 48000 })
+        const answer = buildSdp({
+            ...local,
+            codecs: ['opus'],
+            opusPayload: 107,
+            dtmfPayload: undefined,
+            dtmf48Payload: 97
+        })
+        expect(answer).toContain('m=audio 20000 RTP/AVP 107 97')
+        expect(answer).toContain('a=rtpmap:107 opus/48000/2')
+        expect(answer).not.toContain('telephone-event/8000')
+        // Sem o telephone-event de 48000 na oferta, o DTMF fica no de 8000.
+        expect(parseSdp(offer.replace('a=rtpmap:97 telephone-event/48000\r\n', '').replace(' 97', ''))).toMatchObject({
+            dtmfPayload: 96,
+            dtmfRate: 8000
+        })
+    })
+
     it('áudio cifrado: a chave vai e volta na linha a=crypto', () => {
         const key = newSrtpKey()
         const sdp = buildSdp({ ...local, crypto: { tag: 1, key } })
@@ -96,7 +136,7 @@ describe('SDP (RF-39)', () => {
         expect(() => parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 UDP/TLS/RTP/SAVPF 0\r\n')).toThrow(SdpError)
         expect(() => parseSdp('v=0\r\nm=video 4000 RTP/AVP 96\r\n')).toThrow(/não ofereceu áudio/)
         expect(() =>
-            parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/AVP 111\r\na=rtpmap:111 opus/48000/2\r\n')
+            parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/AVP 18\r\na=rtpmap:18 G729/8000\r\n')
         ).toThrow(/codec em comum/)
     })
 
@@ -404,5 +444,69 @@ describe('diagnóstico de rede (RF-46)', () => {
         expect(isNetDiagRequest({ domain: 'a b' })).toBe(false)
         expect(isNetDiagRequest({ domain: 'x', stun: { host: 'x', port: 0 } })).toBe(false)
         expect(isNetDiagRequest({ domain: 'x', tls: { host: 'a/b', port: 443 } })).toBe(false)
+    })
+})
+
+describe('Opus (RF-47)', () => {
+    it('codifica 20 ms em poucos bytes e decodifica de volta para 160 amostras audíveis', () => {
+        const codec = createCodec('opus')
+        try {
+            expect(codec.clockScale).toBe(6)
+            let last: Int16Array = new Int16Array(0)
+            // Os primeiros blocos ainda estão "esquentando" o codec; o volume se firma depois.
+            for (let i = 0; i < 10; i++) {
+                const packet = codec.encode(sine(160))
+                expect(packet.length).toBeGreaterThan(5)
+                expect(packet.length).toBeLessThan(120)
+                last = codec.decode(packet)
+                expect(last).toHaveLength(160)
+            }
+            expect(Math.max(...last.map(Math.abs))).toBeGreaterThan(4000)
+        } finally {
+            codec.close()
+        }
+    })
+
+    it('duas sessões RTP falam Opus: o relógio anda a 48000 Hz e o dígito usa o telephone-event de 48000', async () => {
+        const got: { audio: Int16Array[]; dtmf: string[] } = { audio: [], dtmf: [] }
+        const wire: { type: number; timestamp: number; duration?: number }[] = []
+        const a = new RtpSession({ audio: () => undefined, dtmf: () => undefined })
+        const b = new RtpSession({ audio: (pcm) => got.audio.push(pcm), dtmf: (tone) => got.dtmf.push(tone) })
+        try {
+            const [, portB] = [await a.open(), await b.open()]
+            const remote = {
+                address: '127.0.0.1',
+                codec: 'opus' as const,
+                payload: 111,
+                dtmfPayload: 110,
+                dtmfRate: 48000 as const
+            }
+            a.setRemote({ ...remote, port: portB })
+            b.setRemote({ ...remote, port: 9 })
+            a.wire = (direction, data) => {
+                const packet = parseRtp(data)!
+                if (direction === 'out')
+                    wire.push({
+                        type: packet.payloadType,
+                        timestamp: packet.timestamp,
+                        duration: packet.payloadType === 110 ? packet.payload.readUInt16BE(2) : undefined
+                    })
+            }
+            for (let i = 0; i < 5; i++) a.sendPcm(sine(160))
+            await a.sendDtmf('7')
+            for (let i = 0; i < 100 && (got.audio.length < 5 || got.dtmf.length < 1); i++)
+                await new Promise((done) => setTimeout(done, 20))
+            expect(got.audio).toHaveLength(5)
+            expect(got.audio[4]).toHaveLength(160)
+            expect(got.dtmf).toEqual(['7'])
+            // 20 ms de Opus são 960 unidades do relógio de 48000 Hz.
+            expect((wire[1]!.timestamp - wire[0]!.timestamp) >>> 0).toBe(960)
+            expect(b.getStats().jitterMs).toBeLessThan(50)
+            // A duração do dígito também vai em unidades de 48000 Hz: 1280 amostras de 8000 Hz são 7680.
+            expect(Math.max(...wire.filter((p) => p.type === 110).map((p) => p.duration!))).toBe(7680)
+        } finally {
+            a.close()
+            b.close()
+        }
     })
 })

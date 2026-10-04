@@ -297,6 +297,19 @@ try {
     await answered.waitFor({ state: 'detached', timeout: 10000 })
     await page.waitForTimeout(500)
 
+    // ─── Opus (RF-47) ───
+    await addAccount('Puro Opus', '2006', 'UDP')
+    await account('Puro Opus').locator('.dot.registered').waitFor({ timeout: 15000 })
+    await dial('Puro Opus', '600')
+    const opus = live(/2006\s*→\s*600/)
+    await opus.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await opus.locator('.quality').filter({ hasText: /opus$/ }).waitFor({ timeout: 15000 })
+    step(`ramal que só fala Opus: ${(await opus.locator('.quality').textContent()).trim().replace(/\s+/g, ' ')}`)
+    await opus.getByRole('button', { name: 'Desligar' }).click()
+    await opus.waitFor({ state: 'detached', timeout: 10000 })
+    // Opus dos dois lados, sem conversão no PBX: o ramal WebRTC 1002 atende sozinho.
+    await page.waitForTimeout(500)
+
     // SIP puro com WebRTC: o Asterisk faz a ponte entre o RTP simples e o DTLS-SRTP. O ramal 1021 só
     // fala G.711, porque o Asterisk de teste não converte Opus.
     await page.getByRole('button', { name: '+ Nova' }).click()
