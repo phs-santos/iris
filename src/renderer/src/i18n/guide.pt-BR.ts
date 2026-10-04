@@ -1,4 +1,5 @@
-// Conteúdo do guia de uso (entrega do M4). Texto puro com duas marcas: **negrito** e `código`.
+// Conteúdo do guia de uso (entrega do M4), em português do Brasil (RNF-13). Texto puro com duas
+// marcas: **negrito** e `código`. Outro idioma entra como guide.<idioma>.ts, com as mesmas seções.
 // As capturas de tela ficam em assets/guide e são geradas por scripts/guide-shots.mjs.
 
 export type GuideBlock =
@@ -27,7 +28,7 @@ export const GUIDE: GuideSection[] = [
         blocks: [
             {
                 type: 'p',
-                text: 'A Íris é um softphone: um telefone que roda no computador e fala com a central por SIP sobre WebSocket, com áudio por WebRTC. Ela foi feita para **testar** telefonia, não para atender clientes o dia todo.'
+                text: 'A Íris é um softphone: um telefone que roda no computador e fala com a central por SIP. As chamadas usam SIP sobre WebSocket, com áudio por WebRTC. Ela foi feita para **testar** telefonia, não para atender clientes o dia todo.'
             },
             { type: 'h', text: 'Para que usar' },
             {
@@ -45,7 +46,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'O que a central precisa ter' },
             {
                 type: 'p',
-                text: 'A Íris só conecta em centrais que aceitam **SIP sobre WebSocket seguro (WSS)** e áudio **WebRTC**. Asterisk (PJSIP com `transport` WSS), FreeSWITCH e Kamailio fazem isso. Uma central que só aceita SIP por UDP ou TCP não conecta direto: é preciso um gateway WebRTC na frente, como o Kamailio ou um Asterisk fazendo a ponte.'
+                text: 'Para **chamadas**, a central precisa aceitar **SIP sobre WebSocket seguro (WSS)** e áudio **WebRTC**. Asterisk (PJSIP com `transport` WSS), FreeSWITCH e Kamailio fazem isso. Numa central que só aceita **SIP puro por UDP, TCP ou TLS**, a Íris já **registra o ramal, mede a Saúde e mostra o SIP bruto**; as chamadas por SIP puro chegam numa próxima versão. Até lá, para ligar numa central assim, use um gateway WebRTC na frente, como o Kamailio ou um Asterisk fazendo a ponte.'
             },
             {
                 type: 'note',
@@ -169,6 +170,10 @@ export const GUIDE: GuideSection[] = [
             },
             {
                 type: 'p',
+                text: 'Quando o registro falha por algo passageiro (rede fora, central reiniciando), a conta mostra **tentando de novo** e a Íris refaz o registro sozinha, esperando cada vez mais entre as tentativas. Senha errada, ramal inexistente e login recusado não são tentados de novo. O limite de tentativas fica em **Configurações → Conexão**.'
+            },
+            {
+                type: 'p',
                 text: 'As etiquetas à direita do nome dizem: um **número** é a quantidade de chamadas ativas da conta; **AA** é auto-atender ligado; **SIM** é conta do PBX simulado.'
             },
             { type: 'h', text: 'Todas as contas de uma vez' },
@@ -214,9 +219,30 @@ export const GUIDE: GuideSection[] = [
                         'A senha do ramal. Ao editar, deixe em branco para manter a atual; digite só para trocar'
                     ],
                     [
+                        'Transporte',
+                        '**WebSocket seguro (WebRTC)** é o padrão e o único que faz chamadas hoje. **SIP por UDP, TCP ou TLS** fala SIP puro com a central, sem WebRTC'
+                    ],
+                    [
                         'WebSocket (WSS)',
-                        'O endereço do WebSocket da central, por exemplo `wss://pbx.empresa.com:8089/ws`'
+                        'Com o transporte WebSocket: o endereço do WebSocket da central, por exemplo `wss://pbx.empresa.com:8089/ws`'
+                    ],
+                    [
+                        'Servidor SIP (host e porta)',
+                        'Com SIP puro: só se a central atende num endereço ou numa porta diferente do domínio, por exemplo `10.0.0.5:5080`. Vazio usa o domínio e a porta padrão (5060; em TLS, 5061)'
                     ]
+                ]
+            },
+            { type: 'h', text: 'Contas por SIP puro (UDP, TCP ou TLS)' },
+            {
+                type: 'p',
+                text: 'Servem para centrais que não têm WebSocket. Nesta versão a conta **registra**, renova o registro sozinha, responde ao `OPTIONS` da central, mede a **Saúde** e mostra o **SIP bruto** e o **Fluxo SIP** do registro. **Ainda não faz nem recebe chamadas**: uma chamada que chega é recusada com `480`, e o log avisa. As chamadas vêm numa próxima versão.'
+            },
+            {
+                type: 'list',
+                items: [
+                    'Em **TLS**, um certificado autoassinado é recusado e a tela oferece **Confiar neste host**, como no WebSocket.',
+                    'Em **UDP**, a Íris repete o pedido se a central não responder e desiste depois de 32 segundos, com o erro `408`.',
+                    'Na primeira vez, o firewall do sistema pode perguntar se a Íris pode usar a rede. Permita.'
                 ]
             },
             { type: 'h', text: 'Opções' },
@@ -577,6 +603,10 @@ export const GUIDE: GuideSection[] = [
                         'A cor de destaque (seis paletas prontas ou a sua própria cor) e o tamanho da interface'
                     ],
                     ['Áudio', 'Microfone e alto-falante. Veja "Áudio"'],
+                    [
+                        'Conexão',
+                        'Quantas vezes a Íris tenta registrar de novo depois de uma queda, com espera crescente (2 s, 4 s, 8 s, até 1 minuto). O padrão é 10; com 0 ela não desiste'
+                    ],
                     ['Ajuda da IA', 'A chave da OpenRouter, o modelo padrão e a máscara. Veja "Ajuda da IA"'],
                     ['Certificados', 'Os PBX com certificado autoassinado que você aceitou, com a opção de remover'],
                     ['Importar e exportar', 'Levar as contas para outra máquina. Veja "Importar e exportar contas"'],
@@ -873,6 +903,7 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     '**Fechar a janela só a esconde.** Os ramais continuam registrados e as chamadas continuam.',
                     'O **ícone na bandeja** (área de notificação) traz a janela de volta com um clique e tem o menu **Mostrar Íris** e **Sair**.',
+                    'A **cor do ícone** diz o estado geral: cinza sem conta registrada, verde com contas registradas, amarelo com chamada tocando, azul em chamada e vermelho quando alguma conta está em erro. Parar o mouse em cima mostra os números.',
                     '**Sair** encerra o app de verdade: os ramais saem do ar e as chamadas caem.',
                     'Uma **chamada recebida** gera uma notificação do sistema; clicar nela abre a janela. Na Bancada, ela também aparece numa faixa colorida no alto da coluna do meio, com **Atender** e **Recusar**.'
                 ]
@@ -925,7 +956,11 @@ export const GUIDE: GuideSection[] = [
                     ],
                     ['Cenários', '`scenarios.json`'],
                     ['Preferências', '`settings.json`: áudio, canal de atualização, hosts confiáveis, opções da IA'],
-                    ['Log', 'Só na memória, até o app fechar ou você salvar']
+                    ['Log das contas (eventos e SIP)', 'Só na memória, até o app fechar ou você salvar'],
+                    [
+                        'Log interno do app',
+                        'Pasta `logs`: `iris.log` e até quatro anteriores, de 10 MB cada. Guarda só as falhas do próprio app (erros, canais que falharam), para investigar um defeito. Não tem SIP nem senha'
+                    ]
                 ]
             },
             {
@@ -937,7 +972,7 @@ export const GUIDE: GuideSection[] = [
                 type: 'list',
                 items: [
                     'Não grava senha em texto puro: o arquivo de senhas é cifrado. Quem tiver a pasta de dados inteira, porém, consegue ler as senhas; trate essa pasta como confidencial.',
-                    'Não apaga um arquivo de senhas estragado: ele é guardado ao lado, com a data no nome, e a tela pede para digitar as senhas de novo.',
+                    'Não apaga um arquivo estragado. Senhas, contas, cenários ou preferências que não dão para ler são guardados ao lado, com a data no nome, e a tela avisa. O app abre mesmo assim.',
                     'Não põe senha, hash nem nonce no log, nem na tela nem nos arquivos salvos.',
                     'Não manda nada para fora além do que você pede: o registro e as chamadas com a sua central, a busca por atualização no GitHub e, se você usar, o texto da prévia para a OpenRouter.',
                     'Não aceita certificado inválido sem você mandar, e só para o host escolhido.'

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed, ref } from 'vue'
 import type { UpdateChannel, UpdateInfo } from '@shared/types'
 import { useCallsStore } from '@renderer/stores/calls'
@@ -12,7 +13,7 @@ const api = window.iris.update
 
 /** No Mac sem assinatura, atualizar pelo Terminal evita o aviso da Apple (scripts/install-macos.sh, RNF-17). */
 const INSTALL_COMMAND =
-    'curl -fsSL https://raw.githubusercontent.com/phs-santos/iris/main/scripts/install-macos.sh | bash'
+    'curl -fsSL https://raw.githubusercontent.com/phs-santos/iris/main/scripts/install-macos.sh | bash' // i18n-ok: comando, não frase
 const copied = ref(false)
 
 async function copyCommand(): Promise<void> {
@@ -29,19 +30,19 @@ const message = computed(() => {
         case 'unsupported':
             return s.reason
         case 'idle':
-            return 'Ainda não procurou por versão nova.'
+            return t('updateSection.ainda_nao_procurou_por_versao')
         case 'checking':
-            return 'Procurando versão nova…'
+            return t('updateSection.procurando_versao_nova')
         case 'up-to-date':
-            return 'Você já está na versão mais recente deste canal.'
+            return t('updateSection.voce_ja_esta_na_versao')
         case 'available':
-            return `A versão ${s.version} está disponível. Nada foi baixado ainda.`
+            return t('updateSection.a_versao_esta_disponivel_nada', { version: s.version })
         case 'downloading':
-            return `Baixando a versão ${s.version}: ${s.percent}%`
+            return t('updateSection.baixando_a_versao', { version: s.version, percent: s.percent })
         case 'ready':
-            return `A versão ${s.version} foi baixada. Ela entra quando o app reiniciar.`
+            return t('updateSection.a_versao_foi_baixada_ela', { version: s.version })
         case 'error':
-            return `Não deu para atualizar: ${s.message}`
+            return t('updateSection.nao_deu_para_atualizar', { message: s.message })
     }
 })
 </script>
@@ -49,48 +50,49 @@ const message = computed(() => {
 <template>
     <section class="set-section">
         <div class="set-head">
-            <h3>Atualização</h3>
+            <h3>{{ $t('updateSection.atualizacao') }}</h3>
             <p>
-                Versão instalada: <b class="mono">{{ info.currentVersion }}</b>
+                {{ $t('updateSection.versao_instalada') }} <b class="mono">{{ info.currentVersion }}</b>
             </p>
         </div>
         <label class="field">
-            <span class="label">Canal</span>
+            <span class="label">{{ $t('updateSection.canal') }}</span>
             <select
                 class="input"
                 :value="info.channel"
                 @change="emit('channel', ($event.target as HTMLSelectElement).value as UpdateChannel)"
             >
-                <option value="stable">Estável</option>
-                <option value="beta">Beta (recebe versões de teste)</option>
+                <option value="stable">{{ $t('updateSection.estavel') }}</option>
+                <option value="beta">{{ $t('updateSection.beta_recebe_versoes_de_teste') }}</option>
             </select>
         </label>
         <p class="status" :class="{ error: status.state === 'error' }" role="status">{{ message }}</p>
         <p v-if="status.state === 'ready' && calls.active.length" class="set-hint">
-            Encerre as chamadas antes de reiniciar.
+            {{ $t('updateSection.encerre_as_chamadas_antes_de') }}
         </p>
         <p v-if="status.state === 'error' && info.manual" class="set-hint">
-            Se não der pelo app, feche a Íris (Sair, na barra de menus) e cole este comando no Terminal. Ela volta na
-            versão nova e as contas continuam.
+            {{ $t('updateSection.se_nao_der_pelo_app') }}
         </p>
         <pre
             v-if="status.state === 'error' && info.manual"
             class="command mono"
             tabindex="0"
-            aria-label="Comando para atualizar pelo Terminal"
+            :aria-label="$t('updateSection.comando_para_atualizar_pelo_terminal')"
             >{{ INSTALL_COMMAND }}</pre>
         <div class="actions">
             <button v-if="status.state === 'error' && info.manual" class="btn" @click="copyCommand">
-                {{ copied ? 'Copiado' : 'Copiar comando' }}
+                {{ copied ? $t('updateSection.copiado') : $t('updateSection.copiar_comando') }}
             </button>
-            <button v-if="status.state === 'available'" class="btn primary" @click="api.download()">Baixar</button>
+            <button v-if="status.state === 'available'" class="btn primary" @click="api.download()">
+                {{ $t('updateSection.baixar') }}
+            </button>
             <button
                 v-else-if="status.state === 'ready'"
                 class="btn primary"
                 :disabled="calls.active.length > 0"
                 @click="api.install()"
             >
-                Reiniciar e instalar
+                {{ $t('updateSection.reiniciar_e_instalar') }}
             </button>
             <button
                 v-else
@@ -98,7 +100,7 @@ const message = computed(() => {
                 :disabled="!supported || status.state === 'checking' || status.state === 'downloading'"
                 @click="api.check()"
             >
-                Procurar atualização
+                {{ $t('updateSection.procurar_atualizacao') }}
             </button>
         </div>
     </section>

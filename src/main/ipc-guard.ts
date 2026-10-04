@@ -4,6 +4,7 @@
 import { app, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { appLog, describeError } from './app-log'
 
 /** Endereço da interface: o servidor do Vite em desenvolvimento, o index.html empacotado no resto. */
 export function rendererUrl(): string {
@@ -38,9 +39,15 @@ export function handle<A extends unknown[], R>(
     channel: string,
     fn: (event: IpcMainInvokeEvent, ...args: A) => R | Promise<R>
 ): void {
-    ipcMain.handle(channel, (event, ...args) => {
+    ipcMain.handle(channel, async (event, ...args) => {
         if (!isTrusted(event)) throw new Error(`Canal ${channel} recusado: remetente desconhecido`)
-        return fn(event, ...(args as A))
+        try {
+            return await fn(event, ...(args as A))
+        } catch (error) {
+            // Só o canal e o erro vão para o log interno (RNF-14); os argumentos podem ter senha.
+            appLog('error', `Canal ${channel} falhou: ${describeError(error)}`)
+            throw error
+        }
     })
 }
 

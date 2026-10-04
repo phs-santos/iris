@@ -14,34 +14,34 @@ function setMain(id: string): void {
 <template>
     <section class="set-section">
         <div class="set-head">
-            <h3>Perfil</h3>
-            <p>Quem está usando a Íris e por qual conta ela começa.</p>
+            <h3>{{ $t('profileSection.perfil') }}</h3>
+            <p>{{ $t('profileSection.quem_esta_usando_a_iris') }}</p>
         </div>
         <div class="set-group">
             <label class="set-row">
                 <span class="what">
-                    <b>Seu nome</b>
-                    <small>Já vem preenchido como nome de exibição nas contas novas.</small>
+                    <b>{{ $t('profileSection.seu_nome') }}</b>
+                    <small>{{ $t('profileSection.ja_vem_preenchido_como_nome') }}</small>
                 </span>
                 <input
                     class="input control"
                     :value="prefs.profile.name ?? ''"
                     maxlength="120"
-                    placeholder="Ex.: Ana do suporte"
+                    :placeholder="$t('profileSection.ex_ana_do_suporte')"
                     @change="prefs.setProfile({ name: ($event.target as HTMLInputElement).value.trim() || undefined })"
                 />
             </label>
             <label class="set-row">
                 <span class="what">
-                    <b>Conta principal</b>
-                    <small>Fica escolhida no discador quando o app abre.</small>
+                    <b>{{ $t('profileSection.conta_principal') }}</b>
+                    <small>{{ $t('profileSection.fica_escolhida_no_discador_quando') }}</small>
                 </span>
                 <select
                     class="input control"
                     :value="prefs.profile.mainAccountId ?? ''"
                     @change="setMain(($event.target as HTMLSelectElement).value)"
                 >
-                    <option value="">A primeira da lista</option>
+                    <option value="">{{ $t('profileSection.a_primeira_da_lista') }}</option>
                     <option v-for="a in accounts.accounts" :key="a.id" :value="a.id">
                         {{ a.name }} · {{ a.extension }}@{{ a.domain }}
                     </option>

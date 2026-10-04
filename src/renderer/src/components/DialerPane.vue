@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
@@ -37,7 +38,7 @@ async function dial(number = destination.value): Promise<void> {
         .filter(Boolean)
     const bad = headers.find((h) => !/^[A-Za-z0-9-]+:\s*.+$/.test(h))
     if (bad) {
-        error.value = `Cabeçalho inválido: "${bad}". Use o formato Nome: valor`
+        error.value = t('dialerPane.cabecalho_invalido_use_o_formato', { bad })
         return
     }
     try {
@@ -54,8 +55,12 @@ defineExpose({ focus: () => input.value?.focus() })
 <template>
     <section class="dialer">
         <div class="from">
-            <span class="label">Discar de</span>
-            <select v-model="accounts.selectedId" class="input from-select" aria-label="Conta de origem">
+            <span class="label">{{ $t('dialerPane.discar_de') }}</span>
+            <select
+                v-model="accounts.selectedId"
+                class="input from-select"
+                :aria-label="$t('dialerPane.conta_de_origem')"
+            >
                 <option v-for="a in accounts.accounts" :key="a.id" :value="a.id">
                     {{ a.name }} · {{ a.extension }}@{{ a.domain }}
                 </option>
@@ -67,14 +72,16 @@ defineExpose({ focus: () => input.value?.focus() })
                 ref="input"
                 v-model="destination"
                 class="input mono number"
-                placeholder="Número ou ramal"
-                aria-label="Número"
+                :placeholder="$t('dialerPane.numero_ou_ramal')"
+                :aria-label="$t('dialerPane.numero')"
                 autocomplete="off"
             />
-            <button class="btn go big" type="submit" :disabled="!registered || !destination.trim()">Ligar</button>
+            <button class="btn go big" type="submit" :disabled="!registered || !destination.trim()">
+                {{ $t('dialerPane.ligar') }}
+            </button>
         </form>
 
-        <p v-if="from && !registered" class="hint">Registre {{ from.name }} para ligar.</p>
+        <p v-if="from && !registered" class="hint">{{ $t('dialerPane.registre_para_ligar', { name: from.name }) }}</p>
         <p v-if="error" class="error">{{ error }}</p>
 
         <div class="chips">
@@ -84,13 +91,17 @@ defineExpose({ focus: () => input.value?.focus() })
                 class="chip mono"
                 type="button"
                 :disabled="!registered"
-                :title="`Ligar para ${s.number}`"
+                :title="$t('dialerPane.ligar_para', { number: s.number })"
                 @click="dial(s.number)"
             >
                 {{ s.number }} <span>{{ s.label }}</span>
             </button>
-            <button class="chip mono" type="button" @click="showKeypad = !showKeypad">teclado</button>
-            <button class="chip mono" type="button" @click="showHeaders = !showHeaders">cabeçalhos SIP</button>
+            <button class="chip mono" type="button" @click="showKeypad = !showKeypad">
+                {{ $t('dialerPane.teclado') }}
+            </button>
+            <button class="chip mono" type="button" @click="showHeaders = !showHeaders">
+                {{ $t('dialerPane.cabecalhos_sip') }}
+            </button>
         </div>
 
         <div v-if="showKeypad" class="keypad">
@@ -98,18 +109,18 @@ defineExpose({ focus: () => input.value?.focus() })
         </div>
 
         <div v-if="showHeaders" class="headers">
-            <label class="label" for="extra-headers">Cabeçalhos extras no INVITE, um por linha</label>
+            <label class="label" for="extra-headers">{{ $t('dialerPane.cabecalhos_extras_no_invite_um') }}</label>
             <textarea
                 id="extra-headers"
                 v-model="headersText"
                 class="input mono"
                 rows="2"
-                placeholder="X-Test-Id: cenario-42"
+                :placeholder="$t('dialerPane.x_test_id_cenario_42')"
             ></textarea>
         </div>
 
         <details v-if="from?.simulated" class="mock-help">
-            <summary>Números do PBX simulado</summary>
+            <summary>{{ $t('dialerPane.numeros_do_pbx_simulado') }}</summary>
             <ul>
                 <li v-for="m in MOCK_NUMBERS" :key="m.number">
                     <b class="mono">{{ m.number }}</b> {{ m.description }}

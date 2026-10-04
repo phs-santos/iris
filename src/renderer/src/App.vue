@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { t } from '@renderer/i18n'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Account, CertificateErrorEvent, UpdateChannel, UpdateInfo, WindowMode } from '@shared/types'
 import { useAccountsStore } from './stores/accounts'
 import { useCallsStore } from './stores/calls'
@@ -20,6 +21,7 @@ import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
 import logoMark from './assets/logo-mark.svg'
+import { accountHost } from './lib/accounts'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
@@ -50,8 +52,22 @@ const certError = ref<CertificateErrorEvent | null>(null)
 const dialer = ref<InstanceType<typeof DialerPane> | null>(null)
 
 const pbxCount = computed(() => accounts.groups.length)
+
 const registeredCount = computed(
     () => accounts.accounts.filter((a) => accounts.statusOf(a.id).state === 'registered').length
+)
+
+// Estado geral para o ícone da bandeja (RF-33).
+watch(
+    () => ({
+        accounts: accounts.accounts.length,
+        registered: registeredCount.value,
+        errors: accounts.accounts.filter((a) => accounts.statusOf(a.id).state === 'error').length,
+        ringing: calls.ringingIncoming.length,
+        calls: calls.active.length - calls.ringingIncoming.length
+    }),
+    (counts) => window.iris.setTray(counts),
+    { deep: true }
 )
 
 function newAccount(): void {
@@ -62,19 +78,12 @@ async function trustHost(): Promise<void> {
     if (!certError.value) return
     const host = certError.value.host
     const settings = await window.iris.settings.load()
-    settings.trustedHosts = [...new Set([...settings.trustedHosts, host])]
-    await window.iris.settings.save(settings)
-    log.add(null, 'warn', 'event', `Certificado de ${host} aceito manualmente`)
+    await window.iris.settings.update({ trustedHosts: [...new Set([...settings.trustedHosts, host])] })
+    log.add(null, 'warn', 'event', t('app.certificado_de_aceito_manualmente', { host }))
     certError.value = null
     // Refaz o registro das contas que usam esse host.
     for (const account of accounts.accounts) {
-        let accountHost = ''
-        try {
-            accountHost = new URL(account.wssUrl).hostname
-        } catch {
-            continue
-        }
-        if (!account.simulated && accountHost === host) void accounts.register(account.id)
+        if (accountHost(account) === host) void accounts.register(account.id)
     }
 }
 
@@ -135,26 +144,41 @@ onMounted(async () => {
     window.addEventListener('keydown', onKey)
     offCert = window.iris.onCertificateError((event) => {
         certError.value = event
-        log.add(null, 'error', 'event', `Certificado TLS recusado para ${event.host}: ${event.error}`)
+        log.add(
+            null,
+            'error',
+            'event',
+            t('app.certificado_tls_recusado_para', { host: event.host, error: event.error })
+        )
     })
     offUpdate = window.iris.update.onStatus((status) => {
         if (!update.value) return
         const before = update.value.status.state
         update.value = { ...update.value, status }
         if (status.state === 'available' && before !== 'available')
-            log.add(null, 'info', 'event', `Versão ${status.version} disponível. Abra "Atualização" para baixar.`)
+            log.add(
+                null,
+                'info',
+                'event',
+                t('app.versao_disponivel_abra_atualizacao_para', { version: status.version })
+            )
     })
     // Sem esperar e sem deixar um erro daqui parar o resto: as contas não dependem da atualização.
     void window.iris.update
         .info()
         .then((value) => (update.value = value))
-        .catch((error) => log.add(null, 'warn', 'event', `Atualização indisponível: ${error.message}`))
+        .catch((error) => log.add(null, 'warn', 'event', t('app.atualizacao_indisponivel', { message: error.message })))
     const info = await window.iris.appInfo()
     log.add(
         null,
         'info',
         'event',
-        `Íris ${info.version} · Electron ${info.electron} · Chromium ${info.chrome} · ${info.platform}`
+        t('app.iris_electron_chromium', {
+            version: info.version,
+            electron: info.electron,
+            chrome: info.chrome,
+            platform: info.platform
+        })
     )
     await prefs.load()
     await devices.load()
@@ -165,6 +189,7 @@ onMounted(async () => {
     const main = prefs.profile.mainAccountId
     if (main && accounts.accounts.some((a) => a.id === main)) accounts.selectedId = main
     await scenarios.load()
+    await accounts.refreshProblems()
 })
 onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
@@ -176,39 +201,46 @@ onUnmounted(() => {
 <template>
     <div class="shell">
         <header v-if="mode === 'bench'" class="topbar">
-            <span class="brand"><img class="brand-mark" :src="logoMark" alt="" />Íris</span>
+            <span class="brand"><img class="brand-mark" :src="logoMark" alt="" />{{ $t('app.iris') }}</span>
             <span class="summary mono tabular">
-                {{ accounts.accounts.length }} contas · {{ pbxCount }} PBX · {{ registeredCount }} registradas ·
-                {{ calls.active.length }} chamadas
+                {{
+                    $t('app.contas_pbx_registradas_chamadas', {
+                        length: accounts.accounts.length,
+                        pbxCount,
+                        registeredCount,
+                        length2: calls.active.length
+                    })
+                }}
             </span>
             <span class="spacer"></span>
-            <button class="btn small" title="Só o discador e a chamada, numa janela estreita" @click="setMode('phone')">
-                Modo Telefone
+            <button class="btn small" :title="$t('app.so_o_discador_e_a')" @click="setMode('phone')">
+                {{ $t('app.modo_telefone') }}
             </button>
-            <button v-if="updatePending" class="btn small primary" @click="openUpdate">Atualização disponível</button>
-            <button class="btn small" @click="showGuide = true">Guia</button>
-            <button class="btn small" title="Configurações (Ctrl/Cmd+,)" @click="settingsAt = 'profile'">
-                Configurações
+            <button v-if="updatePending" class="btn small primary" @click="openUpdate">
+                {{ $t('app.atualizacao_disponivel') }}
+            </button>
+            <button class="btn small" @click="showGuide = true">{{ $t('app.guia') }}</button>
+            <button class="btn small" :title="$t('app.configuracoes_ctrl_cmd')" @click="settingsAt = 'profile'">
+                {{ $t('app.configuracoes') }}
             </button>
         </header>
 
         <div v-if="certError" class="banner" role="alert">
             <span>
-                O certificado TLS de <b class="mono">{{ certError.host }}</b> foi recusado ({{ certError.error }}). Se
-                este PBX é seu e usa certificado autoassinado, você pode confiar nele.
+                {{ $t('app.o_certificado_tls_de') }} <b class="mono">{{ certError.host }}</b>
+                {{ $t('app.foi_recusado_se_este_pbx', { error: certError.error }) }}
             </span>
-            <button class="btn small stop" @click="trustHost">Confiar neste host</button>
-            <button class="btn small" @click="certError = null">Ignorar</button>
+            <button class="btn small stop" @click="trustHost">{{ $t('app.confiar_neste_host') }}</button>
+            <button class="btn small" @click="certError = null">{{ $t('app.ignorar') }}</button>
         </div>
 
         <div v-if="waitingVault" class="banner warn" role="status">
-            Trazendo as senhas salvas por uma versão anterior. Se o sistema pedir a senha de login (no macOS, o pedido
-            das Chaves), digite e confirme; isso acontece só uma vez. As contas aparecem em seguida.
+            {{ $t('app.trazendo_as_senhas_salvas_por') }}
         </div>
 
         <div v-if="accounts.secretsProblem" class="banner warn" role="status">
             <span>{{ accounts.secretsProblem }}</span>
-            <button class="btn small" @click="accounts.secretsProblem = null">Entendi</button>
+            <button class="btn small" @click="accounts.secretsProblem = null">{{ $t('app.entendi') }}</button>
         </div>
 
         <PhoneView
@@ -222,7 +254,7 @@ onUnmounted(() => {
             <AccountsPane @new="newAccount" @edit="(a) => (editing = a)" @health="(id) => (healthFor = id)" />
 
             <section class="center">
-                <div class="center-tabs" role="tablist" aria-label="Área central">
+                <div class="center-tabs" role="tablist" :aria-label="$t('app.area_central')">
                     <button
                         role="tab"
                         class="ctab"
@@ -230,7 +262,7 @@ onUnmounted(() => {
                         :aria-selected="centerTab === 'phone'"
                         @click="centerTab = 'phone'"
                     >
-                        Telefone
+                        {{ $t('app.telefone') }}
                         <span v-if="calls.active.length" class="count tabular">{{ calls.active.length }}</span>
                     </button>
                     <button
@@ -240,8 +272,8 @@ onUnmounted(() => {
                         :aria-selected="centerTab === 'scenarios'"
                         @click="centerTab = 'scenarios'"
                     >
-                        Cenários
-                        <span v-if="scenarios.running" class="count run">rodando</span>
+                        {{ $t('app.cenarios') }}
+                        <span v-if="scenarios.running" class="count run">{{ $t('app.rodando') }}</span>
                     </button>
                 </div>
                 <!-- Chamada recebida em destaque, acima de tudo, em qualquer aba (RF-10). -->
@@ -250,27 +282,26 @@ onUnmounted(() => {
                     :key="call.id"
                     class="incoming"
                     role="region"
-                    :aria-label="`Chamada recebida de ${call.remoteName || call.remote}`"
+                    :aria-label="$t('app.chamada_recebida_de', { p: call.remoteName || call.remote })"
                 >
                     <span class="ring-dot" aria-hidden="true"></span>
                     <span class="incoming-text">
                         <b>{{ call.remoteName || call.remote }}</b>
                         <span class="mono">{{ call.remote }} → {{ accounts.nameOf(call.accountId) }}</span>
                     </span>
-                    <button class="btn go" @click="calls.answer(call.id)">Atender</button>
-                    <button class="btn stop" @click="calls.reject(call.id)">Recusar</button>
+                    <button class="btn go" @click="calls.answer(call.id)">{{ $t('app.atender') }}</button>
+                    <button class="btn stop" @click="calls.reject(call.id)">{{ $t('app.recusar') }}</button>
                 </div>
                 <template v-if="centerTab === 'phone'">
                     <DialerPane ref="dialer" />
                     <div class="calls-head">
-                        <span class="label">Chamadas</span>
-                        <span class="label tabular">{{ calls.active.length }} ativas</span>
+                        <span class="label">{{ $t('app.chamadas') }}</span>
+                        <span class="label tabular">{{ $t('app.ativas', { length: calls.active.length }) }}</span>
                     </div>
                     <div class="calls">
                         <CallCard v-for="call in calls.calls" :key="call.id" :call="call" />
                         <p v-if="calls.calls.length === 0" class="empty">
-                            Nenhuma chamada. Escolha uma conta registrada e disque um número, ou use um dos atalhos
-                            acima.
+                            {{ $t('app.nenhuma_chamada_escolha_uma_conta') }}
                         </p>
                     </div>
                 </template>

@@ -1,5 +1,7 @@
 import type { Account, AccountsExport, Preset } from '@shared/types'
 import type { RegStatus } from '@renderer/sip/engine'
+import { parseSipServer } from '@shared/sip-target'
+import { t } from '@renderer/i18n'
 
 export const ACCOUNT_COLORS = ['#3fcf86', '#6b9cf5', '#f0b13e', '#e879a6', '#5fd0d6', '#b48cf2', '#f08a5d']
 
@@ -15,6 +17,8 @@ export function newAccount(partial: Partial<Account> = {}): Account {
         authUsername: '',
         displayName: '',
         wssUrl: '',
+        transport: 'ws',
+        sipServer: '',
         iceServers: '',
         dtmfMode: 'auto',
         autoRegister: false,
@@ -69,17 +73,17 @@ export function sampleAccounts(): Array<{ account: Account; password: string }> 
     ]
 }
 
-const stateText: Record<RegStatus['state'], string> = {
-    disconnected: 'desconectada',
-    connecting: 'conectando',
-    connected: 'WebSocket conectado, aguardando registro',
-    registered: 'registrada',
-    error: 'erro'
-}
+const stateText = (): Record<RegStatus['state'], string> => ({
+    disconnected: t('accounts.desconectada'),
+    connecting: t('accounts.conectando'),
+    connected: t('accounts.conectado_aguardando'),
+    registered: t('accounts.registrada'),
+    error: t('accounts.erro')
+})
 
 export function describeStatus(status: RegStatus): string {
-    if (status.state !== 'error') return stateText[status.state]
-    return [status.code, status.reason].filter(Boolean).join(' ') || 'erro'
+    if (status.state !== 'error') return stateText()[status.state]
+    return [status.code, status.reason].filter(Boolean).join(' ') || t('accounts.erro')
 }
 
 /** Erro de registro em português: o que aconteceu e o que conferir. O código original aparece ao lado. */
@@ -94,35 +98,57 @@ export function explainRegError(status: RegStatus): RegErrorHelp | null {
     switch (status.code) {
         case 401:
         case 407:
-            return { title: 'O PBX não aceitou a senha', hint: 'Confira a senha e o usuário de autenticação.' }
+            return { title: t('accounts.senha_recusada'), hint: t('accounts.senha_recusada_dica') }
         case 403:
-            return { title: 'O PBX recusou o login', hint: 'Confira usuário e senha, e se o ramal pode registrar.' }
+            return { title: t('accounts.login_recusado'), hint: t('accounts.login_recusado_dica') }
         case 404:
-            return { title: 'O ramal não existe no PBX', hint: 'Confira o ramal e o domínio SIP.' }
+            return { title: t('accounts.ramal_inexistente'), hint: t('accounts.ramal_inexistente_dica') }
         case 408:
-            return { title: 'O PBX não respondeu a tempo', hint: 'Confira o endereço do WebSocket e a rede.' }
+            return { title: t('accounts.sem_resposta'), hint: t('accounts.sem_resposta_dica') }
         case 480:
         case 503:
-            return { title: 'O PBX está indisponível', hint: 'Tente de novo em instantes ou rode Saúde.' }
+            return { title: t('accounts.indisponivel'), hint: t('accounts.indisponivel_dica') }
     }
     if (/websocket|1006|connect|fetch|network|timeout/i.test(reason) || status.code === 1006)
         return {
-            title: 'Não conectou ao PBX',
-            hint: 'Confira o endereço do WebSocket (wss://…), a porta e o certificado. Saúde testa cada parte.'
+            title: t('accounts.nao_conectou'),
+            hint: t('accounts.nao_conectou_dica')
         }
-    return { title: 'O registro falhou', hint: 'Abra Saúde ou "Por que falhou?" para entender o motivo.' }
+    return { title: t('accounts.registro_falhou'), hint: t('accounts.registro_falhou_dica') }
+}
+
+/** Host do PBX da conta, para casar com a lista de certificados aceitos (RF-37). */
+export function accountHost(account: Account): string | null {
+    if (account.simulated) return null
+    const transport = account.transport ?? 'ws'
+    if (transport !== 'ws') return parseSipServer(account.sipServer, account.domain, transport)?.host ?? null
+    try {
+        return new URL(account.wssUrl).hostname
+    } catch {
+        return null
+    }
 }
 
 /** Campos obrigatórios e formato do WSS. Retorna mensagens por campo. */
 export function validateAccount(account: Account, password: string): Record<string, string> {
     const errors: Record<string, string> = {}
-    if (!account.name.trim()) errors.name = 'Dê um nome para reconhecer a conta'
-    if (!account.extension.trim()) errors.extension = 'Informe o ramal'
-    if (!account.domain.trim()) errors.domain = 'Informe o domínio SIP do PBX'
+    if (!account.name.trim()) errors.name = t('accounts.valida_nome')
+    if (!account.extension.trim()) errors.extension = t('accounts.valida_ramal')
+    if (!account.domain.trim()) errors.domain = t('accounts.valida_dominio')
     if (!account.simulated) {
-        if (!/^wss?:\/\/.+/i.test(account.wssUrl.trim()))
-            errors.wssUrl = 'Use um endereço como wss://pbx.empresa.com:8089/ws'
-        if (!password) errors.password = 'Informe a senha do ramal'
+        const transport = account.transport ?? 'ws'
+        if (transport === 'ws') {
+            if (!/^wss?:\/\/.+/i.test(account.wssUrl.trim())) errors.wssUrl = t('accounts.valida_wss')
+        } else {
+            // SIP puro (RF-39): o ramal e o domínio entram direto nas mensagens.
+            if (account.extension.trim() && !/^[A-Za-z0-9_.!~*'()&=+$,;?/%-]+$/.test(account.extension.trim()))
+                errors.extension = t('accounts.valida_ramal_puro')
+            if (account.domain.trim() && !parseSipServer('', account.domain, transport))
+                errors.domain = t('accounts.valida_dominio_puro')
+            if (!parseSipServer(account.sipServer, account.domain || 'x', transport))
+                errors.sipServer = t('accounts.valida_servidor')
+        }
+        if (!password) errors.password = t('accounts.valida_senha')
     }
     return errors
 }
@@ -131,7 +157,7 @@ export function validateAccount(account: Account, password: string): Record<stri
 export function normalizeImported(data: unknown): Array<{ account: Account; password?: string }> {
     const file = data as Partial<AccountsExport>
     if (!file || file.format !== 'iris/accounts' || !Array.isArray(file.accounts)) {
-        throw new Error('Este arquivo não é uma exportação de contas da Íris')
+        throw new Error(t('accounts.importacao_invalida'))
     }
     return file.accounts.map((raw) => {
         const { password, ...rest } = raw

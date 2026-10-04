@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore, type CallView } from '@renderer/stores/calls'
@@ -25,9 +26,10 @@ const established = computed(() => c.value.state === 'established')
 const stateInfo = computed(() => {
     const s = c.value
     if (s.state === 'ended') return { text: s.failed ? 'falhou' : 'encerrada', cls: s.failed ? 'bad' : 'neutral' }
-    if (s.held || s.heldByRemote) return { text: s.held ? 'em espera' : 'em espera (remoto)', cls: 'hold' }
-    if (s.state === 'established') return { text: 'em chamada', cls: 'ok' }
-    if (s.state === 'early') return { text: 'early media', cls: 'warn' }
+    if (s.held || s.heldByRemote)
+        return { text: s.held ? t('callCard.em_espera') : t('callCard.em_espera_remoto'), cls: 'hold' }
+    if (s.state === 'established') return { text: t('callCard.em_chamada'), cls: 'ok' }
+    if (s.state === 'early') return { text: t('callCard.early_media'), cls: 'warn' }
     if (s.direction === 'in') return { text: 'tocando', cls: 'warn' }
     if (s.state === 'ringing') return { text: 'chamando', cls: 'warn' }
     return { text: 'discando', cls: 'neutral' }
@@ -98,31 +100,38 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
         <div class="meta mono">
             <span>{{ account?.name }}</span>
             <span v-if="call.progress && call.state !== 'established' && live">· {{ call.progress }}</span>
-            <span v-if="call.muted">· mudo</span>
-            <span v-if="call.transfer">· transferência {{ call.transfer }}</span>
-            <span v-if="consulting">· consultando {{ consulting.remote }}</span>
-            <span v-if="call.dtmfReceived">· DTMF recebido {{ call.dtmfReceived }}</span>
+            <span v-if="call.muted">{{ $t('callCard.mudo') }}</span>
+            <span v-if="call.transfer">{{ $t('callCard.transferencia', { transfer: call.transfer }) }}</span>
+            <span v-if="consulting">{{ $t('callCard.consultando', { remote: consulting.remote }) }}</span>
+            <span v-if="call.dtmfReceived">{{
+                $t('callCard.dtmf_recebido', { dtmfReceived: call.dtmfReceived })
+            }}</span>
             <span v-if="call.endText">· {{ call.endText }}</span>
-            <button v-if="!live" class="btn small explain" @click.stop="ai.explainCall(call)">Explicar com IA</button>
+            <button v-if="!live" class="btn small explain" @click.stop="ai.explainCall(call)">
+                {{ $t('callCard.explicar_com_ia') }}
+            </button>
         </div>
 
         <div v-if="live && consultOf" class="consult" @click.stop>
             <span>
-                Consulta para transferir <b class="mono">{{ consultOf.remote }}</b>
-                <span class="muted">{{ established ? '' : '(aguardando atender)' }}</span>
+                {{ $t('callCard.consulta_para_transferir') }} <b class="mono">{{ consultOf.remote }}</b>
+                <span class="muted">{{ established ? '' : $t('callCard.aguardando_atender') }}</span>
             </span>
             <button class="btn go" :disabled="!established" @click="calls.completeTransfer(call.id)">
-                Concluir transferência
+                {{ $t('callCard.concluir_transferencia') }}
             </button>
-            <button class="btn" @click="calls.cancelConsult(call.id)">Cancelar e voltar</button>
+            <button class="btn" @click="calls.cancelConsult(call.id)">{{ $t('callCard.cancelar_e_voltar') }}</button>
         </div>
 
         <div v-if="live" class="controls" @click.stop>
             <template v-if="call.direction === 'in' && call.state === 'ringing'">
                 <button class="btn go" @click="calls.answer(call.id)">
-                    Atender<span v-if="autoAnswerIn !== null" class="muted-inv"> (auto em {{ autoAnswerIn }} s)</span>
+                    {{ $t('callCard.atender')
+                    }}<span v-if="autoAnswerIn !== null" class="muted-inv">
+                        {{ $t('callCard.auto_em_s', { autoAnswerIn }) }}</span
+                    >
                 </button>
-                <button class="btn stop" @click="calls.reject(call.id)">Recusar</button>
+                <button class="btn stop" @click="calls.reject(call.id)">{{ $t('callCard.recusar') }}</button>
             </template>
             <template v-else>
                 <button
@@ -131,7 +140,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     :disabled="!established"
                     @click="calls.toggleMute(call.id)"
                 >
-                    {{ call.muted ? 'Ativar mic' : 'Mudo' }}
+                    {{ call.muted ? $t('callCard.ativar_mic') : $t('callCard.mudo_2') }}
                 </button>
                 <button
                     class="btn"
@@ -139,10 +148,10 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     :disabled="!established"
                     @click="calls.toggleHold(call.id)"
                 >
-                    {{ call.held ? 'Retomar' : 'Espera' }}
+                    {{ call.held ? $t('callCard.retomar') : $t('callCard.espera') }}
                 </button>
                 <button class="btn" :class="{ on: showDtmf }" :disabled="!established" @click="showDtmf = !showDtmf">
-                    DTMF
+                    {{ $t('callCard.dtmf') }}
                 </button>
                 <button
                     class="btn"
@@ -150,9 +159,9 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     :disabled="!established || Boolean(consulting) || Boolean(consultOf)"
                     @click="showTransfer = !showTransfer"
                 >
-                    Transferir
+                    {{ $t('callCard.transferir') }}
                 </button>
-                <button class="btn stop" @click="calls.hangup(call.id)">Desligar</button>
+                <button class="btn stop" @click="calls.hangup(call.id)">{{ $t('callCard.desligar') }}</button>
             </template>
         </div>
 
@@ -162,17 +171,19 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     v-model="dtmf"
                     class="input mono"
                     :class="{ invalid: dtmfError }"
-                    placeholder="1,w2,4321#"
-                    aria-label="Sequência DTMF"
+                    :placeholder="$t('callCard.t_1_w2_4321')"
+                    :aria-label="$t('callCard.sequencia_dtmf')"
                 />
                 <button v-if="!call.dtmfRunning" class="btn primary" type="submit" :disabled="!dtmf.trim()">
-                    Enviar
+                    {{ $t('callCard.enviar') }}
                 </button>
-                <button v-else class="btn" type="button" @click="calls.stopDtmf(call.id)">Parar</button>
+                <button v-else class="btn" type="button" @click="calls.stopDtmf(call.id)">
+                    {{ $t('callCard.parar') }}
+                </button>
             </form>
             <p v-if="dtmfError" class="error">{{ dtmfError }}</p>
             <p v-else class="hint">
-                Dígitos 0-9 * # A-D. "w2" espera 2 s. Clique no teclado para enviar um dígito na hora.
+                {{ $t('callCard.digitos_0_9_a_d') }}
             </p>
             <div class="keypad">
                 <button
@@ -192,24 +203,29 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                 <input
                     v-model="transferTo"
                     class="input mono"
-                    placeholder="Destino da transferência"
-                    aria-label="Destino"
+                    :placeholder="$t('callCard.destino_da_transferencia')"
+                    :aria-label="$t('callCard.destino')"
                 />
-                <button class="btn" type="submit" :disabled="!transferTo.trim()">Cega</button>
+                <button class="btn" type="submit" :disabled="!transferTo.trim()">{{ $t('callCard.cega') }}</button>
                 <button class="btn primary" type="button" :disabled="!transferTo.trim()" @click="doConsult">
-                    Consultar antes
+                    {{ $t('callCard.consultar_antes') }}
                 </button>
             </form>
             <p class="hint">
-                Cega: transfere na hora. Consultar antes: põe esta chamada em espera e liga para o destino; depois você
-                conclui ou volta.
+                {{ $t('callCard.cega_transfere_na_hora_consultar') }}
             </p>
         </div>
 
         <div v-if="established && call.quality" class="quality mono tabular">
-            qualidade {{ call.quality.score }} · jitter {{ call.quality.jitterMs }} ms · perda
-            {{ call.quality.packetLossPercent.toFixed(1) }}% · RTT {{ call.quality.rttMs }} ms ·
-            {{ call.quality.codec || 'codec ?' }}
+            {{
+                $t('callCard.qualidade_jitter_ms_perda_rtt', {
+                    score: call.quality.score,
+                    jitterMs: call.quality.jitterMs,
+                    p: call.quality.packetLossPercent.toFixed(1),
+                    rttMs: call.quality.rttMs,
+                    p2: call.quality.codec || 'codec ?'
+                })
+            }}
         </div>
     </article>
 </template>

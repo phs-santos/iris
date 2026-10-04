@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 
@@ -9,7 +10,11 @@ const message = ref<{ ok: boolean; text: string } | null>(null)
 async function doExport(): Promise<void> {
     const json = await accounts.exportJson(includePasswords.value)
     const path = await window.iris.files.saveText('iris-contas.json', json)
-    if (path) message.value = { ok: true, text: `${accounts.accounts.length} contas exportadas para ${path}` }
+    if (path)
+        message.value = {
+            ok: true,
+            text: t('importExportSection.contas_exportadas_para', { length: accounts.accounts.length, path })
+        }
 }
 
 async function doImport(): Promise<void> {
@@ -19,7 +24,7 @@ async function doImport(): Promise<void> {
         const count = await accounts.importJson(text)
         message.value = {
             ok: true,
-            text: `${count} contas importadas. Contas sem senha no arquivo pedem a senha ao editar.`
+            text: t('importExportSection.contas_importadas_contas_sem_senha', { count })
         }
     } catch (error) {
         message.value = { ok: false, text: (error as Error).message }
@@ -30,25 +35,25 @@ async function doImport(): Promise<void> {
 <template>
     <section class="set-section">
         <div class="set-head">
-            <h3>Importar e exportar contas</h3>
-            <p>Leve as contas para outra máquina ou mande para um colega.</p>
+            <h3>{{ $t('importExportSection.importar_e_exportar_contas') }}</h3>
+            <p>{{ $t('importExportSection.leve_as_contas_para_outra') }}</p>
         </div>
         <div class="part">
-            <h4>Exportar</h4>
-            <p>Salva todas as contas num arquivo JSON.</p>
+            <h4>{{ $t('importExportSection.exportar') }}</h4>
+            <p>{{ $t('importExportSection.salva_todas_as_contas_num') }}</p>
             <label class="check">
                 <input v-model="includePasswords" type="checkbox" />
-                Incluir senhas em texto puro no arquivo
+                {{ $t('importExportSection.incluir_senhas_em_texto_puro') }}
             </label>
             <p v-if="includePasswords" class="warn">
-                Quem tiver o arquivo poderá registrar os ramais. Compartilhe com cuidado.
+                {{ $t('importExportSection.quem_tiver_o_arquivo_podera') }}
             </p>
-            <button class="btn primary" @click="doExport">Exportar contas</button>
+            <button class="btn primary" @click="doExport">{{ $t('importExportSection.exportar_contas') }}</button>
         </div>
         <div class="part">
-            <h4>Importar</h4>
-            <p>Lê um arquivo exportado pela Íris. Contas com o mesmo id são substituídas; as outras são adicionadas.</p>
-            <button class="btn" @click="doImport">Escolher arquivo</button>
+            <h4>{{ $t('importExportSection.importar') }}</h4>
+            <p>{{ $t('importExportSection.le_um_arquivo_exportado_pela') }}</p>
+            <button class="btn" @click="doImport">{{ $t('importExportSection.escolher_arquivo') }}</button>
         </div>
         <p v-if="message" class="result" :class="message.ok ? 'ok' : 'bad'" role="status">{{ message.text }}</p>
     </section>

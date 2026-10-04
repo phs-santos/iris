@@ -21,5 +21,10 @@
         "src/shared/**/*",
         "tests/**/*"
     ],
-    "exclude": ["tests/sip-core.test.ts"]
+    "exclude": [
+        "tests/sip-core.test.ts",
+        "tests/app-log.test.ts",
+        "tests/user-agent.test.ts",
+        "tests/transport.test.ts"
+    ]
 }

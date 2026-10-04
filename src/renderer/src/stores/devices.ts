@@ -63,10 +63,10 @@ export const useDevicesStore = defineStore('devices', () => {
     }
 
     async function save(): Promise<void> {
-        const settings = await window.iris.settings.load()
-        settings.audioInputId = inputId.value || undefined
-        settings.audioOutputId = outputId.value || undefined
-        await window.iris.settings.save(settings)
+        await window.iris.settings.update({
+            audioInputId: inputId.value || undefined,
+            audioOutputId: outputId.value || undefined
+        })
     }
 
     async function setInput(id: string): Promise<void> {

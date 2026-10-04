@@ -1,8 +1,10 @@
 node_modules/
 out/
 dist/
+dist-diag/
 package-lock.json
 patches/
 docker/
 *.md
 docs/CONCEITO.html
+coverage/

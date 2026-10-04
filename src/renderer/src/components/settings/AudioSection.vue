@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useDevicesStore } from '@renderer/stores/devices'
 
@@ -31,7 +32,7 @@ async function startMeter(): Promise<void> {
         meter = { stream, ctx, frame: requestAnimationFrame(tick) }
     } catch (error) {
         level.value = 0
-        micError.value = `Microfone indisponível: ${(error as Error).message}`
+        micError.value = t('audioSection.microfone_indisponivel', { p: (error as Error).message })
     }
 }
 
@@ -77,39 +78,46 @@ onUnmounted(stopMeter)
 <template>
     <section class="set-section">
         <div class="set-head">
-            <h3>Áudio</h3>
-            <p>Vale para as chamadas e para o toque de todas as contas, inclusive as em andamento.</p>
+            <h3>{{ $t('audioSection.audio') }}</h3>
+            <p>{{ $t('audioSection.vale_para_as_chamadas_e') }}</p>
         </div>
         <label class="field">
-            <span class="label">Microfone</span>
+            <span class="label">{{ $t('audioSection.microfone') }}</span>
             <select
                 class="input"
                 :value="devices.inputId"
                 @change="chooseInput(($event.target as HTMLSelectElement).value)"
             >
-                <option value="">Padrão do sistema</option>
+                <option value="">{{ $t('audioSection.padrao_do_sistema') }}</option>
                 <option v-for="d in devices.inputs" :key="d.id" :value="d.id">{{ d.label }}</option>
             </select>
         </label>
-        <div class="meter" role="meter" aria-label="Nível do microfone" :aria-valuenow="Math.round(level * 100)">
+        <div
+            class="meter"
+            role="meter"
+            :aria-label="$t('audioSection.nivel_do_microfone')"
+            :aria-valuenow="Math.round(level * 100)"
+        >
             <div class="bar" :style="{ width: `${Math.round(level * 100)}%` }"></div>
         </div>
         <p v-if="micError" class="error">{{ micError }}</p>
-        <p v-else class="set-hint">Fale alguma coisa: a barra deve se mexer.</p>
+        <p v-else class="set-hint">{{ $t('audioSection.fale_alguma_coisa_a_barra') }}</p>
 
         <label class="field">
-            <span class="label">Alto-falante</span>
+            <span class="label">{{ $t('audioSection.alto_falante') }}</span>
             <select
                 class="input"
                 :value="devices.outputId"
                 @change="devices.setOutput(($event.target as HTMLSelectElement).value)"
             >
-                <option value="">Padrão do sistema</option>
+                <option value="">{{ $t('audioSection.padrao_do_sistema') }}</option>
                 <option v-for="d in devices.outputs" :key="d.id" :value="d.id">{{ d.label }}</option>
             </select>
         </label>
         <div>
-            <button class="btn" :disabled="testing" @click="testOutput">Tocar som de teste</button>
+            <button class="btn" :disabled="testing" @click="testOutput">
+                {{ $t('audioSection.tocar_som_de_teste') }}
+            </button>
         </div>
     </section>
 </template>

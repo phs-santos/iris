@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { useDialog } from '@renderer/lib/dialog'
-import { GUIDE } from '@renderer/guide/content'
+import { GUIDE } from '@renderer/i18n/guide.pt-BR'
 
 /** Guia de uso (entrega do M4): índice à esquerda, conteúdo à direita, busca por texto. */
 const emit = defineEmits<{ close: [] }>()
@@ -53,7 +53,7 @@ function fit(event: Event): void {
 /** Separa **negrito** e `código` do texto comum, para desenhar sem HTML vindo de fora. */
 function inline(text: string): { kind: 'text' | 'b' | 'code'; value: string }[] {
     return text
-        .split(/(\*\*[^*]+\*\*|`[^`]+`)/)
+        .split(/(\*\*[^*]+\*\*|`[^`]+`)/) // i18n-ok: expressão regular
         .filter(Boolean)
         .map((part) => {
             if (part.startsWith('**')) return { kind: 'b' as const, value: part.slice(2, -2) }
@@ -74,18 +74,18 @@ function inline(text: string): { kind: 'text' | 'b' | 'code'; value: string }[] 
             tabindex="-1"
         >
             <header>
-                <h2 id="guide-title">Guia da Íris</h2>
-                <button class="btn small ghost" aria-label="Fechar" @click="emit('close')">✕</button>
+                <h2 id="guide-title">{{ $t('guideDialog.guia_da_iris') }}</h2>
+                <button class="btn small ghost" :aria-label="$t('guideDialog.fechar')" @click="emit('close')">✕</button>
             </header>
 
             <div class="layout">
-                <nav class="index" aria-label="Seções do guia">
+                <nav class="index" :aria-label="$t('guideDialog.secoes_do_guia')">
                     <input
                         v-model="search"
                         class="input"
                         type="search"
-                        placeholder="Buscar no guia"
-                        aria-label="Buscar no guia"
+                        :placeholder="$t('guideDialog.buscar_no_guia')"
+                        :aria-label="$t('guideDialog.buscar_no_guia')"
                     />
                     <ul>
                         <li v-for="s in matches" :key="s.id">
@@ -99,7 +99,9 @@ function inline(text: string): { kind: 'text' | 'b' | 'code'; value: string }[] 
                             </button>
                         </li>
                     </ul>
-                    <p v-if="matches.length === 0" class="none">Nada encontrado para "{{ search }}".</p>
+                    <p v-if="matches.length === 0" class="none">
+                        {{ $t('guideDialog.nada_encontrado_para', { search }) }}
+                    </p>
                 </nav>
 
                 <article v-if="current" ref="contentEl" class="content" tabindex="0" :aria-label="current.title">
@@ -136,7 +138,9 @@ function inline(text: string): { kind: 'text' | 'b' | 'code'; value: string }[] 
                         </figure>
 
                         <p v-else-if="b.type === 'note'" class="note" :class="b.kind === 'dica' ? 'tip' : 'warn'">
-                            <b class="tag">{{ b.kind === 'dica' ? 'Dica' : 'Atenção' }}</b>
+                            <b class="tag">{{
+                                b.kind === 'dica' ? $t('guideDialog.dica') : $t('guideDialog.atencao')
+                            }}</b>
                             <template v-for="(t, j) in inline(b.text)" :key="j">
                                 <b v-if="t.kind === 'b'">{{ t.value }}</b>
                                 <code v-else-if="t.kind === 'code'">{{ t.value }}</code>

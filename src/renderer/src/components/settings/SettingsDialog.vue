@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed, ref } from 'vue'
 import type { UpdateChannel, UpdateInfo } from '@shared/types'
 import { useDialog } from '@renderer/lib/dialog'
@@ -7,6 +8,7 @@ import { usePreferencesStore, type SettingsSection } from '@renderer/stores/pref
 import ProfileSection from './ProfileSection.vue'
 import AppearanceSection from './AppearanceSection.vue'
 import AudioSection from './AudioSection.vue'
+import ConnectionSection from './ConnectionSection.vue'
 import AiSection from './AiSection.vue'
 import SecuritySection from './SecuritySection.vue'
 import ImportExportSection from './ImportExportSection.vue'
@@ -23,13 +25,14 @@ const prefs = usePreferencesStore()
 const current = ref<SettingsSection>(props.section)
 const sections = computed(() =>
     [
-        { id: 'profile' as const, name: 'Perfil' },
-        { id: 'appearance' as const, name: 'Aparência' },
-        { id: 'audio' as const, name: 'Áudio' },
-        { id: 'ai' as const, name: 'Ajuda da IA' },
-        { id: 'security' as const, name: 'Certificados' },
-        { id: 'data' as const, name: 'Importar e exportar' },
-        { id: 'update' as const, name: 'Atualização', badge: props.update?.currentVersion }
+        { id: 'profile' as const, name: t('settingsDialog.perfil') },
+        { id: 'appearance' as const, name: t('settingsDialog.aparencia') },
+        { id: 'audio' as const, name: t('settingsDialog.audio') },
+        { id: 'connection' as const, name: t('settingsDialog.conexao') },
+        { id: 'ai' as const, name: t('settingsDialog.ajuda_da_ia') },
+        { id: 'security' as const, name: t('settingsDialog.certificados') },
+        { id: 'data' as const, name: t('settingsDialog.importar_e_exportar') },
+        { id: 'update' as const, name: t('settingsDialog.atualizacao'), badge: props.update?.currentVersion }
     ].filter((s) => s.id !== 'update' || props.update)
 )
 
@@ -66,21 +69,33 @@ function onNavKey(event: KeyboardEvent): void {
             tabindex="-1"
         >
             <header>
-                <h2 id="settings-title">Configurações</h2>
-                <button class="btn small ghost" aria-label="Fechar" @click="emit('close')">✕</button>
+                <h2 id="settings-title">{{ $t('settingsDialog.configuracoes') }}</h2>
+                <button class="btn small ghost" :aria-label="$t('settingsDialog.fechar')" @click="emit('close')">
+                    ✕
+                </button>
             </header>
             <div class="split">
                 <nav>
                     <div class="me">
                         <span class="avatar" aria-hidden="true">{{ initials }}</span>
                         <span class="who">
-                            <b>{{ prefs.profile.name || 'Sem nome' }}</b>
+                            <b>{{ prefs.profile.name || $t('settingsDialog.sem_nome') }}</b>
                             <small class="tabular">
-                                {{ accounts.accounts.length }} contas · {{ accounts.groups.length }} PBX
+                                {{
+                                    $t('settingsDialog.contas_pbx', {
+                                        length: accounts.accounts.length,
+                                        length2: accounts.groups.length
+                                    })
+                                }}
                             </small>
                         </span>
                     </div>
-                    <div role="tablist" aria-orientation="vertical" aria-label="Seções" @keydown="onNavKey">
+                    <div
+                        role="tablist"
+                        aria-orientation="vertical"
+                        :aria-label="$t('settingsDialog.secoes')"
+                        @keydown="onNavKey"
+                    >
                         <button
                             v-for="s in sections"
                             :id="`set-tab-${s.id}`"
@@ -102,6 +117,7 @@ function onNavKey(event: KeyboardEvent): void {
                     <ProfileSection v-if="current === 'profile'" />
                     <AppearanceSection v-else-if="current === 'appearance'" />
                     <AudioSection v-else-if="current === 'audio'" />
+                    <ConnectionSection v-else-if="current === 'connection'" />
                     <AiSection v-else-if="current === 'ai'" />
                     <SecuritySection v-else-if="current === 'security'" />
                     <ImportExportSection v-else-if="current === 'data'" />

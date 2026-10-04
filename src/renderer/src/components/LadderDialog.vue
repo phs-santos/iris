@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed, ref, watch } from 'vue'
 import { useDialog } from '@renderer/lib/dialog'
 import { useAccountsStore } from '@renderer/stores/accounts'
@@ -84,7 +85,8 @@ const rowLabel = (row: LadderRow): string => `${row.message.label}${row.message.
 
 function describeRow(row: LadderRow): string {
     const who = describeAccount(row.message.accountId).label
-    const arrow = row.message.dir === 'out' ? `${who} para o PBX` : `PBX para ${who}`
+    const arrow =
+        row.message.dir === 'out' ? t('ladderDialog.para_o_pbx', { who }) : t('ladderDialog.pbx_para', { who })
     return `${rowLabel(row)}, ${arrow}, ${formatOffset(row.offsetMs)}`
 }
 
@@ -102,21 +104,21 @@ function summary(): string[] {
 
 async function saveHtml(): Promise<void> {
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
-    const title = `Fluxo SIP · ${chosen.value.map((d) => describeDialog(d)).join(' · ')}`
+    const title = t('ladderDialog.fluxo_sip_2', { p: chosen.value.map((d) => describeDialog(d)).join(' · ') })
     const path = await window.iris.files.saveText(
         `iris-fluxo-${stamp}.html`,
         ladderHtml(layout.value, title, summary())
     )
-    if (path) note.value = `Salvo em ${path}`
+    if (path) note.value = t('ladderDialog.salvo_em', { path })
 }
 
 async function copyMessage(): Promise<void> {
     if (!current.value) return
     try {
         await navigator.clipboard.writeText(current.value.message.raw)
-        note.value = 'Mensagem copiada'
+        note.value = t('ladderDialog.mensagem_copiada')
     } catch {
-        note.value = 'Não foi possível copiar'
+        note.value = t('ladderDialog.nao_foi_possivel_copiar')
     }
 }
 </script>
@@ -132,30 +134,37 @@ async function copyMessage(): Promise<void> {
             tabindex="-1"
         >
             <header>
-                <h2 id="ladder-title">Fluxo SIP</h2>
-                <button class="btn small ghost" aria-label="Fechar" @click="emit('close')">✕</button>
+                <h2 id="ladder-title">{{ $t('ladderDialog.fluxo_sip') }}</h2>
+                <button class="btn small ghost" :aria-label="$t('ladderDialog.fechar')" @click="emit('close')">
+                    ✕
+                </button>
             </header>
             <div class="layout">
-                <nav class="side" aria-label="Chamadas no log">
+                <nav class="side" :aria-label="$t('ladderDialog.chamadas_no_log')">
                     <div class="filters">
-                        <select v-model="accountFilter" class="input" aria-label="Conta">
-                            <option :value="null">Todas as contas</option>
+                        <select v-model="accountFilter" class="input" :aria-label="$t('ladderDialog.conta')">
+                            <option :value="null">{{ $t('ladderDialog.todas_as_contas') }}</option>
                             <option v-for="a in accounts.accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
                         </select>
                         <label class="check">
                             <input v-model="showHousekeeping" type="checkbox" />
-                            Mostrar REGISTER e OPTIONS
+                            {{ $t('ladderDialog.mostrar_register_e_options') }}
                         </label>
                     </div>
                     <p v-if="list.length === 0" class="muted empty">
-                        Nenhuma mensagem SIP no log. Ative "Mostrar SIP bruto" na conta e faça uma chamada.
+                        {{ $t('ladderDialog.nenhuma_mensagem_sip_no_log') }}
                     </p>
                     <ul>
                         <li v-for="d in list" :key="d.key" :class="{ on: selected.includes(d.key) }">
                             <input
                                 type="checkbox"
                                 :checked="selected.includes(d.key)"
-                                :aria-label="`Juntar ${describeDialog(d)} de ${describeAccount(d.accountId).label} no desenho`"
+                                :aria-label="
+                                    $t('ladderDialog.juntar_de_no_desenho', {
+                                        p: describeDialog(d),
+                                        p2: describeAccount(d.accountId).label
+                                    })
+                                "
                                 @change="toggle(d)"
                             />
                             <button class="item" @click="only(d)">
@@ -170,7 +179,7 @@ async function copyMessage(): Promise<void> {
                             </button>
                         </li>
                     </ul>
-                    <p class="muted tip">Marque duas chamadas para ver as duas pernas, com o PBX no meio.</p>
+                    <p class="muted tip">{{ $t('ladderDialog.marque_duas_chamadas_para_ver') }}</p>
                 </nav>
 
                 <section class="main">
@@ -181,7 +190,7 @@ async function copyMessage(): Promise<void> {
                             :height="layout.height"
                             :viewBox="`0 0 ${layout.width} ${layout.height}`"
                             role="group"
-                            aria-label="Diagrama de escada"
+                            :aria-label="$t('ladderDialog.diagrama_de_escada')"
                         >
                             <g v-for="c in layout.columns" :key="c.accountId ?? 'pbx'">
                                 <text :x="c.x" y="20" class="col">{{ c.label }}</text>
@@ -223,7 +232,7 @@ async function copyMessage(): Promise<void> {
                                 </text>
                             </g>
                         </svg>
-                        <p v-else class="muted empty">Escolha uma chamada na lista.</p>
+                        <p v-else class="muted empty">{{ $t('ladderDialog.escolha_uma_chamada_na_lista') }}</p>
                     </div>
                     <div class="detail">
                         <template v-if="current">
@@ -233,27 +242,31 @@ async function copyMessage(): Promise<void> {
                                     {{ describeAccount(current.message.accountId).label }}
                                     {{ current.message.dir === 'out' ? '→ PBX' : '← PBX' }}
                                 </span>
-                                <button class="btn small" @click="copyMessage">Copiar mensagem</button>
+                                <button class="btn small" @click="copyMessage">
+                                    {{ $t('ladderDialog.copiar_mensagem') }}
+                                </button>
                             </div>
-                            <pre class="mono" tabindex="0" aria-label="Mensagem SIP completa">{{
+                            <pre class="mono" tabindex="0" :aria-label="$t('ladderDialog.mensagem_sip_completa')">{{
                                 current.message.raw
                             }}</pre>
                         </template>
-                        <p v-else class="muted">Clique numa seta para ver a mensagem completa.</p>
+                        <p v-else class="muted">{{ $t('ladderDialog.clique_numa_seta_para_ver') }}</p>
                     </div>
                 </section>
             </div>
             <footer>
                 <span class="note" role="status">{{ note }}</span>
                 <span class="legend" aria-hidden="true">
-                    <span :style="{ color: SEVERITY_COLORS.request }">pedido</span>
-                    <span :style="{ color: SEVERITY_COLORS.provisional }">1xx</span>
-                    <span :style="{ color: SEVERITY_COLORS.ok }">2xx</span>
+                    <span :style="{ color: SEVERITY_COLORS.request }">{{ $t('ladderDialog.pedido') }}</span>
+                    <span :style="{ color: SEVERITY_COLORS.provisional }">{{ $t('ladderDialog.t_1xx') }}</span>
+                    <span :style="{ color: SEVERITY_COLORS.ok }">{{ $t('ladderDialog.t_2xx') }}</span>
                     <span :style="{ color: SEVERITY_COLORS.auth }">401/407</span>
-                    <span :style="{ color: SEVERITY_COLORS.error }">erro</span>
-                    <span>- - - de novo</span>
+                    <span :style="{ color: SEVERITY_COLORS.error }">{{ $t('ladderDialog.erro') }}</span>
+                    <span>{{ $t('ladderDialog.de_novo') }}</span>
                 </span>
-                <button class="btn" :disabled="layout.rows.length === 0" @click="saveHtml">Salvar .html</button>
+                <button class="btn" :disabled="layout.rows.length === 0" @click="saveHtml">
+                    {{ $t('ladderDialog.salvar_html') }}
+                </button>
             </footer>
         </div>
     </div>

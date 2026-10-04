@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { onMounted, ref } from 'vue'
 import { useLogStore } from '@renderer/stores/log'
 
@@ -12,9 +13,8 @@ async function refresh(): Promise<void> {
 
 async function remove(host: string): Promise<void> {
     const settings = await window.iris.settings.load()
-    settings.trustedHosts = settings.trustedHosts.filter((h) => h !== host)
-    await window.iris.settings.save(settings)
-    log.add(null, 'warn', 'event', `Certificado de ${host} não é mais aceito`)
+    await window.iris.settings.update({ trustedHosts: settings.trustedHosts.filter((h) => h !== host) })
+    log.add(null, 'warn', 'event', t('securitySection.certificado_de_nao_e_mais', { host }))
     await refresh()
 }
 
@@ -24,18 +24,19 @@ onMounted(refresh)
 <template>
     <section class="set-section">
         <div class="set-head">
-            <h3>Certificados</h3>
+            <h3>{{ $t('securitySection.certificados') }}</h3>
             <p>
-                PBX com certificado autoassinado que você aceitou pelo aviso "Confiar neste host". Ao remover, a Íris
-                volta a recusar o certificado na próxima conexão.
+                {{ $t('securitySection.pbx_com_certificado_autoassinado_que') }}
             </p>
         </div>
         <div v-if="hosts.length" class="set-group">
             <div v-for="host in hosts" :key="host" class="set-row">
                 <span class="what mono">{{ host }}</span>
-                <button class="btn small" :aria-label="`Remover ${host}`" @click="remove(host)">Remover</button>
+                <button class="btn small" :aria-label="$t('securitySection.remover_2', { host })" @click="remove(host)">
+                    {{ $t('securitySection.remover') }}
+                </button>
             </div>
         </div>
-        <p v-else class="set-hint">Nenhum certificado aceito à mão.</p>
+        <p v-else class="set-hint">{{ $t('securitySection.nenhum_certificado_aceito_a_mao') }}</p>
     </section>
 </template>

@@ -20,10 +20,44 @@ jobs:
                   cache: npm
             - run: npm ci
             - run: npm run format:check
+            - run: npm run lint
             - run: npm run licenses
             - run: npm run typecheck
-            - run: npm test
+            # Testes de unidade com cobertura da camada de domínio: reprova abaixo de 70% (RNF-15).
+            - run: npm run test:coverage
             - run: npm run build
+            - uses: actions/upload-artifact@v4
+              if: matrix.os == 'ubuntu-latest'
+              with:
+                  name: cobertura
+                  path: coverage/
+
+    # Abre o app EMPACOTADO nos três sistemas (RNF-01) e mede a abertura e o registro (RNF-04).
+    # Os outros testes rodam o app sem empacotar e não veem defeitos que só existem no pacote.
+    pacote:
+        needs: check
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [ubuntu-latest, windows-latest, macos-latest]
+        runs-on: ${{ matrix.os }}
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+            - run: npm ci
+            - run: npm run build
+            - name: Liberar o sandbox do Chromium
+              if: runner.os == 'Linux'
+              run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+            - name: Fumaça do app empacotado (Linux)
+              if: runner.os == 'Linux'
+              run: xvfb-run -a node tests/e2e/pacote.mjs
+            - name: Fumaça do app empacotado
+              if: runner.os != 'Linux'
+              run: node tests/e2e/pacote.mjs
 
     e2e:
         runs-on: ubuntu-latest
@@ -52,6 +86,8 @@ jobs:
               run: xvfb-run -a node tests/e2e/senhas.mjs
             - name: Ajuda da IA com uma OpenRouter falsa (RF-38)
               run: xvfb-run -a node tests/e2e/ai.mjs
+            - name: Arquivos de dados estragados, gravação em fila e log interno (RNF-14, RNF-19)
+              run: xvfb-run -a node tests/e2e/arquivos.mjs
             - name: Subir Asterisk de teste
               run: |
                   ./docker/asterisk/gen-cert.sh
@@ -69,3 +105,8 @@ jobs:
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/scenarios.mjs
             - name: URA 20 vezes pela linha de comando no Asterisk
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/cli.mjs
+            - name: SIP puro por UDP, TCP e TLS com o motor próprio (RF-39)
+              run: xvfb-run -a node tests/e2e/sip-puro.mjs
+            # Por último: este teste para e religa o contêiner do PBX.
+            - name: Reconexão derrubando o contêiner do PBX (RNF-06)
+              run: xvfb-run -a node tests/e2e/reconexao.mjs

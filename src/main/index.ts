@@ -2,7 +2,7 @@ import { app, BrowserWindow, dialog, Menu, nativeImage, Notification, session, s
 import { promises as fs } from 'node:fs'
 import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
-import { IPC, type Account, type Scenario, type Settings, type WindowMode } from '@shared/types'
+import { IPC, type Account, type Scenario, type SettingsPatch, type WindowMode } from '@shared/types'
 import {
     getSecret,
     loadAccounts,
@@ -10,16 +10,20 @@ import {
     loadSettings,
     saveAccounts,
     saveScenarios,
-    saveSettings,
     secretsStatus,
     setSecret,
-    migrateLegacySecrets
+    migrateLegacySecrets,
+    updateSettings
 } from './storage'
 import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
-import { isUpdateChannel, setupUpdater } from './updater'
+import { setupUpdater } from './updater'
 import { AI_SECRET_PREFIX, registerAiIpc } from './ai'
 import { isAppearance, isProfile } from '@shared/appearance'
+import { isReconnect } from '@shared/reconnect'
+import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
+import { appLog, describeError, startAppLog } from './app-log'
+import { registerNativeSipIpc } from './native-sip'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -38,6 +42,17 @@ if (process.env['IRIS_USER_DATA']) app.setPath('userData', process.env['IRIS_USE
 
 // Microfone falso do Chromium, para testes automatizados sem placa de som.
 if (process.env['IRIS_FAKE_MEDIA']) app.commandLine.appendSwitch('use-fake-device-for-media-stream')
+
+// Log interno em arquivo (RNF-14), ligado antes de tudo para pegar também as falhas da abertura.
+startAppLog(join(app.getPath('userData'), 'logs'))
+process.on('uncaughtException', (error) => appLog('error', `Erro não tratado: ${describeError(error)}`))
+process.on('unhandledRejection', (reason) => appLog('error', `Promessa rejeitada: ${describeError(reason)}`))
+app.on('render-process-gone', (_e, _wc, details) =>
+    appLog('error', `A interface caiu: ${details.reason} (código ${details.exitCode})`)
+)
+app.on('child-process-gone', (_e, details) =>
+    appLog('error', `Processo ${details.type} caiu: ${details.reason} (código ${details.exitCode})`)
+)
 
 // Linha de comando (RF-31): sem janela visível, sem bandeja e sem trava de instância única.
 const cli = prepareCli()
@@ -96,29 +111,18 @@ function showWindow(): void {
     mainWindow.focus()
 }
 
-/** Ícone de bandeja desenhado em memória: um círculo verde de 16 px. */
-function trayIcon(): Electron.NativeImage {
-    const size = 16
-    const buf = Buffer.alloc(size * size * 4)
-    for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-            const d = Math.hypot(x - 7.5, y - 7.5)
-            const i = (y * size + x) * 4
-            if (d <= 6.5) {
-                // BGRA
-                buf[i] = 0x86
-                buf[i + 1] = 0xcf
-                buf[i + 2] = 0x3f
-                buf[i + 3] = 0xff
-            }
-        }
-    }
-    return nativeImage.createFromBitmap(buf, { width: size, height: size })
+/** Ícone da bandeja para cada estado (RF-33); o Electron acha o `@2x` ao lado para telas retina. */
+function trayIcon(state: TrayState): Electron.NativeImage {
+    const image = nativeImage.createFromPath(join(__dirname, `../../resources/tray-${state}.png`))
+    // Sem o arquivo (instalação estragada), o ícone do app em miniatura ainda deixa a bandeja usável.
+    return image.isEmpty() ? nativeImage.createFromPath(appIcon).resize({ width: 16, height: 16 }) : image
 }
+
+let trayState: TrayState = 'idle'
 
 function createTray(): void {
     try {
-        tray = new Tray(trayIcon())
+        tray = new Tray(trayIcon(trayState))
         tray.setToolTip('Íris')
         tray.setContextMenu(
             Menu.buildFromTemplate([
@@ -202,18 +206,25 @@ function registerIpc(): void {
     handle(IPC.secretsStatus, () => secretsStatus())
     handle(IPC.secretsMigrate, () => migrateLegacySecrets())
     handle(IPC.settingsLoad, () => loadSettings())
-    handle(IPC.settingsSave, async (_e, settings: Settings) => {
+    // A interface manda só os campos que mudou; os outros (canal de atualização, IA) ela não alcança.
+    const patchKeys = ['trustedHosts', 'audioInputId', 'audioOutputId', 'profile', 'appearance', 'reconnect']
+    const isDeviceId = (v: unknown): boolean => v === undefined || isString(v, 500)
+    handle(IPC.settingsUpdate, async (_e, patch: SettingsPatch) => {
         check(
-            isPlainObject(settings) &&
-                isList(settings.trustedHosts, 200) &&
-                settings.trustedHosts.every((h) => isString(h, 255)) &&
-                (settings.updateChannel === undefined || isUpdateChannel(settings.updateChannel)) &&
-                isProfile(settings.profile) &&
-                isAppearance(settings.appearance),
+            isPlainObject(patch) &&
+                Object.keys(patch).every((k) => patchKeys.includes(k)) &&
+                (patch.trustedHosts === undefined ||
+                    (isList(patch.trustedHosts, 200) && patch.trustedHosts.every((h) => isString(h, 255)))) &&
+                isDeviceId(patch.audioInputId) &&
+                isDeviceId(patch.audioOutputId) &&
+                isProfile(patch.profile) &&
+                isAppearance(patch.appearance) &&
+                isReconnect(patch.reconnect),
             'preferências'
         )
-        await saveSettings(settings)
-        trustedHosts = new Set(settings.trustedHosts)
+        const settings = await updateSettings(patch)
+        trustedHosts = new Set([...settings.trustedHosts, ...(cliOptions?.trustHosts ?? [])])
+        return settings
     })
 
     handle(IPC.filesSaveText, async (_e, defaultName: string, content: string) => {
@@ -242,12 +253,30 @@ function registerIpc(): void {
         notification.show()
     })
 
+    on(IPC.tray, (_e, counts: unknown) => {
+        if (!tray || !isTrayCounts(counts)) return
+        const { state, tooltip } = traySummary(counts)
+        tray.setToolTip(tooltip)
+        if (state === trayState) return
+        trayState = state
+        tray.setImage(trayIcon(state))
+    })
+    on(IPC.logError, (_e, text: unknown) => {
+        if (isString(text, 20_000)) appLog('error', `Interface: ${text}`)
+    })
+
     handle(IPC.appInfo, () => ({
         version: app.getVersion(),
         platform: process.platform,
         electron: process.versions.electron,
         chrome: process.versions.chrome
     }))
+
+    // TLS do motor próprio (RF-39): mesma lista de hosts aceitos e mesmo aviso do WebSocket (RF-37).
+    registerNativeSipIpc({
+        isTrustedHost: (host) => trustedHosts.has(host),
+        onCertificateError: (host, error) => mainWindow?.webContents.send(IPC.certificateError, { host, error })
+    })
 
     handle(IPC.windowMode, (_e, mode: WindowMode) => {
         check(mode === 'phone' || mode === 'bench', 'modo da janela')
@@ -276,7 +305,16 @@ function setWindowMode(mode: WindowMode): void {
 app.on('second-instance', showWindow)
 
 app.whenReady().then(async () => {
-    trustedHosts = new Set([...(await loadSettings()).trustedHosts, ...(cliOptions?.trustHosts ?? [])])
+    appLog(
+        'info',
+        `Íris ${app.getVersion()} abriu (${process.platform} ${process.arch}, Electron ${process.versions.electron})`
+    )
+    // Um erro ao ler as preferências não pode impedir a janela de abrir nem os canais de existir.
+    const saved = await loadSettings().catch((error) => {
+        appLog('error', `Preferências não carregadas: ${describeError(error)}`)
+        return null
+    })
+    trustedHosts = new Set([...(saved?.trustedHosts ?? []), ...(cliOptions?.trustHosts ?? [])])
     setupSecurity()
     registerIpc()
     if (cli) {

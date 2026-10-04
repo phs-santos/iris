@@ -1,7 +1,9 @@
 node_modules/
 out/
 dist/
+dist-diag/
 *.log
 .DS_Store
 docker/asterisk/keys/
 *.tsbuildinfo
+coverage/

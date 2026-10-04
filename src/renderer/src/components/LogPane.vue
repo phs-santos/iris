@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { formatEntry, formatTime, useLogStore, type LogFilter } from '@renderer/stores/log'
@@ -22,9 +23,9 @@ const matching = computed(() => log.filtered(filter))
 const visible = computed(() => matching.value.slice(-VISIBLE_LIMIT))
 
 const tabs = [
-    { kind: 'event', label: 'Eventos' },
-    { kind: 'sip', label: 'SIP bruto' },
-    { kind: 'all', label: 'Tudo' }
+    { kind: 'event', label: t('logPane.eventos') },
+    { kind: 'sip', label: t('logPane.sip_bruto') },
+    { kind: 'all', label: t('logPane.tudo') }
 ] as const
 
 watch(
@@ -52,9 +53,9 @@ const asText = (): string => matching.value.map((e) => formatEntry(e, accounts.n
 async function copy(): Promise<void> {
     try {
         await navigator.clipboard.writeText(asText())
-        copied.value = `${matching.value.length} linhas copiadas`
+        copied.value = t('logPane.linhas_copiadas', { length: matching.value.length })
     } catch {
-        copied.value = 'Não foi possível copiar'
+        copied.value = t('logPane.nao_foi_possivel_copiar')
     }
     setTimeout(() => (copied.value = ''), 2500)
 }
@@ -74,7 +75,7 @@ async function save(format: 'txt' | 'json'): Promise<void> {
                   2
               )
     const path = await window.iris.files.saveText(`iris-log-${stamp}.${format}`, content)
-    if (path) copied.value = `Salvo em ${path}`
+    if (path) copied.value = t('logPane.salvo_em', { path })
     setTimeout(() => (copied.value = ''), 4000)
 }
 </script>
@@ -95,26 +96,38 @@ async function save(format: 'txt' | 'json'): Promise<void> {
                     {{ t.label }}
                 </button>
             </div>
-            <span class="label tabular">{{ matching.length }} linhas</span>
+            <span class="label tabular">{{ $t('logPane.linhas', { length: matching.length }) }}</span>
         </div>
 
         <div class="filters">
-            <select v-model="filter.accountId" class="input" aria-label="Filtrar por conta">
-                <option :value="null">Todas as contas</option>
+            <select v-model="filter.accountId" class="input" :aria-label="$t('logPane.filtrar_por_conta')">
+                <option :value="null">{{ $t('logPane.todas_as_contas') }}</option>
                 <option v-for="a in accounts.accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
             </select>
-            <select v-model="filter.minLevel" class="input level" aria-label="Nível mínimo">
-                <option value="debug">debug+</option>
-                <option value="info">info+</option>
-                <option value="warn">aviso+</option>
-                <option value="error">erro</option>
+            <select v-model="filter.minLevel" class="input level" :aria-label="$t('logPane.nivel_minimo')">
+                <option value="debug">{{ $t('logPane.debug') }}</option>
+                <option value="info">{{ $t('logPane.info') }}</option>
+                <option value="warn">{{ $t('logPane.aviso') }}</option>
+                <option value="error">{{ $t('logPane.erro') }}</option>
             </select>
-            <input v-model="filter.text" class="input" placeholder="Buscar" aria-label="Buscar no log" />
+            <input
+                v-model="filter.text"
+                class="input"
+                :placeholder="$t('logPane.buscar')"
+                :aria-label="$t('logPane.buscar_no_log')"
+            />
         </div>
 
-        <div ref="listEl" class="list mono" role="log" tabindex="0" aria-label="Linhas do log" @scroll="onScroll">
+        <div
+            ref="listEl"
+            class="list mono"
+            role="log"
+            tabindex="0"
+            :aria-label="$t('logPane.linhas_do_log')"
+            @scroll="onScroll"
+        >
             <p v-if="matching.length > VISIBLE_LIMIT" class="trimmed">
-                Mostrando as últimas {{ VISIBLE_LIMIT }} de {{ matching.length }} linhas. Copiar e salvar levam todas.
+                {{ $t('logPane.mostrando_as_ultimas_de_linhas', { VISIBLE_LIMIT, length: matching.length }) }}
             </p>
             <div v-for="e in visible" :key="e.id" class="line" :class="[e.level, e.kind]">
                 <span class="t">{{ formatTime(e.ts) }}</span>
@@ -126,23 +139,23 @@ async function save(format: 'txt' | 'json'): Promise<void> {
             <p v-if="matching.length === 0" class="trimmed">
                 {{
                     filter.kind === 'sip'
-                        ? 'Nenhuma mensagem SIP. Ative "Mostrar SIP bruto" na conta para vê-las aqui.'
-                        : 'Nada no log com estes filtros.'
+                        ? $t('logPane.nenhuma_mensagem_sip_ative_mostrar')
+                        : $t('logPane.nada_no_log_com_estes')
                 }}
             </p>
         </div>
 
         <div class="foot">
-            <button class="btn small" @click="copy">Copiar</button>
-            <button class="btn small" @click="save('txt')">Salvar .txt</button>
-            <button class="btn small" @click="save('json')">Salvar .json</button>
-            <button class="btn small" @click="log.clear(filter.accountId)">Limpar</button>
+            <button class="btn small" @click="copy">{{ $t('logPane.copiar') }}</button>
+            <button class="btn small" @click="save('txt')">{{ $t('logPane.salvar_txt') }}</button>
+            <button class="btn small" @click="save('json')">{{ $t('logPane.salvar_json') }}</button>
+            <button class="btn small" @click="log.clear(filter.accountId)">{{ $t('logPane.limpar') }}</button>
             <button class="btn small" :disabled="matching.length === 0" @click="ai.explainLog(matching)">
-                Explicar com IA
+                {{ $t('logPane.explicar_com_ia') }}
             </button>
-            <button class="btn small" @click="showLadder = true">Fluxo SIP</button>
+            <button class="btn small" @click="showLadder = true">{{ $t('logPane.fluxo_sip') }}</button>
             <span class="note">{{ copied }}</span>
-            <button v-if="!follow" class="btn small ghost" @click="jumpToEnd">Ir para o fim</button>
+            <button v-if="!follow" class="btn small ghost" @click="jumpToEnd">{{ $t('logPane.ir_para_o_fim') }}</button>
         </div>
         <LadderDialog v-if="showLadder" :account-id="filter.accountId" @close="showLadder = false" />
     </aside>

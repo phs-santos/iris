@@ -16,6 +16,9 @@
         "src/main/**/*",
         "src/preload/**/*",
         "src/shared/**/*",
-        "tests/sip-core.test.ts"
+        "tests/sip-core.test.ts",
+        "tests/app-log.test.ts",
+        "tests/user-agent.test.ts",
+        "tests/transport.test.ts"
     ]
 }
