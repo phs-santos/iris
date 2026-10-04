@@ -8,6 +8,7 @@ import type { HistoryEntry } from './history'
 import type { MonitorSettings, WebhookPayload } from './monitor'
 import type { NetDiagRequest, NetDiagResult } from './net-diag'
 import type { LoadProgress, LoadReport, LoadSpec } from './load'
+import type { MwiInfo, PresenceState } from './presence'
 import type { AccountTransport, SipTransportKind } from './sip-target'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
@@ -36,6 +37,8 @@ export interface Account {
     sipServer?: string
     /** SIP puro: exige áudio cifrado (SRTP) nas chamadas. */
     srtp?: boolean
+    /** Ramais cujo estado acompanhar (BLF, RF-27), separados por vírgula ou espaço. */
+    blf?: string
     /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */
     iceServers: string
     dtmfMode: DtmfMode
@@ -153,12 +156,16 @@ export interface NativeSipConfig {
     /** Host e porta do PBX; vazio usa o domínio. */
     server?: string
     srtp?: boolean
+    /** Ramais cujo estado acompanhar (BLF, RF-27). */
+    blf?: string[]
 }
 
 export type NativeSipEventBody =
     | { type: 'status'; status: { state: RegStateName; code?: number; reason?: string; final?: boolean } }
     | { type: 'log'; level: 'debug' | 'info' | 'warn' | 'error'; kind: 'event' | 'sip'; text: string }
     | { type: 'call'; callId: string; event: NativeCallEvent }
+    | { type: 'presence'; extension: string; state: PresenceState }
+    | { type: 'mwi'; info: MwiInfo }
     /** 20 ms de áudio recebido: 160 amostras de 16 bits a 8000 Hz. */
     | { type: 'audio'; callId: string; pcm: Int16Array }
 

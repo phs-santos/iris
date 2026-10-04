@@ -1,6 +1,7 @@
 // Motor simulado (RF-32): imita um PBX sem rede. Contas simuladas do mesmo domínio
 // ligam umas para as outras; alguns números especiais simulam respostas do PBX.
 
+import { parseBlfList, type PresenceState } from '@shared/presence'
 import type { SipManualRequest, SipManualResponse } from '@shared/types'
 import { levelDb, SAMPLE_RATE, SILENCE_DB } from '@shared/audio'
 import type { Account, DtmfMode } from '@shared/types'
@@ -38,6 +39,12 @@ export const MOCK_TIMING = {
 const registry = new Set<MockEngine>()
 
 /** Remove todas as contas registradas no PBX simulado. Usado nos testes. */
+/** Avisa os motores simulados do mesmo domínio que acompanham este ramal (BLF, RF-27). */
+function publishPresence(domain: string, extension: string, state: PresenceState): void {
+    for (const engine of registry)
+        if (engine.domain === domain && engine.watching.includes(extension)) engine.notifyPresence(extension, state)
+}
+
 export function resetMockNetwork(): void {
     registry.clear()
 }
@@ -110,12 +117,14 @@ class MockCall implements EngineCall {
     establish(): void {
         if (this.state !== 'ringing') return
         this.state = 'established'
+        publishPresence(this.engine.domain, this.engine.extension, 'busy')
         this.emit('established')
     }
 
     end(end: CallEnd): void {
         if (this.state === 'ended') return
         this.state = 'ended'
+        publishPresence(this.engine.domain, this.engine.extension, 'idle')
         this.timers.forEach(clearTimeout)
         this.emit('ended', end)
         this.emitter.clear()
@@ -297,6 +306,8 @@ export class MockEngine implements SipEngine {
     private status: RegStatus = { state: 'disconnected' }
     readonly domain: string
     readonly extension: string
+    /** Ramais que esta conta acompanha (BLF, RF-27). */
+    readonly watching: string[]
     private calls = new Set<MockCall>()
     private readonly registerCallId: string
     private registerSeq = 0
@@ -307,6 +318,7 @@ export class MockEngine implements SipEngine {
     ) {
         this.domain = account.domain.toLowerCase()
         this.extension = account.extension
+        this.watching = parseBlfList(account.blf)
         this.registerCallId = `reg-${nextId++}-${Math.random().toString(36).slice(2, 8)}@${this.domain}`
     }
 
@@ -316,6 +328,10 @@ export class MockEngine implements SipEngine {
 
     log(level: LogLevel, text: string, kind: LogKind = 'event'): void {
         this.emitter.emit('log', { level, kind, text })
+    }
+
+    notifyPresence(extension: string, state: PresenceState): void {
+        this.emitter.emit('presence', extension, state)
     }
 
     /** Mensagem do SIP bruto simulado: a linha inicial e os cabeçalhos que o diagrama de escada usa. */
@@ -375,6 +391,12 @@ export class MockEngine implements SipEngine {
                     this.registerReply(this.register(600), '200 OK')
                     registry.add(this)
                     this.setStatus({ state: 'registered' })
+                    // BLF simulado (RF-27): quem já está registrado aparece livre; o resto, sem notícia.
+                    for (const extension of this.watching) {
+                        const known = [...registry].some((e) => e.domain === this.domain && e.extension === extension)
+                        this.emitter.emit('presence', extension, known ? 'idle' : 'unknown')
+                    }
+                    publishPresence(this.domain, this.extension, 'idle')
                 }
                 resolve()
             }, MOCK_TIMING.register)

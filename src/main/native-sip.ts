@@ -82,7 +82,8 @@ function isConfig(v: unknown): v is NativeSipConfig {
         parseSipServer(v.server as string | undefined, v.domain, v.transport) !== null &&
         (v.authUser === undefined || v.authUser === '' || isSipUser(v.authUser)) &&
         isOptionalText(v.displayName, 120) &&
-        (v.srtp === undefined || typeof v.srtp === 'boolean')
+        (v.srtp === undefined || typeof v.srtp === 'boolean') &&
+        (v.blf === undefined || (Array.isArray(v.blf) && v.blf.length <= 50 && v.blf.every(isSipUser)))
     )
 }
 
@@ -139,6 +140,7 @@ export function registerNativeSipIpc(options: Options): void {
                 port: target.port,
                 trusted: options.isTrustedHost(target.host),
                 srtp: config.srtp,
+                blf: config.blf,
                 userAgent: `Iris/${app.getVersion()}`
             },
             createTransport,
@@ -146,6 +148,8 @@ export function registerNativeSipIpc(options: Options): void {
                 status: (status) => send(sender, engineId, { type: 'status', status }),
                 log: (level, kind, text) => send(sender, engineId, { type: 'log', level, kind, text }),
                 certificate: (host, error) => options.onCertificateError(host, error),
+                presence: (extension, state) => send(sender, engineId, { type: 'presence', extension, state }),
+                mwi: (info) => send(sender, engineId, { type: 'mwi', info }),
                 incoming: (call) => {
                     calls.set(callKey(engineId, call.callId), call)
                     send(sender, engineId, {

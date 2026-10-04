@@ -9,6 +9,7 @@ import { ref } from 'vue'
 import MenuButton from './MenuButton.vue'
 import SipRequestDialog from './SipRequestDialog.vue'
 import LoadDialog from './LoadDialog.vue'
+import type { PresenceState } from '@shared/presence'
 import { useLogStore } from '@renderer/stores/log'
 
 const emit = defineEmits<{ new: []; edit: [account: Account]; health: [id: string] }>()
@@ -31,6 +32,14 @@ function toggle(account: Account): void {
     if (state === 'disconnected' || state === 'error') void accounts.register(account.id)
     else void accounts.unregister(account.id)
 }
+
+const presenceLabel = (state: PresenceState): string =>
+    ({
+        idle: t('accountsPane.blf_livre'),
+        ringing: t('accountsPane.blf_tocando'),
+        busy: t('accountsPane.blf_ocupado'),
+        unknown: t('accountsPane.blf_sem_noticia')
+    })[state]
 
 /** Ações menos usadas ficam no menu ⋯, para a conta escolhida não virar uma parede de botões. */
 function moreActions(account: Account): Array<{ label: string; action: () => void; danger?: boolean }> {
@@ -137,6 +146,21 @@ async function remove(id: string): Promise<void> {
                             }}</span>
                         </div>
                     </button>
+
+                    <div v-if="accounts.presenceOf(account).length || accounts.mwiOf(account.id)?.waiting" class="blf">
+                        <span
+                            v-for="p in accounts.presenceOf(account)"
+                            :key="p.extension"
+                            class="lamp mono"
+                            :class="p.state"
+                            :title="presenceLabel(p.state)"
+                        >
+                            {{ p.extension }}<span class="sr-only"> {{ presenceLabel(p.state) }}</span>
+                        </span>
+                        <span v-if="accounts.mwiOf(account.id)?.waiting" class="lamp mwi">
+                            {{ $t('accountsPane.correio', { n: accounts.mwiOf(account.id)?.newMessages ?? 0 }) }}
+                        </span>
+                    </div>
 
                     <div
                         v-if="explainRegError(accounts.statusOf(account.id))"
@@ -316,5 +340,42 @@ async function remove(id: string): Promise<void> {
 .empty {
     color: var(--muted);
     padding: 8px;
+}
+.blf {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 10px 8px 34px;
+}
+.lamp {
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+}
+.lamp.idle {
+    border-color: color-mix(in srgb, var(--ok) 55%, var(--line));
+    color: var(--fg);
+}
+.lamp.ringing {
+    border-color: var(--warn);
+    color: var(--warn);
+}
+.lamp.busy {
+    border-color: var(--bad);
+    background: color-mix(in srgb, var(--bad) 18%, transparent);
+    color: var(--fg);
+}
+.lamp.mwi {
+    border-color: var(--accent);
+    color: var(--fg);
+}
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
 }
 </style>

@@ -294,6 +294,10 @@ async function save(register: boolean): Promise<void> {
                             ></button>
                         </div>
                     </label>
+                    <label v-if="native || form.simulated" class="field wide">
+                        <span class="label">{{ $t('accountForm.blf_ramais') }}</span>
+                        <input v-model="form.blf" class="input mono" :placeholder="$t('accountForm.blf_exemplo')" />
+                    </label>
                     <label class="field wide">
                         <span class="label">{{ $t('accountForm.stun_turn_separados_por_virgula') }}</span>
                         <input

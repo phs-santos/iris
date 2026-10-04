@@ -105,6 +105,29 @@ describe('MockEngine', () => {
         })
     })
 
+    it('BLF simulado (RF-27): quem acompanha um ramal vê livre, em chamada e livre de novo', async () => {
+        const watcher = new MockEngine(
+            newAccount({ name: 'vigia', extension: '1003', domain: 'demo.local', simulated: true, blf: '1002, 1009' }),
+            '1234'
+        )
+        const a = make('1001')
+        const b = make('1002')
+        const seen: string[] = []
+        watcher.on('presence', (extension, state) => seen.push(`${extension} ${state}`))
+        await registered(b)
+        await registered(a)
+        await registered(watcher)
+        // 1002 já estava registrado; 1009 não existe.
+        expect(seen).toEqual(['1002 idle', '1009 unknown'])
+        let incoming: EngineCall | undefined
+        b.on('incoming', (call) => (incoming = call))
+        const out = await a.dial('1002')
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
+        await incoming!.answer()
+        await out.hangup()
+        expect(seen.slice(2)).toEqual(['1002 busy', '1002 idle'])
+    })
+
     it('entrega o DTMF enviado ao outro lado', async () => {
         const a = make('1001')
         const b = make('1002')

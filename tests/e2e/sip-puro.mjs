@@ -26,7 +26,7 @@ const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)
 const account = (name) => page.locator('.acc', { hasText: name })
 
-async function addAccount(name, ext, transport, password = '1234', autoAnswer = false, srtp = false) {
+async function addAccount(name, ext, transport, password = '1234', autoAnswer = false, srtp = false, blf = '') {
     await page.getByRole('button', { name: '+ Nova' }).click()
     const form = page.locator('form.dialog')
     await form.getByRole('textbox', { name: 'Nome' }).fill(name)
@@ -38,6 +38,10 @@ async function addAccount(name, ext, transport, password = '1234', autoAnswer = 
         throw new Error('o campo do WebSocket continua na tela de uma conta de SIP puro')
     if (autoAnswer) await form.getByText('Auto-atender após').locator('input[type=checkbox]').check()
     if (srtp) await form.getByText('Exigir áudio cifrado (SRTP)').locator('input[type=checkbox]').check()
+    if (blf) {
+        await form.getByRole('button', { name: /Avançado/ }).click()
+        await form.getByLabel(/Ramais para acompanhar/).fill(blf)
+    }
     await form.getByRole('button', { name: 'Salvar e registrar' }).click()
 }
 
@@ -77,7 +81,8 @@ try {
     step('2002 registrou por TCP')
 
     // O PBX de teste usa certificado autoassinado: o app recusa e oferece confiar no host (RF-37).
-    await addAccount('Puro TLS', '2003', 'TLS')
+    // A conta TLS acompanha o ramal 2001 (BLF, RF-27).
+    await addAccount('Puro TLS', '2003', 'TLS', '1234', false, false, '2001')
     await page.getByRole('button', { name: 'Confiar neste host' }).click({ timeout: 15000 })
     await account('Puro TLS').locator('.dot.registered').waitFor({ timeout: 15000 })
     await expectContact('2003', true)
@@ -144,6 +149,9 @@ try {
     const echo = call(/2001\s*→\s*600/)
     await echo.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
     await expectAudio(echo, 'chamada para o eco atendida, com áudio voltando')
+    // BLF (RF-27): enquanto o 2001 fala, a conta que o acompanha mostra o ramal em chamada.
+    await account('Puro TLS').locator('.lamp.busy', { hasText: '2001' }).waitFor({ timeout: 10000 })
+    step('BLF: o ramal 2001 aparece em chamada na conta que o acompanha')
     // Gravação (RF-36): o WAV sai com o microfone num canal e o eco no outro.
     await echo.getByRole('button', { name: 'Gravar' }).click()
     await page.waitForTimeout(1500)
@@ -169,6 +177,8 @@ try {
     await echo.getByRole('button', { name: 'Desligar' }).click()
     await echo.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
     step('desligar encerra a chamada (BYE)')
+    await account('Puro TLS').locator('.lamp.idle', { hasText: '2001' }).waitFor({ timeout: 10000 })
+    step('BLF: terminada a chamada, o ramal volta a aparecer livre')
 
     await dial('Puro UDP', '486')
     await call('486 Busy Here').waitFor({ timeout: 20000 })
