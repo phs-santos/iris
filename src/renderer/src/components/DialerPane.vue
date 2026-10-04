@@ -3,10 +3,12 @@ import { t } from '@renderer/i18n'
 import { computed, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
+import { useContactsStore } from '@renderer/stores/contacts'
 import { MOCK_NUMBERS } from '@renderer/sip/mock-engine'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
+const contacts = useContactsStore()
 const destination = ref('')
 const headersText = ref('')
 const showHeaders = ref(false)
@@ -24,7 +26,9 @@ const shortcuts = computed(() => {
     const peers = accounts.accounts
         .filter((a) => a.id !== account.id && a.domain === account.domain)
         .map((a) => ({ label: a.name, number: a.extension }))
-    return [...peers, ...account.quickDials]
+    // Favoritos da agenda (RF-50) também viram atalhos.
+    const favorites = contacts.contacts.filter((c) => c.favorite).map((c) => ({ label: c.name, number: c.number }))
+    return [...peers, ...account.quickDials, ...favorites]
 })
 
 const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
@@ -75,7 +79,12 @@ defineExpose({ focus: () => input.value?.focus() })
                 :placeholder="$t('dialerPane.numero_ou_ramal')"
                 :aria-label="$t('dialerPane.numero')"
                 autocomplete="off"
+                list="iris-contacts"
             />
+            <!-- Sugestões da agenda (RF-50): o número, com o nome ao lado. -->
+            <datalist id="iris-contacts">
+                <option v-for="c in contacts.contacts" :key="c.id" :value="c.number">{{ c.name }}</option>
+            </datalist>
             <button class="btn go big" type="submit" :disabled="!registered || !destination.trim()">
                 {{ $t('dialerPane.ligar') }}
             </button>

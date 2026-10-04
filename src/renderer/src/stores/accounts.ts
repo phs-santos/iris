@@ -120,14 +120,15 @@ export const useAccountsStore = defineStore('accounts', () => {
         await window.iris.accounts.save(JSON.parse(JSON.stringify(accounts.value)))
     }
 
-    async function save(account: Account, password?: string | null): Promise<void> {
+    /** `select` falso não troca a conta escolhida: usado ao atualizar várias contas de uma vez. */
+    async function save(account: Account, password?: string | null, select = true): Promise<void> {
         const index = accounts.value.findIndex((a) => a.id === account.id)
         const wasRegistered = index >= 0 && statusOf(account.id).state !== 'disconnected'
         if (index >= 0) accounts.value[index] = account
         else accounts.value.push(account)
         if (password !== undefined) await window.iris.secrets.set(account.id, password)
         await persist()
-        selectedId.value = account.id
+        if (select) selectedId.value = account.id
         // A conexão usa os dados antigos até ser refeita.
         if (wasRegistered) {
             await unregister(account.id)

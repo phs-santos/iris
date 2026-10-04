@@ -244,6 +244,19 @@ export const GUIDE: GuideSection[] = [
                     ]
                 ]
             },
+            { type: 'h', text: 'Servidores: a conexão escrita uma vez só' },
+            {
+                type: 'p',
+                text: 'Quando várias contas usam o mesmo PBX, cadastre o PBX em **Configurações → Servidores**: nome, domínio, transporte, endereço, STUN/TURN, preset e SRTP. Na conta, escolha o servidor na lista **Servidor** e preencha só nome, ramal e senha; os campos de conexão ficam travados. **Editar o servidor muda todas as contas dele de uma vez**, e as que estão no ar registram de novo com os dados novos.'
+            },
+            {
+                type: 'list',
+                items: [
+                    'Já tem uma conta pronta? No formulário dela, **Salvar conexão como servidor** cadastra o servidor e liga a conta a ele.',
+                    'Para mudar a conexão de uma conta só, escolha **Nenhum** na lista Servidor: ela se solta e os campos voltam a ser editáveis.',
+                    'Excluir um servidor não apaga nem desconecta as contas: elas ficam com os dados que tinham, só deixam de mudar junto.'
+                ]
+            },
             { type: 'h', text: 'Contas por SIP puro (UDP, TCP ou TLS)' },
             {
                 type: 'p',
@@ -438,6 +451,28 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'p',
                 text: 'Com a chamada estabelecida, o cartão mostra, atualizado a cada 2 s: **qualidade** (nota de 0 a 100), **jitter** (variação do atraso, em ms), **perda** (pacotes perdidos, em %), **RTT** (ida e volta, em ms) e o **codec**. Jitter e perda altos explicam áudio picotado; RTT alto explica atraso na conversa.'
+            }
+        ]
+    },
+    {
+        id: 'contatos',
+        title: 'Contatos',
+        summary: 'A agenda: os números que você mais usa, com nome, para ligar com um clique.',
+        blocks: [
+            {
+                type: 'p',
+                text: 'A aba **Contatos**, ao lado de Telefone, guarda nome, número, empresa, observação e, se quiser, a conta pela qual ligar. **+ Novo contato** cadastra; a busca acha por nome, número, empresa ou observação, sem diferenciar acento.'
+            },
+            {
+                type: 'list',
+                items: [
+                    '**Ligar** disca pela conta do contato; se ela não estiver registrada, pela conta escolhida no discador. O botão fica apagado quando nenhuma das duas está no ar.',
+                    'A **estrela** marca o contato como favorito: ele aparece primeiro na lista e vira atalho no discador.',
+                    'Quando um contato liga, ou quando você liga para ele, a chamada mostra o **nome** da agenda. O histórico também.',
+                    'No **Histórico**, **Salvar contato** cria o contato com o número da chamada já preenchido.',
+                    'Ao digitar no discador, os números da agenda aparecem como sugestão.',
+                    '**Importar CSV** e **Exportar CSV** levam a agenda de e para uma planilha, com as colunas `nome;numero;empresa;observacao;favorito`. Contatos com um número que já existe não entram de novo.'
+                ]
             }
         ]
     },
@@ -662,6 +697,7 @@ export const GUIDE: GuideSection[] = [
                         'A cor de destaque (seis paletas prontas ou a sua própria cor) e o tamanho da interface'
                     ],
                     ['Áudio', 'Microfone e alto-falante. Veja "Áudio"'],
+                    ['Servidores', 'Os PBX cadastrados, para as contas reaproveitarem a conexão. Veja "Contas"'],
                     [
                         'Conexão',
                         'Quantas vezes a Íris tenta registrar de novo depois de uma queda, com espera crescente (2 s, 4 s, 8 s, até 1 minuto). O padrão é 10; com 0 ela não desiste'
@@ -1086,6 +1122,7 @@ export const GUIDE: GuideSection[] = [
                     ],
                     ['Cenários', '`scenarios.json`'],
                     ['Histórico de chamadas', '`history.json`, com as 500 mais recentes'],
+                    ['Contatos e servidores', '`contacts.json` e `servers.json`'],
                     [
                         'Gravações de chamadas',
                         'Pasta `gravacoes`: um arquivo WAV por gravação, sem cifra. Só existem se você clicar em Gravar'

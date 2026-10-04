@@ -5,7 +5,8 @@ import { DEFAULT_RECONNECT } from '@shared/reconnect'
 import type { ReconnectSettings } from '@shared/types'
 
 /** Seções da tela de Configurações. */
-export type SettingsSection = 'profile' | 'appearance' | 'audio' | 'connection' | 'ai' | 'security' | 'data' | 'update'
+export type SettingsSection =
+    'profile' | 'appearance' | 'audio' | 'servers' | 'connection' | 'ai' | 'security' | 'data' | 'update'
 
 /** Perfil e aparência da tela de Configurações, aplicados na hora e salvos em settings.json. */
 export const usePreferencesStore = defineStore('preferences', () => {

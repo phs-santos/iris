@@ -3,6 +3,8 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { isHistoryEntry, type HistoryEntry, type HistoryFile } from '@shared/history'
+import { isContact, type Contact, type ContactsFile } from '@shared/contacts'
+import { isSipServer, type ServersFile, type SipServer } from '@shared/servers'
 import type {
     Account,
     AccountsFile,
@@ -114,6 +116,32 @@ export async function loadScenarios(): Promise<Scenario[]> {
 export async function saveScenarios(scenarios: Scenario[]): Promise<void> {
     const data: ScenariosFile = { schemaVersion: 1, scenarios }
     await writeJson('scenarios.json', data)
+}
+
+export async function loadContacts(): Promise<Contact[]> {
+    const data = await readDataFile<ContactsFile>(
+        'contacts.json',
+        'contatos',
+        (d) => isObject(d) && Array.isArray(d.contacts)
+    )
+    return (data?.contacts ?? []).filter(isContact)
+}
+
+export async function saveContacts(contacts: Contact[]): Promise<void> {
+    await writeJson('contacts.json', { schemaVersion: 1, contacts } satisfies ContactsFile)
+}
+
+export async function loadServers(): Promise<SipServer[]> {
+    const data = await readDataFile<ServersFile>(
+        'servers.json',
+        'servidores',
+        (d) => isObject(d) && Array.isArray(d.servers)
+    )
+    return (data?.servers ?? []).filter(isSipServer)
+}
+
+export async function saveServers(servers: SipServer[]): Promise<void> {
+    await writeJson('servers.json', { schemaVersion: 1, servers } satisfies ServersFile)
 }
 
 export async function loadHistory(): Promise<HistoryEntry[]> {

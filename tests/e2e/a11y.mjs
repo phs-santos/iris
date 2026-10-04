@@ -67,7 +67,16 @@ try {
     await page.keyboard.press('ControlOrMeta+,')
     const settings = page.getByRole('dialog', { name: 'Configurações' })
     await settings.waitFor({ timeout: 2000 }).catch(() => problems.push('[configurações] Ctrl/Cmd+, não abre'))
-    for (const name of ['Perfil', 'Aparência', 'Áudio', 'Ajuda da IA', 'Certificados', 'Importar e exportar']) {
+    for (const name of [
+        'Perfil',
+        'Aparência',
+        'Áudio',
+        'Servidores',
+        'Conexão',
+        'Ajuda da IA',
+        'Certificados',
+        'Importar e exportar'
+    ]) {
         await settings.getByRole('tab', { name }).click()
         await scan(`configurações › ${name}`)
     }
@@ -106,6 +115,11 @@ try {
     await page.keyboard.press('Escape')
     await page.getByRole('tab', { name: 'Histórico' }).click()
     await scan('histórico de chamadas')
+    await page.getByRole('tab', { name: 'Contatos' }).click()
+    await page.getByRole('button', { name: '+ Novo contato' }).click()
+    await scan('novo contato')
+    await page.keyboard.press('Escape')
+    await scan('agenda de contatos')
     await page.getByRole('tab', { name: 'Telefone' }).click()
 
     await page.getByRole('button', { name: 'Explicar com IA' }).last().click()

@@ -150,6 +150,8 @@ São 37 requisitos em cinco grupos: 15 essenciais, 16 importantes e 6 desejávei
 | RF-48 | Contas em lote por CSV (nome, ramal, domínio, senha, transporte, endereço) e variáveis nos cenários (`{ramal}`, `{dominio}`, `{nome}` da conta de origem), para o mesmo roteiro servir a várias contas | Importante | 1.6 | Um CSV com 20 linhas cria 20 contas; um cenário com `{ramal}` roda em qualquer uma delas |
 | RF-49 | Relatório JUnit (XML) na linha de comando, com cada execução de cenário como um teste e o passo que falhou na mensagem | Importante | 1.6 | Um CI que lê JUnit mostra os cenários e destaca o que falhou |
 | RF-27 | Presença e BLF de ramais escolhidos e aviso de correio de voz (MWI), em SIP puro | Desejável | 1.6 | O ramal aparece como ocupado enquanto está em chamada |
+| RF-50 | Agenda de contatos: nome, número, empresa, observação e conta preferida; busca, favoritos, ligar com um clique, salvar a partir do histórico e importar e exportar em CSV. O nome do contato aparece na chamada recebida, nos cartões e no histórico | Importante | 1.6 | Um contato salvo é discado pela agenda, e quando ele liga a chamada recebida mostra o nome |
+| RF-51 | Cadastro de servidores (PBX): domínio, transporte, endereço, STUN/TURN, SRTP e preset, reaproveitados pelas contas. Editar o servidor atualiza todas as contas ligadas a ele e registra de novo as que estavam no ar | Importante | 1.6 | Trocar o endereço de um servidor muda as três contas que o usam, sem editar uma por uma |
 | RF-52 | Chamada de vídeo. Planejado, sem data | Desejável | Depois | Vídeo nos dois sentidos entre dois ramais WebRTC do mesmo PBX |
 
 ## Requisitos não funcionais

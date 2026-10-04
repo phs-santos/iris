@@ -6,6 +6,7 @@ import { parseDtmfSequence, runDtmfSequence } from '@renderer/lib/dtmf'
 import { useAccountsStore } from './accounts'
 import { useLogStore } from './log'
 import { useHistoryStore } from './history'
+import { useContactsStore } from './contacts'
 
 export type CallState = 'dialing' | 'ringing' | 'early' | 'established' | 'ended'
 
@@ -76,7 +77,8 @@ export const useCallsStore = defineStore('calls', () => {
             accountId,
             direction: call.direction,
             remote: call.remote,
-            remoteName: call.remoteName,
+            // Sem nome vindo do PBX, vale o da agenda (RF-50).
+            remoteName: call.remoteName ?? useContactsStore().nameOf(call.remote),
             state,
             muted: false,
             held: false,
@@ -225,7 +227,8 @@ export const useCallsStore = defineStore('calls', () => {
         const log = useLogStore()
         const account = accounts.byId(accountId)
         const c = track(accountId, call, 'ringing')
-        const who = call.remoteName ? `${call.remoteName} (${call.remote})` : call.remote
+        const name = c.remoteName
+        const who = name ? `${name} (${call.remote})` : call.remote
         log.add(accountId, 'info', 'event', `Chamada recebida de ${who}`)
 
         if (account?.autoAnswer.enabled) {

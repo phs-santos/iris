@@ -5,6 +5,9 @@ import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
 import { useHistoryStore } from '@renderer/stores/history'
 import LadderDialog from './LadderDialog.vue'
+import ContactForm from './ContactForm.vue'
+import { useContactsStore } from '@renderer/stores/contacts'
+import type { Contact } from '@shared/contacts'
 
 /** Histórico de chamadas (RF-40): o que aconteceu com cada chamada, depois que o cartão dela sumiu. */
 const emit = defineEmits<{ dialed: [] }>()
@@ -14,6 +17,14 @@ const calls = useCallsStore()
 /** Conta cujo Fluxo SIP está aberto; o diagrama vem do log, que só existe enquanto o app está aberto. */
 const ladderFor = ref<string | null>(null)
 const confirming = ref(false)
+const contacts = useContactsStore()
+/** Contato sendo criado a partir de uma chamada do histórico. */
+const newContact = ref<Contact | null>(null)
+function saveContact(entry: HistoryEntry): void {
+    newContact.value = { id: crypto.randomUUID(), name: entry.remoteName ?? '', number: entry.remote }
+}
+
+const nameOf = (entry: HistoryEntry): string | undefined => contacts.nameOf(entry.remote) ?? entry.remoteName
 
 const when = (entry: HistoryEntry): string =>
     new Date(entry.startedAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'medium' })
@@ -58,7 +69,7 @@ function clear(): void {
                 >
                 <span class="who">
                     <b class="mono">{{ entry.remote }}</b>
-                    <span v-if="entry.remoteName" class="name">{{ entry.remoteName }}</span>
+                    <span v-if="nameOf(entry)" class="name">{{ nameOf(entry) }}</span>
                     <small class="mono">
                         <span class="sr-only">{{
                             entry.direction === 'out' ? $t('historyPane.feita') : $t('historyPane.recebida')
@@ -82,6 +93,14 @@ function clear(): void {
                         {{ $t('historyPane.ligar_de_novo') }}
                     </button>
                     <button
+                        v-if="!contacts.nameOf(entry.remote)"
+                        class="btn small"
+                        :aria-label="$t('historyPane.salvar_contato_de', { remote: entry.remote })"
+                        @click="saveContact(entry)"
+                    >
+                        {{ $t('historyPane.salvar_contato') }}
+                    </button>
+                    <button
                         class="btn small"
                         :aria-label="$t('historyPane.fluxo_sip_da_conta', { accountName: entry.accountName })"
                         @click="ladderFor = entry.accountId"
@@ -91,6 +110,7 @@ function clear(): void {
                 </span>
             </li>
         </ul>
+        <ContactForm v-if="newContact" :contact="newContact" @close="newContact = null" />
         <LadderDialog v-if="ladderFor" :account-id="ladderFor" @close="ladderFor = null" />
     </div>
 </template>
