@@ -68,6 +68,9 @@ function isCallAction(v: unknown): v is NativeCallAction {
     if (!isPlainObject(v)) return false
     if (v.type === 'answer' || v.type === 'reject' || v.type === 'hangup') return true
     if (v.type === 'mute') return typeof v.muted === 'boolean'
+    if (v.type === 'hold') return typeof v.held === 'boolean'
+    if (v.type === 'transfer') return isSipUser(v.target)
+    if (v.type === 'attended') return isCallId(v.consultCallId)
     return (
         v.type === 'dtmf' &&
         isString(v.tone, 1) &&
@@ -140,7 +143,8 @@ export function registerNativeSipIpc(options: Options): void {
                 calls.delete(callKey(engineId, callId))
                 emit({ kind: 'ended', ...end })
             },
-            hold: (held) => emit({ kind: 'hold', held }),
+            hold: (held, by) => emit({ kind: 'hold', held, by }),
+            transfer: (code, reason, final) => emit({ kind: 'transfer', code, reason, final }),
             dtmf: (tone) => emit({ kind: 'dtmf', tone }),
             audio: (pcm) => send(sender, engineId, { type: 'audio', callId, pcm })
         }
@@ -164,7 +168,8 @@ export function registerNativeSipIpc(options: Options): void {
                 progress: (...args) => callEvents(event.sender, engineId, callId).progress(...args),
                 established: () => callEvents(event.sender, engineId, callId).established(),
                 ended: (end) => callEvents(event.sender, engineId, callId).ended(end),
-                hold: (held) => callEvents(event.sender, engineId, callId).hold(held),
+                hold: (held, by) => callEvents(event.sender, engineId, callId).hold(held, by),
+                transfer: (...args) => callEvents(event.sender, engineId, callId).transfer(...args),
                 dtmf: (tone) => callEvents(event.sender, engineId, callId).dtmf(tone),
                 audio: (pcm) => callEvents(event.sender, engineId, callId).audio(pcm)
             },
@@ -183,7 +188,13 @@ export function registerNativeSipIpc(options: Options): void {
         else if (action.type === 'reject') call.reject()
         else if (action.type === 'hangup') await call.hangup()
         else if (action.type === 'mute') call.setMuted(action.muted)
-        else await call.sendDtmf(action.tone.toUpperCase(), action.mode)
+        else if (action.type === 'hold') await call.setHeld(action.held)
+        else if (action.type === 'transfer') await call.transfer(action.target)
+        else if (action.type === 'attended') {
+            const consult = calls.get(callKey(engineId, action.consultCallId))
+            if (!consult) throw new Error('A chamada de consulta não existe mais')
+            await call.attendedTransfer(consult)
+        } else await call.sendDtmf(action.tone.toUpperCase(), action.mode)
     })
 
     handle(IPC.sipCallStats, (_e, engineId: string, callId: string): NativeCallStats | null => {

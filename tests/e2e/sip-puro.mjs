@@ -1,5 +1,6 @@
 // Motor próprio (RF-39): contas por SIP puro registram no Asterisk por UDP, TCP e TLS, medem a Saúde
-// por OPTIONS, mostram o SIP bruto, ligam e recebem chamadas com áudio G.711 e DTMF, e desregistram.
+// por OPTIONS, mostram o SIP bruto, ligam e recebem chamadas com áudio G.711 e DTMF, põem em espera,
+// transferem (cega e assistida) e desregistram.
 // Uso: docker compose up -d && npm run build && node tests/e2e/sip-puro.mjs
 import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
@@ -154,6 +155,51 @@ try {
     await callee.getByRole('button', { name: 'Desligar' }).click()
     await caller.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
     step('quem atendeu desligou e o outro lado encerrou')
+
+    // ─── Espera e transferência (terceira entrega) ───
+    const live = (text) => page.locator('.call:not(.ended)', { hasText: text })
+    await page.waitForTimeout(500)
+    await dial('Puro UDP', '2002')
+    const holder = live(/2001\s*→\s*2002/)
+    await holder.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await holder.getByRole('button', { name: 'Espera' }).click()
+    await holder.locator('.pill', { hasText: 'em espera' }).waitFor({ timeout: 10000 })
+    await holder.getByRole('button', { name: 'Retomar' }).click()
+    await holder.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 10000 })
+    step('espera e retomada por re-INVITE')
+
+    // Cega: 2001 manda 2002 para o eco e sai da chamada.
+    await holder.getByRole('button', { name: 'Transferir' }).click()
+    await holder.getByLabel('Destino').fill('600')
+    await holder.getByRole('button', { name: 'Cega' }).click()
+    await page.locator('.list').getByText('Transferência: 200 OK').first().waitFor({ timeout: 15000 })
+    await holder.waitFor({ state: 'detached', timeout: 15000 })
+    const transferred = live(/2002\s*←\s*2001/)
+    await transferred.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 10000 })
+    step('transferência cega: quem transferiu saiu e o outro lado segue em chamada com o destino')
+    await transferred.getByRole('button', { name: 'Desligar' }).click()
+    await transferred.waitFor({ state: 'detached', timeout: 10000 })
+    await page.waitForTimeout(500)
+
+    // Assistida: 2001 fala com 2002, consulta o eco e junta os dois.
+    await dial('Puro UDP', '2002')
+    const original = live(/2001\s*→\s*2002/)
+    await original.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
+    await original.getByRole('button', { name: 'Transferir' }).click()
+    await original.getByLabel('Destino').fill('600')
+    await original.getByRole('button', { name: 'Consultar antes' }).click()
+    const consult = live('Consulta para transferir')
+    await consult.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 25000 })
+    await consult.getByRole('button', { name: 'Concluir transferência' }).click()
+    await page.locator('.list').getByText('Transferência: 200 OK').nth(1).waitFor({ timeout: 15000 })
+    await original.waitFor({ state: 'detached', timeout: 15000 })
+    await consult.waitFor({ state: 'detached', timeout: 15000 })
+    const joined = live(/2002\s*←\s*2001/)
+    await joined.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 10000 })
+    step('transferência assistida: as duas chamadas de quem transferiu caíram e o outro lado ficou com o destino')
+    await joined.getByRole('button', { name: 'Desligar' }).click()
+    await joined.waitFor({ state: 'detached', timeout: 10000 })
+    await page.waitForTimeout(500)
 
     // SIP puro com WebRTC: o Asterisk faz a ponte entre o RTP simples e o DTLS-SRTP. O ramal 1021 só
     // fala G.711, porque o Asterisk de teste não converte Opus.

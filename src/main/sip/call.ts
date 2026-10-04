@@ -1,5 +1,6 @@
 // Uma chamada do motor próprio (RF-39, segunda entrega): o diálogo SIP (INVITE, ACK, CANCEL, BYE,
-// re-INVITE e INFO) e o áudio RTP em G.711. Espera local, transferência e SRTP ficam para a terceira.
+// re-INVITE, INFO e REFER) e o áudio RTP em G.711. Tem espera e transferência cega e assistida; o
+// SRTP e o RTCP ficam para depois.
 
 import { randomBytes } from 'node:crypto'
 import { digestAuthorization, parseChallenge, type DigestChallenge } from './digest'
@@ -23,7 +24,10 @@ export interface CallEvents {
     progress(code: number, reason: string, earlyMedia: boolean): void
     established(): void
     ended(end: CallEnd): void
-    hold(held: boolean): void
+    /** `by` diz quem pôs em espera ou retomou: esta conta ou o outro lado. */
+    hold(held: boolean, by: 'local' | 'remote'): void
+    /** Andamento de uma transferência pedida por esta conta (NOTIFY do REFER). */
+    transfer(code: number, reason: string, final: boolean): void
     dtmf(tone: string): void
     audio(pcm: Int16Array): void
 }
@@ -75,6 +79,7 @@ export class SipCall {
     private sdpVersion = 1
     private readonly sdpSession = Date.now()
     private remoteHeld = false
+    private localHeld = false
     private muted = false
     /** INVITE recebido, guardado para as respostas; ou o que mandamos, para o CANCEL. */
     private invite?: SipRequest
@@ -149,21 +154,27 @@ export class SipCall {
     }
 
     /** Pedido dentro do diálogo, respondendo a um desafio se o PBX pedir a senha de novo. */
-    private async inDialog(method: string, body = '', contentType?: string): Promise<SipResponse> {
+    private async inDialog(
+        method: string,
+        body = '',
+        contentType?: string,
+        extra: [string, string][] = []
+    ): Promise<SipResponse> {
         const uri = this.remoteTarget ?? `sip:${this.remote}@${this.host.domain}`
-        let response = await this.host.transact(this.build(method, uri, body, contentType))
-        if ((response.status === 401 || response.status === 407) && this.takeChallenge(response))
-            response = await this.host.transact(this.build(method, uri, body, contentType))
+        let response = await this.host.transact(this.build(method, uri, body, contentType, extra))
+        if ((response.status === 401 || response.status === 407) && this.takeChallenge(response, true))
+            response = await this.host.transact(this.build(method, uri, body, contentType, extra))
         return response
     }
 
-    private takeChallenge(response: SipResponse): boolean {
+    /** `first` é a primeira recusa deste pedido: um desafio novo é aceito mesmo sem `stale`. */
+    private takeChallenge(response: SipResponse, first: boolean): boolean {
         const proxy = response.status === 407
         const value = header(response, proxy ? 'Proxy-Authenticate' : 'WWW-Authenticate')
         if (!value) return false
         const challenge = parseChallenge(value)
         // Recusa repetida com a mesma senha: não insiste, a não ser que o nonce tenha vencido.
-        if (this.challenge && !challenge.stale) return false
+        if (!first && !challenge.stale) return false
         this.challenge = { value: challenge, proxy, count: 0 }
         return true
     }
@@ -180,7 +191,8 @@ export class SipCall {
         })
     }
 
-    private applyRemote(media: RemoteMedia): void {
+    /** `answer`: é a resposta a um pedido nosso; o sentido dela espelha o nosso e não diz nada do outro lado. */
+    private applyRemote(media: RemoteMedia, answer = false): void {
         this.rtp.setRemote({
             address: media.address,
             port: media.port,
@@ -191,11 +203,23 @@ export class SipCall {
         this.codecs = [media.codec]
         // "sendonly" ou "inactive" do outro lado: ele nos pôs em espera.
         const held = media.direction === 'sendonly' || media.direction === 'inactive'
-        if (held !== this.remoteHeld) {
+        if (!answer && held !== this.remoteHeld) {
             this.remoteHeld = held
-            this.events.hold(held)
+            this.events.hold(held, 'remote')
         }
-        this.rtp.sendAudio = !this.muted && media.direction !== 'sendonly' && media.direction !== 'inactive'
+        this.updateFlow()
+    }
+
+    /** Em espera, de qualquer lado, o microfone não vai; na nossa espera, o que chega também é descartado. */
+    private updateFlow(): void {
+        this.rtp.sendAudio = !this.muted && !this.remoteHeld && !this.localHeld
+        this.rtp.receiveAudio = !this.localHeld
+    }
+
+    /** O sentido do nosso áudio, juntando a nossa espera com a do outro lado. */
+    private mediaDirection(): MediaDirection {
+        if (this.localHeld) return this.remoteHeld ? 'inactive' : 'sendonly'
+        return this.remoteHeld ? 'recvonly' : 'sendrecv'
     }
 
     private finish(end: CallEnd): void {
@@ -215,12 +239,12 @@ export class SipCall {
             this.rtpPort = await this.rtp.open()
             const uri = `sip:${this.remote}@${this.host.domain}`
             let response: SipResponse
-            for (;;) {
+            for (let tries = 0; ; tries++) {
                 const invite = this.build('INVITE', uri, this.localSdp('sendrecv'), 'application/sdp', extraHeaders)
                 this.invite = invite
                 response = await this.host.transact(invite, (provisional) => this.onProvisional(provisional))
                 if ((response.status === 401 || response.status === 407) && !this.canceled) {
-                    if (this.takeChallenge(response)) continue
+                    if (this.takeChallenge(response, tries === 0)) continue
                 }
                 break
             }
@@ -391,7 +415,69 @@ export class SipCall {
 
     setMuted(muted: boolean): void {
         this.muted = muted
-        this.rtp.sendAudio = !muted && !this.remoteHeld
+        this.updateFlow()
+    }
+
+    /** Espera e retomada: um re-INVITE mudando o sentido do áudio (RFC 3264, 8.4). */
+    async setHeld(held: boolean): Promise<void> {
+        if (this.state !== 'established') throw new Error('A chamada não está em andamento')
+        if (held === this.localHeld) return
+        this.localHeld = held
+        try {
+            await this.reinvite()
+        } catch (error) {
+            this.localHeld = !held
+            this.updateFlow()
+            throw error
+        }
+        this.updateFlow()
+        this.events.hold(held, 'local')
+    }
+
+    private async reinvite(): Promise<void> {
+        const uri = this.remoteTarget ?? `sip:${this.remote}@${this.host.domain}`
+        let response: SipResponse
+        for (let tries = 0; ; tries++) {
+            const request = this.build('INVITE', uri, this.localSdp(this.mediaDirection()), 'application/sdp')
+            response = await this.host.transact(request)
+            if ((response.status === 401 || response.status === 407) && this.takeChallenge(response, tries === 0))
+                continue
+            break
+        }
+        if (response.status >= 300) throw new Error(`O PBX recusou: ${response.status} ${response.reason}`)
+        this.host.sendDirect(this.build('ACK', uri))
+        if (!response.body.trim()) return
+        try {
+            this.applyRemote(parseSdp(response.body), true)
+        } catch {
+            // Resposta sem áudio aproveitável: fica com o endereço que já valia.
+        }
+    }
+
+    /** Transferência cega (RF-15): pede ao outro lado que ligue para `target` (REFER, RFC 3515). */
+    transfer(target: string): Promise<void> {
+        return this.refer(`<sip:${target}@${this.host.domain}>`)
+    }
+
+    /**
+     * Transferência assistida (RF-16): o outro lado desta chamada assume o lugar desta conta na chamada
+     * de consulta (REFER com Replaces, RFC 3891).
+     */
+    async attendedTransfer(consult: SipCall): Promise<void> {
+        if (consult.state !== 'established' || !consult.remoteTag)
+            throw new Error('A chamada de consulta precisa estar em andamento')
+        const replaces = `${consult.callId};to-tag=${consult.remoteTag};from-tag=${consult.localTag}`
+        await this.refer(`<sip:${consult.remote}@${this.host.domain}?Replaces=${encodeURIComponent(replaces)}>`)
+    }
+
+    private async refer(referTo: string): Promise<void> {
+        if (this.state !== 'established') throw new Error('A chamada não está em andamento')
+        const response = await this.inDialog('REFER', '', undefined, [
+            ['Refer-To', referTo],
+            ['Referred-By', `<sip:${this.host.user}@${this.host.domain}>`]
+        ])
+        // A recusa já é o resultado final; o aceite (202) só diz que o outro lado vai tentar.
+        if (response.status >= 300) this.events.transfer(response.status, response.reason, true)
     }
 
     sendPcm(pcm: Int16Array): void {
@@ -444,7 +530,12 @@ export class SipCall {
                 try {
                     const media = request.body.trim() ? parseSdp(request.body) : undefined
                     if (media) this.applyRemote(media)
-                    const direction = media ? answerDirection(media.direction) : 'sendrecv'
+                    // A nossa espera continua valendo mesmo que o outro lado peça áudio nos dois sentidos.
+                    const direction = this.localHeld
+                        ? this.mediaDirection()
+                        : media
+                          ? answerDirection(media.direction)
+                          : 'sendrecv'
                     this.host.respond(request, 200, 'OK', {
                         ...options,
                         body: this.localSdp(direction),
@@ -473,9 +564,20 @@ export class SipCall {
                 if (tone) this.events.dtmf(tone.toUpperCase())
                 return this.host.respond(request, 200, 'OK', options)
             }
+            case 'NOTIFY': {
+                this.host.respond(request, 200, 'OK', options)
+                // O andamento da transferência vem como um pedaço de resposta SIP no corpo (RFC 3515, 2.4.5).
+                const frag = /SIP\/2\.0 (\d{3})(?: ([^\r\n]*))?/.exec(request.body)
+                if (!/^refer/i.test(header(request, 'Event') ?? '') || !frag) return
+                const code = Number(frag[1])
+                const over = /terminated/i.test(header(request, 'Subscription-State') ?? '')
+                this.events.transfer(code, frag[2]?.trim() ?? '', code >= 200 || over)
+                // Transferência concluída: quem transferiu sai da chamada (RFC 5589, 6.1).
+                if (code >= 200 && code < 300) void this.hangup()
+                return
+            }
             case 'OPTIONS':
             case 'UPDATE':
-            case 'NOTIFY':
                 return this.host.respond(request, 200, 'OK', options)
             default:
                 this.host.respond(request, 501, 'Not Implemented', options)

@@ -46,7 +46,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'O que a central precisa ter' },
             {
                 type: 'p',
-                text: 'A Íris fala com a central de dois jeitos. O mais completo é **SIP sobre WebSocket seguro (WSS)** com áudio **WebRTC**: Asterisk (PJSIP com `transport` WSS), FreeSWITCH e Kamailio fazem isso. O outro é **SIP puro por UDP, TCP ou TLS**, para centrais sem WebSocket: a conta registra, liga e recebe chamadas com áudio **G.711** e DTMF. Em SIP puro ainda não há espera, transferência nem áudio cifrado (SRTP); isso chega numa próxima versão.'
+                text: 'A Íris fala com a central de dois jeitos. O mais completo é **SIP sobre WebSocket seguro (WSS)** com áudio **WebRTC**: Asterisk (PJSIP com `transport` WSS), FreeSWITCH e Kamailio fazem isso. O outro é **SIP puro por UDP, TCP ou TLS**, para centrais sem WebSocket: a conta registra, liga e recebe chamadas com áudio **G.711** e DTMF. Em SIP puro o áudio ainda não é cifrado (SRTP); isso chega numa próxima versão.'
             },
             {
                 type: 'note',
@@ -235,7 +235,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'Contas por SIP puro (UDP, TCP ou TLS)' },
             {
                 type: 'p',
-                text: 'Servem para centrais que não têm WebSocket. A conta **registra**, renova o registro sozinha, **liga e recebe chamadas** com áudio G.711 (PCMU ou PCMA), manda e recebe **DTMF** (por RTP ou SIP INFO), tem **mudo**, mede a **Saúde** e a qualidade (perda e variação do atraso) e mostra o **SIP bruto** e o **Fluxo SIP**. **Ainda não tem** espera, transferência nem áudio cifrado: os botões Espera e Transferir avisam no log que isso chega numa próxima versão.'
+                text: 'Servem para centrais que não têm WebSocket. A conta **registra**, renova o registro sozinha, **liga e recebe chamadas** com áudio G.711 (PCMU ou PCMA), manda e recebe **DTMF** (por RTP ou SIP INFO), tem **mudo**, **espera** e **transferência** cega e assistida, mede a **Saúde** e a qualidade (perda e variação do atraso) e mostra o **SIP bruto** e o **Fluxo SIP**. **Ainda não tem** áudio cifrado (SRTP) nem o tempo de ida e volta na qualidade (aparece como 0 ms).'
             },
             {
                 type: 'list',

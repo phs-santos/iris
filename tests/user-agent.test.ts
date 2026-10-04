@@ -364,7 +364,8 @@ function callRecorder() {
         progress: (code, reason, early) => seen.push(`progress ${code} ${reason}${early ? ' early' : ''}`),
         established: () => seen.push('established'),
         ended: (end) => seen.push(['ended', end.by, end.code, end.reason].filter(Boolean).join(' ')),
-        hold: (held) => seen.push(held ? 'hold' : 'unhold'),
+        hold: (held, by) => seen.push(`${held ? 'hold' : 'unhold'} ${by}`),
+        transfer: (code, reason, final) => seen.push(`transfer ${code} ${reason}${final ? ' final' : ''}`),
         dtmf: (tone) => seen.push(`dtmf ${tone}`),
         audio: () => undefined
     }
@@ -443,10 +444,10 @@ describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
         await agent.stop()
     })
 
-    it('atende com SDP: fica em andamento, recebe espera, DTMF por INFO e o BYE do outro lado', async () => {
+    it('em andamento: espera dos dois lados, DTMF por INFO, transferência cega e o BYE do outro lado', async () => {
         const { agent, transport } = await registered()
         const { seen, events } = callRecorder()
-        agent.dial('1002', events)
+        const call = agent.dial('1002', events)
         await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
         const invite = sentOf(transport, 'INVITE')[0]!
         const callId = header(invite, 'Call-ID')!
@@ -494,9 +495,93 @@ describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
         transport.onMessage(inDialog('INFO', 12, 'Signal=7\r\nDuration=160\r\n', 'application/dtmf-relay'))
         transport.onMessage(inDialog('MESSAGE', 13))
         expect(lastReply()).toMatchObject({ status: 501 })
-        transport.onMessage(inDialog('BYE', 14))
-        expect(lastReply()).toMatchObject({ status: 200 })
-        expect(seen).toEqual(['established', 'hold', 'unhold', 'dtmf 7', 'ended remote'])
+        // Espera local: re-INVITE com sendonly; a resposta recvonly do PBX não conta como espera dele.
+        const hold = call.setHeld(true)
+        await until(() => sentOf(transport, 'INVITE').length === 2, 're-INVITE da espera')
+        const reinvite = sentOf(transport, 'INVITE')[1]!
+        expect(reinvite.body).toContain('a=sendonly')
+        expect(reinvite.uri).toBe('sip:1002@pbx.teste:5060')
+        expect(header(reinvite, 'To')).toContain(';tag=pbx')
+        transport.onMessage(
+            ok(PBX_SDP('recvonly'))
+                .replace(`Via: ${header(invite, 'Via')}`, `Via: ${header(reinvite, 'Via')}`)
+                .replace(`CSeq: ${header(invite, 'CSeq')}`, `CSeq: ${header(reinvite, 'CSeq')}`)
+        )
+        await hold
+        expect(sentOf(transport, 'ACK')).toHaveLength(3)
+
+        // Transferência cega: REFER, e o andamento chega por NOTIFY.
+        transport.answer = (request) => (request.method === 'REFER' ? { status: 202, reason: 'Accepted' } : null)
+        await call.transfer('8000')
+        const refer = sentOf(transport, 'REFER')[0]!
+        expect(header(refer, 'Refer-To')).toBe('<sip:8000@pbx.teste>')
+        expect(header(refer, 'Referred-By')).toBe('<sip:2001@pbx.teste>')
+        const notify = (frag: string, state: string): string =>
+            inDialog('NOTIFY', 20, `${frag}\r\n`, 'message/sipfrag').replace(
+                'Content-Type:',
+                `Event: refer\r\nSubscription-State: ${state}\r\nContent-Type:`
+            )
+        transport.onMessage(notify('SIP/2.0 100 Trying', 'active;expires=60'))
+        transport.onMessage(notify('SIP/2.0 200 OK', 'terminated;reason=noresource'))
+        transport.answer = () => null
+
+        // Concluída a transferência, esta conta sai da chamada com BYE.
+        expect(sentOf(transport, 'BYE')).toHaveLength(1)
+        expect(seen).toEqual([
+            'established',
+            'hold remote',
+            'unhold remote',
+            'dtmf 7',
+            'hold local',
+            'transfer 100 Trying',
+            'transfer 200 OK final',
+            'ended local'
+        ])
+        await agent.stop()
+    })
+
+    it('transferência assistida: REFER com Replaces apontando para a chamada de consulta', async () => {
+        const { agent, transport } = await registered()
+        const answer = (invite: SipRequest, tag: string): void =>
+            transport.onMessage(
+                [
+                    'SIP/2.0 200 OK',
+                    `Via: ${header(invite, 'Via')}`,
+                    `From: ${header(invite, 'From')}`,
+                    `To: ${header(invite, 'To')};tag=${tag}`,
+                    `Call-ID: ${header(invite, 'Call-ID')}`,
+                    `CSeq: ${header(invite, 'CSeq')}`,
+                    'Contact: <sip:pbx@pbx.teste:5060>',
+                    'Content-Type: application/sdp',
+                    `Content-Length: ${Buffer.byteLength(PBX_SDP())}`,
+                    '',
+                    PBX_SDP()
+                ].join('\r\n')
+            )
+        const first = callRecorder()
+        const original = agent.dial('1002', first.events)
+        await until(() => sentOf(transport, 'INVITE').length === 1, 'primeiro INVITE')
+        const second = callRecorder()
+        const consult = agent.dial('1003', second.events)
+        await expect(original.attendedTransfer(consult)).rejects.toThrow(/consulta precisa estar em andamento/)
+        await until(() => sentOf(transport, 'INVITE').length === 2, 'INVITE da consulta')
+        answer(sentOf(transport, 'INVITE')[0]!, 'tagA')
+        await until(() => first.seen.includes('established'), 'original em andamento')
+        await expect(original.attendedTransfer(consult)).rejects.toThrow(/consulta precisa estar em andamento/)
+        answer(sentOf(transport, 'INVITE')[1]!, 'tagB')
+        await until(() => second.seen.includes('established'), 'consulta em andamento')
+
+        transport.answer = (request) => (request.method === 'REFER' ? { status: 603, reason: 'Declined' } : null)
+        await original.attendedTransfer(consult)
+        const referTo = header(sentOf(transport, 'REFER')[0]!, 'Refer-To')!
+        const consultInvite = sentOf(transport, 'INVITE')[1]!
+        const fromTag = /tag=([^;>]+)/.exec(header(consultInvite, 'From')!)![1]
+        expect(referTo).toBe(
+            `<sip:1003@pbx.teste?Replaces=${encodeURIComponent(`${consult.callId};to-tag=tagB;from-tag=${fromTag}`)}>`
+        )
+        // O PBX recusou o REFER: a recusa já é o resultado final.
+        expect(first.seen).toEqual(['established', 'transfer 603 Declined final'])
+        transport.answer = () => null
         await agent.stop()
     })
 
