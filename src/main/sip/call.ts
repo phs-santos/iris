@@ -58,6 +58,8 @@ export interface CallHost {
     readonly reliable: boolean
     log(level: 'info' | 'warn' | 'error', text: string): void
     forget(call: SipCall): void
+    /** Guarda um pacote de áudio na captura da conta (RF-44). */
+    captureRtp(direction: 'out' | 'in', data: Buffer, localPort: number, address: string, port: number): void
 }
 
 export interface ResponseOptions {
@@ -124,6 +126,8 @@ export class SipCall {
             },
             dtmf: (tone) => this.events.dtmf(tone)
         })
+        this.rtp.wire = (direction, data, address, port) =>
+            this.host.captureRtp(direction, data, this.rtpPort, address, port)
     }
 
     get ended(): boolean {

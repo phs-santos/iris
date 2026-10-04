@@ -325,7 +325,14 @@ function registerIpc(): void {
     // TLS do motor próprio (RF-39): mesma lista de hosts aceitos e mesmo aviso do WebSocket (RF-37).
     registerNativeSipIpc({
         isTrustedHost: (host) => trustedHosts.has(host),
-        onCertificateError: (host, error) => mainWindow?.webContents.send(IPC.certificateError, { host, error })
+        onCertificateError: (host, error) => mainWindow?.webContents.send(IPC.certificateError, { host, error }),
+        saveFile: async (defaultName, data) => {
+            if (!mainWindow) return null
+            const result = await dialog.showSaveDialog(mainWindow, { defaultPath: basename(defaultName) })
+            if (result.canceled || !result.filePath) return null
+            await fs.writeFile(result.filePath, data)
+            return result.filePath
+        }
     })
 
     handle(IPC.windowMode, (_e, mode: WindowMode) => {

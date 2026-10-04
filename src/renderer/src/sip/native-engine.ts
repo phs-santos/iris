@@ -1,4 +1,11 @@
-import type { Account, DtmfMode, NativeCallEvent, NativeSipEvent } from '@shared/types'
+import type {
+    Account,
+    DtmfMode,
+    NativeCallEvent,
+    NativeSipEvent,
+    SipManualRequest,
+    SipManualResponse
+} from '@shared/types'
 import type { SipTransportKind } from '@shared/sip-target'
 import { Emitter } from '@renderer/lib/emitter'
 import { t } from '@renderer/i18n'
@@ -218,6 +225,14 @@ export class NativeSipEngine implements SipEngine {
         this.early.delete(callId)
         if (pending.length) setTimeout(() => pending.forEach((event) => this.deliver(call, event)), 0)
         return call
+    }
+
+    request(spec: SipManualRequest): Promise<SipManualResponse> {
+        return window.iris.sip.request(this.id, spec)
+    }
+
+    exportCapture(withRtp: boolean): Promise<string | null> {
+        return window.iris.sip.exportPcap(this.id, withRtp)
     }
 
     async health(): Promise<HealthReport> {

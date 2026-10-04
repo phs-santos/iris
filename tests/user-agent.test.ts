@@ -303,6 +303,41 @@ describe('motor próprio: registro por SIP puro (RF-39)', () => {
         await agent.stop()
     })
 
+    it('pedido manual (RF-45): leva os cabeçalhos extras e o corpo, responde ao desafio e mede o tempo', async () => {
+        const { agent, transport } = setup({}, (t) => (t.answer = withAuth()))
+        await agent.start()
+        const before = transport().sent.length
+        // O PBX pede a senha de novo, agora como proxy, para os pedidos que não são REGISTER.
+        transport().answer = (request) =>
+            request.method === 'REGISTER' || header(request, 'Proxy-Authorization')
+                ? { status: 200, reason: 'OK' }
+                : { status: 407, reason: 'Proxy Authentication Required', extra: [['Proxy-Authenticate', CHALLENGE]] }
+        const { response, ms } = await agent.sendRequest({
+            method: 'MESSAGE',
+            uri: 'sip:1002@pbx.teste',
+            headers: [['X-Teste', '1']],
+            body: 'olá',
+            contentType: 'text/plain'
+        })
+        expect(response.status).toBe(200)
+        expect(ms).toBeGreaterThanOrEqual(0)
+        const [first, second] = transport().sent.slice(before)
+        expect(first!.method).toBe('MESSAGE')
+        expect(header(first!, 'To')).toBe('<sip:1002@pbx.teste>')
+        expect(header(first!, 'X-Teste')).toBe('1')
+        expect(header(first!, 'Content-Type')).toBe('text/plain')
+        expect(first!.body).toBe('olá')
+        expect(header(first!, 'Proxy-Authorization')).toBeUndefined()
+        expect(header(second!, 'Proxy-Authorization')).toContain('uri="sip:1002@pbx.teste"')
+        expect(second!.body).toBe('olá')
+        // Um pedido para o próprio PBX mantém o To da conta.
+        await agent.sendRequest({ method: 'OPTIONS', uri: 'sip:pbx.teste', headers: [] })
+        expect(header(transport().sent.at(-1)!, 'To')).toBe('<sip:2001@pbx.teste>')
+        // Tudo o que foi e voltou está na captura (RF-44).
+        expect(agent.capture.count).toBe(transport().sent.length * 2)
+        await agent.stop()
+    })
+
     it('o log da tela não leva a resposta do desafio (RNF-10)', async () => {
         const { agent, logs } = setup({}, (t) => (t.answer = withAuth()))
         await agent.start()

@@ -15,18 +15,24 @@ import {
     type NativeSipConfig,
     type NativeSipEvent,
     type NativeSipEventBody,
-    type NativeSipHealth
+    type NativeSipHealth,
+    type SipManualRequest,
+    type SipManualResponse,
+    MANUAL_METHODS
 } from '@shared/types'
 import { isSipTransportKind, parseSipServer } from '@shared/sip-target'
 import { check, handle, isPlainObject, isString, on } from './ipc-guard'
 import type { CallEvents, SipCall } from './sip/call'
 import { createTransport } from './sip/transport'
 import { SipUserAgent } from './sip/user-agent'
+import { serializeMessage } from './sip/message'
 
 interface Options {
     /** Hosts cujo certificado inválido o usuário aceitou (RF-37). */
     isTrustedHost(host: string): boolean
     onCertificateError(host: string, error: string): void
+    /** Pergunta onde salvar e grava; devolve o caminho, ou null se o usuário cancelou. */
+    saveFile(defaultName: string, data: Buffer): Promise<string | null>
 }
 
 const agents = new Map<string, SipUserAgent>()
@@ -249,6 +255,50 @@ export function registerNativeSipIpc(options: Options): void {
         recorders.set(key, recorder)
         call.tap = (side, pcm) => recorder.push(side, pcm)
         return recorder.path
+    })
+
+    handle(IPC.sipRequest, async (_e, engineId: string, spec: SipManualRequest): Promise<SipManualResponse> => {
+        check(
+            isEngineId(engineId) &&
+                isPlainObject(spec) &&
+                (MANUAL_METHODS as readonly string[]).includes(spec.method as string) &&
+                isString(spec.uri, 300) &&
+                /^sips?:[^\s<>"]+$/i.test(spec.uri) &&
+                Array.isArray(spec.headers) &&
+                spec.headers.length <= 20 &&
+                spec.headers.every(isExtraHeader) &&
+                (spec.body === undefined || (isString(spec.body, 20_000) && !spec.body.includes('\0'))) &&
+                (spec.contentType === undefined ||
+                    (isString(spec.contentType, 100) && /^[\w.+-]+\/[\w.+-]+$/.test(spec.contentType))),
+            'pedido SIP'
+        )
+        const agent = agents.get(engineId)
+        if (!agent?.connected) throw new Error('Registre a conta antes de mandar um pedido')
+        const { response, ms } = await agent.sendRequest({
+            method: spec.method,
+            uri: spec.uri,
+            headers: spec.headers.map((line): [string, string] => [
+                line.slice(0, line.indexOf(':')).trim(),
+                line.slice(line.indexOf(':') + 1).trim()
+            ]),
+            // O corpo do SIP usa CRLF; a tela manda as linhas como o usuário digitou.
+            body: spec.body?.replace(/\r?\n/g, '\r\n'),
+            contentType: spec.contentType
+        })
+        return {
+            status: response.status,
+            reason: response.reason,
+            text: serializeMessage(response).replace(/\r\n/g, '\n'),
+            ms
+        }
+    })
+
+    handle(IPC.sipPcap, async (_e, engineId: string, withRtp: boolean): Promise<string | null> => {
+        check(isEngineId(engineId) && typeof withRtp === 'boolean', 'captura')
+        const agent = agents.get(engineId)
+        if (!agent) throw new Error('Registre a conta para ter o que capturar')
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+        return options.saveFile(`iris-${stamp}.pcap`, agent.capture.toPcap(withRtp))
     })
 
     // 50 blocos por segundo por chamada: sem resposta e sem log, só confere o tamanho.

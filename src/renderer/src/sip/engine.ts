@@ -1,7 +1,7 @@
 // Interface própria do motor SIP (RNF-16). A interface do app só conhece estes tipos;
 // o easy-sipjs e o simulador são duas implementações intercambiáveis.
 
-import type { DtmfMode } from '@shared/types'
+import type { DtmfMode, SipManualRequest, SipManualResponse } from '@shared/types'
 
 export type RegState = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error'
 
@@ -101,6 +101,10 @@ export interface SipEngine {
     disconnect(): Promise<void>
     dial(destination: string, options?: DialOptions): Promise<EngineCall>
     health(): Promise<HealthReport>
+    /** Pedido SIP manual, fora de chamada (RF-45). Só nos motores que conseguem. */
+    request?(spec: SipManualRequest): Promise<SipManualResponse>
+    /** Salva em PCAP o que passou pela rede desta conta (RF-44). Só no motor próprio. */
+    exportCapture?(withRtp: boolean): Promise<string | null>
     dispose(): Promise<void>
 }
 

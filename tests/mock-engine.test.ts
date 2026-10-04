@@ -91,6 +91,20 @@ describe('MockEngine', () => {
         expect(await incoming!.audioLevel()).toBe(SILENCE_DB)
     })
 
+    it('pedido manual no simulado (RF-45): 200 para OPTIONS, 489 para assinatura, erro sem registro', async () => {
+        const a = make('1001')
+        await expect(a.request({ method: 'OPTIONS', uri: 'sip:demo.local', headers: [] })).rejects.toThrow(
+            /Registre a conta/
+        )
+        await registered(a)
+        const ok = await a.request({ method: 'OPTIONS', uri: 'sip:demo.local', headers: [] })
+        expect(ok).toMatchObject({ status: 200, reason: 'OK' })
+        expect(ok.text).toContain('Allow: INVITE')
+        expect(await a.request({ method: 'SUBSCRIBE', uri: 'sip:1002@demo.local', headers: [] })).toMatchObject({
+            status: 489
+        })
+    })
+
     it('entrega o DTMF enviado ao outro lado', async () => {
         const a = make('1001')
         const b = make('1002')

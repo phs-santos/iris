@@ -19,6 +19,7 @@ import {
 } from './message'
 import { TlsCertificateError, type SipTransport, type TransportFactory } from './transport'
 import { SipCall, type CallEvents, type CallHost, type ResponseOptions } from './call'
+import { PacketCapture } from './pcap'
 
 export interface UserAgentConfig {
     user: string
@@ -94,6 +95,8 @@ export class SipUserAgent {
     private transport?: SipTransport
     private pending = new Map<string, Pending>()
     private calls = new Map<string, SipCall>()
+    /** Tudo o que passou pela rede desta conta, para exportar em PCAP (RF-44). */
+    readonly capture = new PacketCapture()
     private state: UaState = 'disconnected'
     private callId = `${token(12)}@iris`
     private fromTag = token(6)
@@ -337,6 +340,7 @@ export class SipUserAgent {
             this.pending.set(key, entry)
             const send = (): void => {
                 this.events.log('info', 'sip', `→ ${redact(text).replace(/\r\n/g, '\n')}`)
+                this.captureSip('out', text)
                 transport.send(text)
             }
             send()
@@ -387,6 +391,7 @@ export class SipUserAgent {
             return
         }
         this.events.log('info', 'sip', `← ${text.replace(/\r\n/g, '\n')}`)
+        this.captureSip('in', text)
         if (message.kind === 'response') this.onResponse(message)
         else this.onRequest(message)
     }
@@ -441,7 +446,58 @@ export class SipUserAgent {
 
     private sendText(text: string): void {
         this.events.log('info', 'sip', `→ ${redact(text).replace(/\r\n/g, '\n')}`)
+        this.captureSip('out', text)
         this.transport?.send(text)
+    }
+
+    private remoteEndpoint(): { address: string; port: number } {
+        return { address: this.config.host, port: this.config.port }
+    }
+
+    private captureSip(direction: 'out' | 'in', text: string): void {
+        const local = this.transport?.local
+        if (!local) return
+        const remote = this.remoteEndpoint()
+        if (direction === 'out') this.capture.add(local, remote, text)
+        else this.capture.add(remote, local, text)
+    }
+
+    /**
+     * Pedido manual, fora de qualquer chamada (RF-45): OPTIONS, MESSAGE, SUBSCRIBE e afins. Responde
+     * uma vez ao desafio de senha e devolve a resposta final com o tempo que levou.
+     */
+    async sendRequest(spec: {
+        method: string
+        uri: string
+        headers: [string, string][]
+        body?: string
+        contentType?: string
+    }): Promise<{ response: SipResponse; ms: number }> {
+        const started = Date.now()
+        const build = (): SipRequest => {
+            const request = this.buildRequest(spec.method, spec.uri)
+            // Um pedido para outro endereço leva esse endereço no To.
+            const to = request.headers.find(([name]) => name === 'To')!
+            if (/^sips?:[^@]+@/i.test(spec.uri)) to[1] = `<${spec.uri.split(';')[0]}>`
+            request.headers.push(...spec.headers)
+            if (spec.body) {
+                request.headers.push(['Content-Type', spec.contentType || 'text/plain'])
+                request.body = spec.body
+            }
+            return request
+        }
+        const saved = this.challenge
+        let response = await this.request(build())
+        if (response.status === 401 || response.status === 407) {
+            const proxy = response.status === 407
+            const value = header(response, proxy ? 'Proxy-Authenticate' : 'WWW-Authenticate')
+            if (value) {
+                this.challenge = { value: parseChallenge(value), proxy }
+                this.nonceCount = 0
+                response = await this.request(build()).finally(() => (this.challenge = saved))
+            }
+        }
+        return { response, ms: Date.now() - started }
     }
 
     // ─── Chamadas (segunda entrega do RF-39) ───────────────────────────────
@@ -473,6 +529,11 @@ export class SipUserAgent {
             },
             respond: (request, status, reason, options) => this.reply(request, status, reason, options),
             log: (level, text) => this.events.log(level, 'event', text),
+            captureRtp: (direction, data, localPort, address, port) => {
+                const local = { address: this.transport?.local.address ?? '0.0.0.0', port: localPort }
+                if (direction === 'out') this.capture.add(local, { address, port }, data, true)
+                else this.capture.add({ address, port }, local, data, true)
+            },
             forget: (call) => {
                 if (this.calls.get(call.callId) === call) this.calls.delete(call.callId)
             }

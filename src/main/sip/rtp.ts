@@ -112,6 +112,8 @@ export class RtpSession {
     private dtmfQueue: Promise<void> = Promise.resolve()
     private sendingDtmf = false
     private closed = false
+    /** Cópia de cada pacote como passou pela rede, para a captura (RF-44). */
+    wire?: (direction: 'out' | 'in', data: Buffer, address: string, port: number) => void
     /** Mudo ou espera: o microfone é descartado. */
     sendAudio = true
     receiveAudio = true
@@ -167,6 +169,7 @@ export class RtpSession {
     }
 
     private receive(raw: Buffer, address: string, port: number): void {
+        this.wire?.('in', raw, address, port)
         // Com cifra, um pacote que não confere a assinatura é descartado antes de qualquer outra coisa.
         const data = this.srtpIn ? this.srtpIn.unprotect(raw) : raw
         const packet = data && parseRtp(data)
@@ -218,6 +221,7 @@ export class RtpSession {
         this.sequence = (this.sequence + 1) & 0xffff
         this.stats.packetsSent++
         this.octetsSent += payload.length
+        this.wire?.('out', data, remote.address, remote.port)
         this.socket.send(data, remote.port, remote.address, () => undefined)
     }
 

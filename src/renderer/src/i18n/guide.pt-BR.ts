@@ -197,6 +197,8 @@ export const GUIDE: GuideSection[] = [
                     '**Editar**: abre o formulário. Se a conta estava registrada, ela é registrada de novo com os dados novos.',
                     '**⋯ → Saúde**: roda as verificações da conta. Veja "Saúde e diagnóstico".',
                     '**⋯ → Duplicar**: cria uma cópia, para cadastrar vários ramais parecidos sem redigitar tudo.',
+                    '**⋯ → Requisição SIP…** (contas de SIP puro registradas e simuladas): manda um pedido avulso, como `OPTIONS`, `MESSAGE` ou `SUBSCRIBE`, com os cabeçalhos e o corpo que você escrever, e mostra a resposta inteira do PBX e o tempo que levou.',
+                    '**⋯ → Exportar PCAP** (contas de SIP puro registradas): salva o que passou pela rede daquela conta desde o registro, para abrir no Wireshark. "Só SIP" leva a sinalização; "com áudio" leva também os pacotes RTP. A captura guarda os 30 MB mais recentes.',
                     '**⋯ → Excluir**: pede confirmação e apaga a conta e a senha guardada.'
                 ]
             },
@@ -242,6 +244,7 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     'Em **TLS**, um certificado autoassinado é recusado e a tela oferece **Confiar neste host**, como no WebSocket.',
                     'Em **UDP**, a Íris repete o pedido se a central não responder e desiste depois de 32 segundos, com o erro `408`.',
+                    'No arquivo **PCAP**, as mensagens aparecem sempre como UDP, mesmo em contas TCP ou TLS, e em TLS já decifradas: é o texto SIP que interessa para diagnosticar. O arquivo tem ramais, números discados e, na opção com áudio, a conversa: trate como confidencial.',
                     'O áudio vai por **RTP sem cifra**, a não ser que você marque **Exigir áudio cifrado (SRTP)** na conta. Com essa opção, a Íris oferece SRTP ao ligar e recusa (`488`) quem liga sem ele; na linha de qualidade aparece `(SRTP)` ao lado do codec. Uma chamada recebida que já venha com SRTP é atendida com cifra mesmo sem a opção.',
                     'A chave do SRTP vai dentro da sinalização (SDES). Para ela não passar em claro, use o transporte **TLS** junto.',
                     'Com SRTP, o tempo de ida e volta (RTT) fica em 0: ele vem do RTCP, que a Íris só troca sem cifra.',

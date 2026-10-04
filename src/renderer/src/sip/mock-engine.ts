@@ -1,6 +1,7 @@
 // Motor simulado (RF-32): imita um PBX sem rede. Contas simuladas do mesmo domínio
 // ligam umas para as outras; alguns números especiais simulam respostas do PBX.
 
+import type { SipManualRequest, SipManualResponse } from '@shared/types'
 import { levelDb, SAMPLE_RATE, SILENCE_DB } from '@shared/audio'
 import type { Account, DtmfMode } from '@shared/types'
 import { Emitter } from '@renderer/lib/emitter'
@@ -472,6 +473,24 @@ export class MockEngine implements SipEngine {
         call.respond('out', '180 Ringing')
         this.emitter.emit('incoming', call)
         return call
+    }
+
+    /** Pedido manual no PBX simulado (RF-45): responde 200 ao que conhece e 489 a assinaturas. */
+    async request(spec: SipManualRequest): Promise<SipManualResponse> {
+        if (!this.registered) throw new Error('Registre a conta antes de mandar um pedido')
+        const [status, reason] =
+            spec.method === 'SUBSCRIBE' || spec.method === 'PUBLISH' ? [489, 'Bad Event'] : [200, 'OK']
+        this.log('info', `${spec.method} manual para ${spec.uri}: ${status} ${reason}`)
+        const text = [
+            `SIP/2.0 ${status} ${reason}`,
+            `To: <${spec.uri}>;tag=simulado`,
+            `CSeq: 1 ${spec.method}`,
+            'Allow: INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, MESSAGE, REFER, NOTIFY',
+            'Server: PBX simulado da Íris',
+            'Content-Length: 0',
+            ''
+        ].join('\n')
+        return { status, reason, text, ms: 20 }
     }
 
     async health(): Promise<HealthReport> {

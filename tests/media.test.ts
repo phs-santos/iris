@@ -3,6 +3,7 @@ import { decodeG711, encodeG711 } from '../src/main/sip/g711'
 import { buildRtp, parseRtp, RtpSession } from '../src/main/sip/rtp'
 import { answerDirection, buildSdp, parseSdp, SdpError } from '../src/main/sip/sdp'
 import { deriveKey, newSrtpKey, SrtpContext } from '../src/main/sip/srtp'
+import { PacketCapture, udpPacket } from '../src/main/sip/pcap'
 
 const sine = (samples: number, amplitude = 12000): Int16Array =>
     Int16Array.from({ length: samples }, (_, i) => Math.round(amplitude * Math.sin((2 * Math.PI * 440 * i) / 8000)))
@@ -292,5 +293,56 @@ describe('RTCP (RF-39)', () => {
             a.close()
             b.close()
         }
+    })
+})
+
+describe('captura em PCAP (RF-44)', () => {
+    const local = { address: '192.168.0.10', port: 5060 }
+    const pbx = { address: '10.0.0.5', port: 5060 }
+
+    it('monta um pacote IPv4 + UDP com endereços, portas e soma de verificação certos', () => {
+        const packet = udpPacket(local, pbx, Buffer.from('OPTIONS'))
+        expect(packet[0]).toBe(0x45)
+        expect(packet.readUInt16BE(2)).toBe(28 + 7)
+        expect(packet[9]).toBe(17)
+        expect([...packet.subarray(12, 16)]).toEqual([192, 168, 0, 10])
+        expect([...packet.subarray(16, 20)]).toEqual([10, 0, 0, 5])
+        expect(packet.readUInt16BE(20)).toBe(5060)
+        expect(packet.readUInt16BE(24)).toBe(8 + 7)
+        expect(packet.subarray(28).toString()).toBe('OPTIONS')
+        // A soma de todas as palavras do cabeçalho IP, com a soma de verificação, dá 0xffff.
+        let sum = 0
+        for (let i = 0; i < 20; i += 2) sum += packet.readUInt16BE(i)
+        while (sum >> 16) sum = (sum & 0xffff) + (sum >> 16)
+        expect(sum).toBe(0xffff)
+        // Endereço que não é IPv4 (IPv6, nome) vira 127.0.0.1 para o arquivo continuar legível.
+        expect([...udpPacket({ address: '::1', port: 1 }, pbx, Buffer.alloc(0)).subarray(12, 16)]).toEqual([
+            127, 0, 0, 1
+        ])
+    })
+
+    it('escreve o arquivo em ordem de tempo e deixa o áudio de fora quando não é pedido', () => {
+        const capture = new PacketCapture()
+        capture.add(pbx, local, 'SIP/2.0 200 OK', false, 2000)
+        capture.add(local, { address: '10.0.0.5', port: 10000 }, Buffer.alloc(172), true, 1500)
+        capture.add(local, pbx, 'REGISTER sip:pbx SIP/2.0', false, 1000)
+        expect(capture.count).toBe(3)
+
+        const sip = capture.toPcap(false)
+        expect(sip.readUInt32LE(0)).toBe(0xa1b2c3d4)
+        expect(sip.readUInt32LE(20)).toBe(101)
+        // Dois pacotes: o REGISTER (mais antigo) vem antes do 200.
+        const first = sip.readUInt32LE(24 + 8)
+        expect(sip.readUInt32LE(24)).toBe(1)
+        expect(sip.subarray(24 + 16 + 28, 24 + 16 + first).toString()).toBe('REGISTER sip:pbx SIP/2.0')
+        expect(sip.length).toBe(24 + 2 * 16 + 2 * 28 + 'REGISTER sip:pbx SIP/2.0'.length + 'SIP/2.0 200 OK'.length)
+        expect(capture.toPcap(true).length).toBe(sip.length + 16 + 28 + 172)
+    })
+
+    it('ao passar do limite, descarta os pacotes mais antigos', () => {
+        const capture = new PacketCapture(1000)
+        for (let i = 0; i < 20; i++) capture.add(local, pbx, Buffer.alloc(172), true, i)
+        expect(capture.count).toBe(5)
+        expect(capture.toPcap(true).readUInt32LE(24 + 4)).toBe(15 * 1000)
     })
 })

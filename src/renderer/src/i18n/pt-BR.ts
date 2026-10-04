@@ -3,6 +3,23 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    sipRequestDialog: {
+        titulo: 'Requisição SIP · {name}',
+        fechar: 'Fechar',
+        explicacao:
+            'Manda um pedido SIP avulso por esta conta e mostra a resposta do PBX. Via, From, To, Call-ID, CSeq e Contact são da Íris; aqui entram só os cabeçalhos a mais.',
+        metodo: 'Método',
+        endereco: 'Endereço (URI)',
+        cabecalhos: 'Cabeçalhos extras, um por linha',
+        cabecalhos_exemplo: 'Event: message-summary\nAccept: application/simple-message-summary',
+        corpo: 'Corpo (opcional)',
+        tipo_do_corpo: 'Tipo do corpo',
+        enviar: 'Enviar',
+        enviando: 'Enviando…',
+        resposta: '{status} {reason} em {ms} ms',
+        resposta_completa: 'Resposta completa',
+        registre_antes: 'Registre a conta antes de mandar um pedido'
+    },
     historyPane: {
         chamadas: '{length} chamadas',
         limpar: 'Limpar histórico',
@@ -152,6 +169,11 @@ export const ptBR = {
         falhou: 'Falhou: {p}'
     },
     accountsPane: {
+        requisicao_sip: 'Requisição SIP…',
+        exportar_pcap: 'Exportar PCAP (só SIP)',
+        exportar_pcap_com_audio: 'Exportar PCAP (com áudio)',
+        pcap_salvo: 'Captura salva em {path}',
+        pcap_falhou: 'Não foi possível exportar a captura: {message}',
         contas: 'Contas',
         acoes_de_todas_as_contas: 'Ações de todas as contas',
         nova: '+ Nova',
