@@ -23,7 +23,8 @@ O SIP Bench é um softphone desktop para desenvolvedores e QA testarem telefonia
 
 **Fora do escopo**
 
-- Vídeo, chat e conferência
+- Chat e conferência
+- Vídeo, até o RF-52 ser feito (planejado em 04/10/2026; ver "Chamada de vídeo")
 - Uso como softphone de atendimento em produção (fila, CRM, relatórios)
 - Versão mobile
 
@@ -132,6 +133,24 @@ São 37 requisitos em cinco grupos: 15 essenciais, 16 importantes e 6 desejávei
 | RF-37 | Aceitar certificado autoassinado de um host específico, com aviso explícito | Importante | M2 | Só o host aceito conecta; os demais continuam recusados |
 | RF-38 | Ajuda de IA para explicar o log, uma chamada ou uma falha de registro, pela OpenRouter, com a chave do próprio usuário | Desejável | M4 | Sem chave nada é enviado; a tela mostra o texto antes de enviar; por padrão ramais, números, IPs, domínios e nomes saem mascarados; senhas e dados de autenticação nunca saem; a chave fica no cofre de senhas e a interface não consegue lê-la |
 | RF-39 | SIP puro por UDP, TCP ou TLS com motor próprio em TypeScript, sem biblioteca nativa, atrás da interface `SipEngine`. Três entregas: (1) registro, renovação, OPTIONS e Saúde; (2) chamadas com G.711 e DTMF (RFC 4733 e SIP INFO); (3) espera, transferência, SRTP e qualidade por RTCP | Importante | Depois do M4 | Entrega 1: um ramal registra no Asterisk por UDP, por TCP e por TLS, renova o registro e aparece nos contatos do PBX. Entrega 2: chamada com áudio nos dois sentidos entre um ramal de SIP puro e um ramal WebRTC. Entrega 3: as mesmas ações de chamada do WebRTC |
+
+### Depois do 1.5 (pedidos pelo usuário em 04/10/2026)
+
+| ID | Requisito | Prioridade | Marco | Critério de aceitação |
+| --- | --- | --- | --- | --- |
+| RF-40 | Histórico de chamadas: hora, conta, direção, número, duração e resultado de cada chamada encerrada, guardado entre uma abertura e outra, com atalho para o Fluxo SIP enquanto o log da chamada ainda estiver na memória | Importante | 1.6 | Uma chamada encerrada aparece na lista com o código final e continua lá depois de reabrir o app |
+| RF-36 | Gravar a chamada em arquivo de áudio local (WAV, um lado em cada canal). Primeiro em SIP puro; em WebRTC depois | Desejável | 1.6 | O arquivo contém os dois lados da conversa |
+| RF-41 | Verificação de áudio nos cenários: passos "tocar tom", "tocar arquivo WAV", "esperar áudio" e "esperar silêncio". Enviar áudio vale para SIP puro e para o simulado; medir o que chega vale para os três motores | Importante | 1.6 | Um cenário contra o eco do PBX passa quando o áudio volta e falha quando a chamada fica muda |
+| RF-42 | Teste de carga por SIP puro: N ramais registrados e M chamadas simultâneas tocando um tom, com relatório de registros, chamadas completadas, perda e jitter | Desejável | 1.6 | 50 chamadas simultâneas contra o Asterisk de teste, com o relatório no fim |
+| RF-43 | Monitor: roda um cenário a cada N minutos e avisa por notificação do sistema e, se configurado, por webhook quando o resultado muda de passou para falhou ou o contrário | Importante | 1.6 | Com o PBX fora do ar, a notificação aparece na execução seguinte; quando ele volta, outra avisa |
+| RF-44 | Exportar uma chamada de SIP puro em PCAP, com a sinalização e, se pedido, o RTP | Desejável | 1.6 | O Wireshark abre o arquivo e mostra o diálogo SIP |
+| RF-45 | Requisição SIP manual por uma conta de SIP puro registrada: método, endereço, cabeçalhos e corpo; a resposta aparece na tela e no log | Desejável | 1.6 | Um OPTIONS manual ao PBX mostra o 200 OK com os cabeçalhos |
+| RF-46 | Diagnóstico de rede na Saúde: registros DNS SRV do domínio, certificado TLS do PBX (emissor, validade, nomes) e endereço público visto por um servidor STUN | Desejável | 1.6 | Para um domínio com SRV, a tela lista os destinos e as portas |
+| RF-47 | Mais codecs em SIP puro: G.722 e Opus, além do G.711 | Desejável | 1.6 | Chamada com um ramal que só aceita Opus completa com áudio |
+| RF-48 | Contas em lote por CSV (nome, ramal, domínio, senha, transporte, endereço) e variáveis nos cenários (`{ramal}`, `{dominio}`, `{nome}` da conta de origem), para o mesmo roteiro servir a várias contas | Importante | 1.6 | Um CSV com 20 linhas cria 20 contas; um cenário com `{ramal}` roda em qualquer uma delas |
+| RF-49 | Relatório JUnit (XML) na linha de comando, com cada execução de cenário como um teste e o passo que falhou na mensagem | Importante | 1.6 | Um CI que lê JUnit mostra os cenários e destaca o que falhou |
+| RF-27 | Presença e BLF de ramais escolhidos e aviso de correio de voz (MWI), em SIP puro | Desejável | 1.6 | O ramal aparece como ocupado enquanto está em chamada |
+| RF-52 | Chamada de vídeo. Planejado, sem data | Desejável | Depois | Vídeo nos dois sentidos entre dois ramais WebRTC do mesmo PBX |
 
 ## Requisitos não funcionais
 
@@ -259,6 +278,24 @@ A janela principal tem três colunas fixas: contas à esquerda, discador e chama
 2. **Chamada entre contas:** selecionar a conta A, clicar no atalho da conta B, ligar; B toca na mesma janela e atende (ou auto-atende); os dois cartões ficam lado a lado e o log intercala os eventos por horário.
 3. **Teste de URA:** discar o número da URA, ouvir, enviar a sequência `1,w2,4321#` e conferir os dígitos no log.
 4. **Transferência:** em chamada, clicar em Transferir, escolher cega ou assistida, acompanhar 100, 180 e 200 no cartão.
+
+## Chamada de vídeo (RF-52, planejado)
+
+O vídeo entra por dois caminhos, com custo muito diferente.
+
+**WebRTC (contas por WebSocket): o caminho curto.** O Chromium já captura a câmera, codifica (VP8, VP9 ou H.264), cifra e desenha o vídeo. O que falta é do app:
+
+- permissão de câmera, hoje negada de propósito em `setupSecurity` (só o microfone passa), e a frase de uso da câmera no `Info.plist` do macOS;
+- `dial` e `answer` com a opção de vídeo na interface `SipEngine`, nos três motores (o simulado mostra um vídeo de teste);
+- o easy-sipjs precisa pedir vídeo no `getUserMedia` e entregar o elemento de vídeo remoto; se não fizer, entra um patch como o do `transport=ws`;
+- tela: o cartão da chamada ganha a imagem do outro lado e a miniatura da própria câmera, os botões de ligar e desligar a câmera e a escolha da câmera em Configurações → Áudio (que passa a se chamar Áudio e vídeo);
+- qualidade: resolução, quadros por segundo e taxa de bits pelo `getStats`;
+- cenários: o passo "esperar vídeo" confere que chegam quadros;
+- teste: o Asterisk de teste precisa de `allow=vp8` e `max_video_streams` nos ramais WebRTC; o Chromium tem câmera falsa (`IRIS_FAKE_MEDIA`).
+
+**SIP puro (motor próprio): o caminho longo.** O RTP de vídeo em si é parecido com o de áudio, mas codificar e decodificar vídeo no processo principal não é viável sem biblioteca nativa. A saída é usar o WebCodecs do Chromium na interface: a câmera vira quadros H.264 codificados por `VideoEncoder`, que cruzam o IPC e são empacotados em RTP (RFC 6184) no processo principal; no outro sentido, o RTP é desempacotado e os quadros vão para um `VideoDecoder` e um `<canvas>`. Falta ainda o controle que o vídeo exige e o áudio não: pedido de quadro-chave (RTCP PLI e FIR), limite de banda e reordenação de pacotes. É do tamanho das entregas 2 e 3 do RF-39 juntas.
+
+**Ordem proposta:** primeiro o WebRTC inteiro; o SIP puro só se houver um PBX sem WebSocket que precise de vídeo.
 
 ## Plano de entrega
 
