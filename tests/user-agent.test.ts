@@ -5,6 +5,7 @@ import { TlsCertificateError, type SipTransport, type TransportOptions } from '.
 import { redact, SipUserAgent, T1, TIMER_F, type UaStatus, type UserAgentConfig } from '../src/main/sip/user-agent'
 import { parseSipServer } from '../src/shared/sip-target'
 import type { CallEvents, SipCall } from '../src/main/sip/call'
+import { toneSamples } from '../src/shared/audio'
 
 /** PBX falso em memória: guarda o que o user-agent manda e responde o que o teste disser. */
 class FakeTransport implements SipTransport {
@@ -582,6 +583,52 @@ describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
         // O PBX recusou o REFER: a recusa já é o resultado final.
         expect(first.seen).toEqual(['established', 'transfer 603 Declined final'])
         transport.answer = () => null
+        await agent.stop()
+    })
+
+    it('toca um áudio no lugar do microfone, no ritmo de 20 ms por bloco, e mede o que chega (RF-41)', async () => {
+        const { agent, transport } = await registered()
+        const { seen, events } = callRecorder()
+        const call = agent.dial('600', events)
+        await expect(call.play(toneSamples(440, 100))).rejects.toThrow(/não está em andamento/)
+        await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
+        const invite = sentOf(transport, 'INVITE')[0]!
+        const body = PBX_SDP()
+        transport.onMessage(
+            [
+                'SIP/2.0 200 OK',
+                `Via: ${header(invite, 'Via')}`,
+                `From: ${header(invite, 'From')}`,
+                `To: ${header(invite, 'To')};tag=pbx`,
+                `Call-ID: ${header(invite, 'Call-ID')}`,
+                `CSeq: ${header(invite, 'CSeq')}`,
+                'Contact: <sip:600@pbx.teste:5060>',
+                'Content-Type: application/sdp',
+                `Content-Length: ${Buffer.byteLength(body)}`,
+                '',
+                body
+            ].join('\r\n')
+        )
+        await until(() => seen.includes('established'), 'chamada em andamento')
+        const copied: Int16Array[] = []
+        call.tap = (side, pcm) => side === 'sent' && copied.push(pcm)
+        const started = Date.now()
+        const playing = call.play(toneSamples(440, 200))
+        // Enquanto toca, o microfone é descartado.
+        call.sendPcm(new Int16Array(160).fill(9999))
+        await playing
+        const elapsed = Date.now() - started
+        expect(elapsed).toBeGreaterThanOrEqual(170)
+        expect(elapsed).toBeLessThan(1500)
+        expect(copied).toHaveLength(10)
+        expect(copied.every((frame) => frame.length === 160 && !frame.includes(9999))).toBe(true)
+        expect(call.stats().packetsSent).toBe(10)
+        // Depois do áudio, o microfone volta a passar; e ninguém mandou nada de volta.
+        call.sendPcm(new Int16Array(160).fill(9999))
+        expect(copied).toHaveLength(11)
+        expect(call.receivedLevel()).toBe(-96)
+        transport.answer = () => ({ status: 200, reason: 'OK' })
+        await call.hangup()
         await agent.stop()
     })
 

@@ -107,6 +107,18 @@ class NativeSipCall implements EngineCall {
         return this.audio.setInputDevice(deviceId)
     }
 
+    audioLevel(): Promise<number | null> {
+        return window.iris.sip.callLevel(this.engineId, this.id)
+    }
+
+    playAudio(pcm: Int16Array): Promise<void> {
+        return this.action({ type: 'play', pcm })
+    }
+
+    setRecording(on: boolean): Promise<string | null> {
+        return window.iris.sip.record(this.engineId, this.id, on)
+    }
+
     async quality(): Promise<CallQuality | null> {
         const stats = await window.iris.sip.callStats(this.engineId, this.id).catch(() => null)
         if (!stats || stats.packetsReceived === 0) return null

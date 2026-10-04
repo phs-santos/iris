@@ -3,6 +3,10 @@
 // (RNF-08). Cada motor da interface tem um id; os eventos voltam marcados com ele.
 
 import { app, type WebContents } from 'electron'
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { SAMPLE_RATE } from '@shared/audio'
+import { WavRecorder } from './sip/recorder'
 import {
     IPC,
     type NativeCallAction,
@@ -29,6 +33,19 @@ const agents = new Map<string, SipUserAgent>()
 /** Chamadas em andamento, por motor e id da chamada. */
 const calls = new Map<string, SipCall>()
 const callKey = (engineId: string, callId: string): string => `${engineId}|${callId}`
+/** Gravações em andamento (RF-36), pela mesma chave das chamadas. */
+const recorders = new Map<string, WavRecorder>()
+/** Um áudio tocado numa chamada tem no máximo 2 minutos. */
+const MAX_PLAY_SAMPLES = SAMPLE_RATE * 120
+
+function stopRecording(key: string): void {
+    const recorder = recorders.get(key)
+    if (!recorder) return
+    recorders.delete(key)
+    const call = calls.get(key)
+    if (call) call.tap = undefined
+    recorder.finish()
+}
 const MAX_AGENTS = 200
 const PING_TIMEOUT_MS = 5000
 
@@ -72,6 +89,7 @@ function isCallAction(v: unknown): v is NativeCallAction {
     if (v.type === 'hold') return typeof v.held === 'boolean'
     if (v.type === 'transfer') return isSipUser(v.target)
     if (v.type === 'attended') return isCallId(v.consultCallId)
+    if (v.type === 'play') return v.pcm instanceof Int16Array && v.pcm.length > 0 && v.pcm.length <= MAX_PLAY_SAMPLES
     return (
         v.type === 'dtmf' &&
         isString(v.tone, 1) &&
@@ -142,6 +160,7 @@ export function registerNativeSipIpc(options: Options): void {
             progress: (code, reason, earlyMedia) => emit({ kind: 'progress', code, reason, earlyMedia }),
             established: () => emit({ kind: 'established' }),
             ended: (end) => {
+                stopRecording(callKey(engineId, callId))
                 calls.delete(callKey(engineId, callId))
                 emit({ kind: 'ended', ...end })
             },
@@ -192,6 +211,7 @@ export function registerNativeSipIpc(options: Options): void {
         else if (action.type === 'mute') call.setMuted(action.muted)
         else if (action.type === 'hold') await call.setHeld(action.held)
         else if (action.type === 'transfer') await call.transfer(action.target)
+        else if (action.type === 'play') await call.play(action.pcm)
         else if (action.type === 'attended') {
             const consult = calls.get(callKey(engineId, action.consultCallId))
             if (!consult) throw new Error('A chamada de consulta não existe mais')
@@ -202,6 +222,33 @@ export function registerNativeSipIpc(options: Options): void {
     handle(IPC.sipCallStats, (_e, engineId: string, callId: string): NativeCallStats | null => {
         check(isEngineId(engineId) && isCallId(callId), 'chamada SIP')
         return calls.get(callKey(engineId, callId))?.stats() ?? null
+    })
+
+    handle(IPC.sipCallLevel, (_e, engineId: string, callId: string): number | null => {
+        check(isEngineId(engineId) && isCallId(callId), 'chamada SIP')
+        return calls.get(callKey(engineId, callId))?.receivedLevel() ?? null
+    })
+
+    handle(IPC.sipRecord, (_e, engineId: string, callId: string, on: boolean): string | null => {
+        check(isEngineId(engineId) && isCallId(callId) && typeof on === 'boolean', 'gravação')
+        const key = callKey(engineId, callId)
+        const call = calls.get(key)
+        if (!call) return null
+        const current = recorders.get(key)
+        if (!on) {
+            stopRecording(key)
+            return current?.path ?? null
+        }
+        if (current) return current.path
+        // A pasta e o nome são daqui: a interface só liga e desliga.
+        const dir = join(app.getPath('userData'), 'gravacoes')
+        mkdirSync(dir, { recursive: true })
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+        const safe = (text: string): string => text.replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 40)
+        const recorder = new WavRecorder(join(dir, `iris-${stamp}-${safe(call.remote)}-${recorders.size + 1}.wav`))
+        recorders.set(key, recorder)
+        call.tap = (side, pcm) => recorder.push(side, pcm)
+        return recorder.path
     })
 
     // 50 blocos por segundo por chamada: sem resposta e sem log, só confere o tamanho.

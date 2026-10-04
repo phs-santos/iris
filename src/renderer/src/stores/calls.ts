@@ -37,6 +37,10 @@ export interface CallView {
     consultId?: string
     /** Nesta chamada de consulta: a chamada original, que está em espera. */
     consultFor?: string
+    /** O motor desta chamada grava em arquivo (RF-36). */
+    canRecord: boolean
+    /** Arquivo da gravação em andamento. */
+    recording?: string
 }
 
 /** Tempo que um cartão de chamada encerrada fica visível. */
@@ -80,7 +84,8 @@ export const useCallsStore = defineStore('calls', () => {
             startedAt: Date.now(),
             failed: false,
             dtmfRunning: false,
-            dtmfReceived: ''
+            dtmfReceived: '',
+            canRecord: typeof call.setRecording === 'function'
         })
         selectedId.value = call.id
         // Lê de novo do array: o Vue devolve o proxy reativo, não o objeto cru.
@@ -112,6 +117,8 @@ export const useCallsStore = defineStore('calls', () => {
             if (original?.consultId === c.id) original.consultId = undefined
             const consult = c.consultId ? view(c.consultId) : undefined
             if (consult?.consultFor === c.id) consult.consultFor = undefined
+            if (c.recording) log.add(accountId, 'info', 'event', `Gravação salva em ${c.recording}`)
+            c.recording = undefined
             const wasEstablished = c.state === 'established'
             c.state = 'ended'
             c.endedAt = Date.now()
@@ -257,6 +264,41 @@ export const useCallsStore = defineStore('calls', () => {
 
     const toggleHold = (id: string): Promise<void> => run(id, (call) => call.setHeld(!view(id)?.held), 'Espera')
 
+    /** Liga ou desliga a gravação da chamada em WAV (RF-36). */
+    async function toggleRecording(id: string): Promise<void> {
+        const c = view(id)
+        const call = engineCalls.get(id)
+        if (!c || !call?.setRecording) return
+        const log = useLogStore()
+        try {
+            const path = await call.setRecording(!c.recording)
+            const current = view(id)
+            if (!current) return
+            if (current.recording) {
+                log.add(c.accountId, 'info', 'event', `Gravação salva em ${current.recording}`)
+                current.recording = undefined
+            } else if (path) {
+                current.recording = path
+                log.add(c.accountId, 'info', 'event', `Gravando a chamada em ${path}`)
+            }
+        } catch (error) {
+            log.add(c.accountId, 'error', 'event', `Gravação falhou: ${(error as Error).message}`)
+        }
+    }
+
+    /** Volume do áudio recebido, para os cenários (RF-41). */
+    const audioLevel = (id: string): Promise<number | null> =>
+        engineCalls.get(id)?.audioLevel() ?? Promise.resolve(null)
+
+    /** Toca um áudio na chamada, no lugar do microfone (RF-41). Lança erro se o motor não consegue. */
+    async function playAudio(id: string, pcm: Int16Array): Promise<void> {
+        const call = engineCalls.get(id)
+        if (!call) throw new Error('A chamada não existe mais')
+        if (!call.playAudio)
+            throw new Error('Esta conta não toca áudio na chamada: use uma conta de SIP puro ou simulada')
+        await call.playAudio(pcm)
+    }
+
     /** Envia uma sequência como "1,w2,4321#". Lança erro de sintaxe antes de enviar qualquer dígito. */
     async function sendDtmf(id: string, sequence: string): Promise<void> {
         const c = view(id)
@@ -365,6 +407,9 @@ export const useCallsStore = defineStore('calls', () => {
         hangup,
         toggleMute,
         toggleHold,
+        toggleRecording,
+        audioLevel,
+        playAudio,
         sendDtmf,
         stopDtmf,
         transfer,

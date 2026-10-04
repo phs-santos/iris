@@ -117,6 +117,27 @@ try {
     const echo = call(/2001\s*→\s*600/)
     await echo.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
     await expectAudio(echo, 'chamada para o eco atendida, com áudio voltando')
+    // Gravação (RF-36): o WAV sai com o microfone num canal e o eco no outro.
+    await echo.getByRole('button', { name: 'Gravar' }).click()
+    await page.waitForTimeout(1500)
+    await echo.getByRole('button', { name: 'Parar gravação' }).click()
+    const saved = page
+        .locator('.list')
+        .getByText(/Gravação salva em .*\.wav/)
+        .first()
+    await saved.waitFor({ timeout: 10000 })
+    const wavPath = /salva em (.*\.wav)/.exec(await saved.textContent())[1]
+    const wav = readFileSync(wavPath)
+    const frames = (wav.length - 44) / 4
+    const loud = (channel) => {
+        let peak = 0
+        for (let i = 0; i < frames; i++) peak = Math.max(peak, Math.abs(wav.readInt16LE(44 + i * 4 + channel * 2)))
+        return peak
+    }
+    if (wav.toString('latin1', 0, 4) !== 'RIFF' || wav.readUInt16LE(22) !== 2 || frames < 8000)
+        throw new Error(`gravação inválida: ${frames} amostras por canal`)
+    if (loud(0) < 500 || loud(1) < 500) throw new Error(`gravação muda: picos ${loud(0)} e ${loud(1)}`)
+    step(`gravação em WAV estéreo com ${(frames / 8000).toFixed(1)} s e áudio nos dois canais`)
     await echo.getByRole('button', { name: 'Mudo' }).click()
     await echo.getByRole('button', { name: 'Desligar' }).click()
     await echo.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })

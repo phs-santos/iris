@@ -9,6 +9,8 @@ import { RtpSession, type RtpStats } from './rtp'
 import { answerDirection, buildSdp, parseSdp, SdpError, type MediaDirection, type RemoteMedia } from './sdp'
 import type { G711 } from './g711'
 import { newSrtpKey } from './srtp'
+import { levelDb, SILENCE_DB } from '@shared/audio'
+import { FRAME_SAMPLES } from './rtp'
 
 const token = (bytes = 6): string => randomBytes(bytes).toString('hex')
 const DTMF_PAYLOAD = 101
@@ -95,6 +97,12 @@ export class SipCall {
     private retransmit?: ReturnType<typeof setTimeout>
     private lastAck?: SipRequest
     private canceled = false
+    /** Volume dos últimos blocos recebidos, para os cenários saberem se há áudio (RF-41). */
+    private levels: { at: number; db: number }[] = []
+    /** Áudio que está sendo tocado no lugar do microfone, e por onde ele vai. */
+    private playing?: { timer: ReturnType<typeof setInterval>; done: () => void }
+    /** Quem quer uma cópia do áudio que passa, nos dois sentidos (gravação, RF-36). */
+    tap?: (side: 'sent' | 'received', pcm: Int16Array) => void
     private gotProvisional = false
 
     constructor(
@@ -108,7 +116,12 @@ export class SipCall {
         this.callId = callId ?? `${token(12)}@iris`
         this.state = direction === 'out' ? 'calling' : 'ringing'
         this.rtp = new RtpSession({
-            audio: (pcm) => this.events.audio(pcm),
+            audio: (pcm) => {
+                this.levels.push({ at: Date.now(), db: levelDb(pcm) })
+                if (this.levels.length > 50) this.levels.shift()
+                this.tap?.('received', pcm)
+                this.events.audio(pcm)
+            },
             dtmf: (tone) => this.events.dtmf(tone)
         })
     }
@@ -242,6 +255,7 @@ export class SipCall {
     private finish(end: CallEnd): void {
         if (this.state === 'ended') return
         this.state = 'ended'
+        this.stopPlaying()
         clearTimeout(this.retransmit)
         this.rtp.close()
         this.host.forget(this)
@@ -511,8 +525,55 @@ export class SipCall {
         if (response.status >= 300) this.events.transfer(response.status, response.reason, true)
     }
 
+    /** 20 ms do microfone. Enquanto um tom ou arquivo toca, o microfone é descartado. */
     sendPcm(pcm: Int16Array): void {
-        if (this.state !== 'ended') this.rtp.sendPcm(pcm)
+        if (this.state === 'ended' || this.playing) return
+        this.tap?.('sent', pcm)
+        this.rtp.sendPcm(pcm)
+    }
+
+    /**
+     * Toca um áudio na chamada, no lugar do microfone (RF-41). O ritmo vem do relógio, não de um
+     * temporizador exato: a cada volta manda os blocos que já deveriam ter saído.
+     */
+    play(pcm: Int16Array): Promise<void> {
+        if (this.state !== 'established') return Promise.reject(new Error('A chamada não está em andamento'))
+        this.stopPlaying()
+        return new Promise<void>((done) => {
+            const started = Date.now()
+            let sent = 0
+            const total = Math.ceil(pcm.length / FRAME_SAMPLES)
+            const tick = (): void => {
+                const due = Math.min(total, Math.floor((Date.now() - started) / 20) + 1)
+                for (; sent < due; sent++) {
+                    const frame = new Int16Array(FRAME_SAMPLES)
+                    frame.set(pcm.subarray(sent * FRAME_SAMPLES, (sent + 1) * FRAME_SAMPLES))
+                    this.tap?.('sent', frame)
+                    this.rtp.sendPcm(frame)
+                }
+                if (sent >= total) this.stopPlaying()
+            }
+            this.playing = { timer: setInterval(tick, 10), done }
+            tick()
+        })
+    }
+
+    private stopPlaying(): void {
+        const playing = this.playing
+        if (!playing) return
+        this.playing = undefined
+        clearInterval(playing.timer)
+        playing.done()
+    }
+
+    /** Volume médio do que chegou nos últimos `windowMs`, em dBFS; silêncio total se nada chegou. */
+    receivedLevel(windowMs = 400): number {
+        const since = Date.now() - windowMs
+        const recent = this.levels.filter((l) => l.at >= since)
+        if (recent.length === 0) return SILENCE_DB
+        // Média em potência, não em decibéis: um bloco alto no meio do silêncio conta.
+        const power = recent.reduce((sum, l) => sum + 10 ** (l.db / 10), 0) / recent.length
+        return Math.max(SILENCE_DB, Math.round(10 * Math.log10(power)))
     }
 
     /** `auto` usa RTP (RFC 4733) quando o outro lado aceita; senão, SIP INFO. */

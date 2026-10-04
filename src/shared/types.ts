@@ -172,6 +172,8 @@ export type NativeCallAction =
     | { type: 'transfer'; target: string }
     /** Transferência assistida: junta o outro lado desta chamada com o da chamada de consulta. */
     | { type: 'attended'; consultCallId: string }
+    /** Toca um áudio (PCM de 16 bits a 8000 Hz) no lugar do microfone; termina quando o áudio acaba. */
+    | { type: 'play'; pcm: Int16Array }
 
 export interface NativeCallStats {
     packetsSent: number
@@ -294,6 +296,10 @@ export interface IrisApi {
         dial(engineId: string, destination: string, headers?: string[]): Promise<string>
         callAction(engineId: string, callId: string, action: NativeCallAction): Promise<void>
         callStats(engineId: string, callId: string): Promise<NativeCallStats | null>
+        /** Volume do áudio recebido nos últimos instantes, em dBFS (RF-41). */
+        callLevel(engineId: string, callId: string): Promise<number | null>
+        /** Liga ou desliga a gravação (RF-36). Devolve o caminho do arquivo, ou null se a chamada não existe. */
+        record(engineId: string, callId: string, on: boolean): Promise<string | null>
         /** 20 ms do microfone para a chamada. */
         sendAudio(engineId: string, callId: string, pcm: Int16Array): void
         onEvent(listener: (event: NativeSipEvent) => void): () => void
@@ -340,6 +346,8 @@ export const IPC = {
     sipDial: 'sip:dial',
     sipCallAction: 'sip:call-action',
     sipCallStats: 'sip:call-stats',
+    sipCallLevel: 'sip:call-level',
+    sipRecord: 'sip:record',
     sipAudio: 'sip:audio',
     sipEvent: 'sip:event',
     aiStatus: 'ai:status',

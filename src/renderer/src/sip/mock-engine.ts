@@ -1,6 +1,7 @@
 // Motor simulado (RF-32): imita um PBX sem rede. Contas simuladas do mesmo domínio
 // ligam umas para as outras; alguns números especiais simulam respostas do PBX.
 
+import { levelDb, SAMPLE_RATE, SILENCE_DB } from '@shared/audio'
 import type { Account, DtmfMode } from '@shared/types'
 import { Emitter } from '@renderer/lib/emitter'
 import type {
@@ -42,7 +43,13 @@ export function resetMockNetwork(): void {
 
 let nextId = 1
 
+/** Volume da "voz" simulada de quem está numa chamada, em dBFS. */
+const MOCK_VOICE_DB = -30
+
 class MockCall implements EngineCall {
+    muted = false
+    held = false
+    private heard?: { db: number; until: number }
     readonly id = `m${nextId++}`
     private emitter = new Emitter<CallEvents>()
     peer?: MockCall
@@ -162,11 +169,37 @@ class MockCall implements EngineCall {
     }
 
     setMuted(muted: boolean): void {
+        this.muted = muted
         this.engine.log('info', muted ? 'Microfone mudo' : 'Microfone ativo')
+    }
+
+    /** O outro lado tocou um áudio: por `ms`, é esse o volume que esta ponta ouve. */
+    hears(db: number, ms: number): void {
+        this.heard = { db, until: Date.now() + ms }
+    }
+
+    /**
+     * Volume simulado (RF-41): sem ninguém em mudo ou em espera, cada ponta ouve a "voz" da outra, e a
+     * URA fala o tempo todo. Um áudio tocado pelo outro lado vale mais que a voz enquanto durar.
+     */
+    async audioLevel(): Promise<number | null> {
+        if (this.state !== 'established' || this.held || this.peer?.held) return SILENCE_DB
+        if (this.heard && Date.now() < this.heard.until) return this.heard.db
+        if (this.peer) return this.peer.muted ? SILENCE_DB : MOCK_VOICE_DB
+        return MOCK_VOICE_DB
+    }
+
+    async playAudio(pcm: Int16Array): Promise<void> {
+        if (this.state !== 'established') throw new Error('A chamada ainda não foi atendida')
+        const ms = Math.round((pcm.length / SAMPLE_RATE) * 1000)
+        this.engine.log('info', `Tocando áudio de ${ms} ms na chamada`)
+        this.peer?.hears(levelDb(pcm), ms)
+        await new Promise<void>((done) => this.later(ms, done))
     }
 
     async setHeld(held: boolean): Promise<void> {
         if (this.state !== 'established') return
+        this.held = held
         const sdp = ['Content-Type: application/sdp', '', `a=${held ? 'sendonly' : 'sendrecv'}`]
         this.ack('out', this.exchange('out', 'INVITE', sdp))
         this.peer?.ack('in', this.peer.exchange('in', 'INVITE', sdp))
