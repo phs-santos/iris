@@ -20,5 +20,6 @@
         "src/preload/*.d.ts",
         "src/shared/**/*",
         "tests/**/*"
-    ]
+    ],
+    "exclude": ["tests/sip-core.test.ts"]
 }
