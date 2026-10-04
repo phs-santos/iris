@@ -95,6 +95,18 @@ try {
     await page.getByRole('menuitem', { name: 'Saúde' }).click()
     await scan('saúde da conta')
     await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: /^Mais ações de / }).click()
+    await page.getByRole('menuitem', { name: 'Requisição SIP…' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Enviar' }).click()
+    await page
+        .getByRole('dialog')
+        .getByText(/^200 OK em \d+ ms$/)
+        .waitFor()
+    await scan('requisição SIP manual')
+    await page.keyboard.press('Escape')
+    await page.getByRole('tab', { name: 'Histórico' }).click()
+    await scan('histórico de chamadas')
+    await page.getByRole('tab', { name: 'Telefone' }).click()
 
     await page.getByRole('button', { name: 'Explicar com IA' }).last().click()
     await page.getByLabel('Chave da OpenRouter').waitFor()
