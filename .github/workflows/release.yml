@@ -30,6 +30,17 @@ jobs:
             - run: npm run typecheck
             - run: npm test
             - run: npm run build
+            # Antes de gerar os instaladores, abre o app empacotado neste sistema: a janela em branco da
+            # 1.0.0 e o erro de IPC da 1.0.4 passaram em todos os testes que rodam o app sem empacotar.
+            - name: Liberar o sandbox do Chromium
+              if: runner.os == 'Linux'
+              run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+            - name: Fumaça do app empacotado (Linux)
+              if: runner.os == 'Linux'
+              run: xvfb-run -a node tests/e2e/pacote.mjs
+            - name: Fumaça do app empacotado
+              if: runner.os != 'Linux'
+              run: node tests/e2e/pacote.mjs
             # Sem certificado (RNF-17), os instaladores saem sem assinatura; o macOS fica com a ad-hoc.
             - name: Gerar instaladores
               run: npx electron-builder --publish never

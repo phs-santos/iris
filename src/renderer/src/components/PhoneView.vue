@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed, ref, watch } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore, type CallView } from '@renderer/stores/calls'
@@ -77,11 +78,11 @@ watch(screen, (s) => {
 })
 
 const hint = computed(() => {
-    if (!account.value) return 'Nenhuma conta. Crie uma na Bancada.'
+    if (!account.value) return t('phoneView.nenhuma_conta_crie_uma_na')
     if (!registered.value) return `${account.value.name}: ${describeStatus(status.value!)}`
     const typed = number.value.trim()
     if (typed) return known.value.get(typed) ?? ''
-    return 'Digite um número ou ramal'
+    return t('phoneView.digite_um_numero_ou_ramal')
 })
 
 async function dial(): Promise<void> {
@@ -123,9 +124,9 @@ function showCall(c: CallView): void {
 }
 
 function stateText(c: CallView): string {
-    if (c.held || c.heldByRemote) return c.held ? 'em espera' : 'em espera pelo outro lado'
+    if (c.held || c.heldByRemote) return c.held ? t('phoneView.em_espera') : t('phoneView.em_espera_pelo_outro_lado')
     if (c.state === 'established') return duration(c.establishedAt ?? c.startedAt, now.value)
-    if (c.state === 'early') return 'chamando (early media)'
+    if (c.state === 'early') return t('phoneView.chamando_early_media')
     if (c.state === 'ringing') return 'chamando…'
     return 'discando…'
 }
@@ -137,7 +138,13 @@ const bars = computed(() => {
     const filled = q.score >= 80 ? 4 : q.score >= 60 ? 3 : q.score >= 40 ? 2 : 1
     return {
         filled,
-        label: `Qualidade ${q.score}: jitter ${q.jitterMs} ms, perda ${q.packetLossPercent.toFixed(1)}%, RTT ${q.rttMs} ms, ${q.codec || 'codec ?'}`
+        label: t('phoneView.qualidade_jitter_ms_perda_rtt', {
+            score: q.score,
+            jitterMs: q.jitterMs,
+            p: q.packetLossPercent.toFixed(1),
+            rttMs: q.rttMs,
+            p2: q.codec || 'codec ?'
+        })
     }
 })
 
@@ -153,23 +160,23 @@ defineExpose({ focus: () => input.value?.focus() })
                 {{ initial(account?.name ?? '?') }}
             </span>
             <div class="from">
-                <select v-model="accounts.selectedId" class="from-select" aria-label="Conta">
+                <select v-model="accounts.selectedId" class="from-select" :aria-label="$t('phoneView.conta')">
                     <option v-for="a in accounts.accounts" :key="a.id" :value="a.id">
                         {{ a.name }} · {{ a.extension }}
                     </option>
                 </select>
                 <span class="from-status">
                     <span class="dot" :class="status?.state"></span>
-                    {{ account ? `${account.extension}@${account.domain}` : 'sem conta' }}
+                    {{ account ? `${account.extension}@${account.domain}` : $t('phoneView.sem_conta') }}
                 </span>
             </div>
-            <button class="tool" title="Bancada: contas, chamadas e log lado a lado" @click="emit('bench')">
-                Bancada
+            <button class="tool" :title="$t('phoneView.bancada_contas_chamadas_e_log')" @click="emit('bench')">
+                {{ $t('phoneView.bancada') }}
             </button>
             <button
                 class="tool"
-                aria-label="Configurações"
-                title="Configurações (Ctrl/Cmd+,)"
+                :aria-label="$t('phoneView.configuracoes')"
+                :title="$t('phoneView.configuracoes_ctrl_cmd')"
                 @click="emit('settings')"
             >
                 ⚙
@@ -177,32 +184,42 @@ defineExpose({ focus: () => input.value?.focus() })
         </header>
 
         <!-- Chamada recebida: ocupa a tela inteira. -->
-        <section v-if="screen === 'ringing' && ringing" class="stage ringing" aria-label="Chamada recebida">
-            <p class="to">Chamada para {{ accounts.nameOf(ringing.accountId) }}</p>
+        <section
+            v-if="screen === 'ringing' && ringing"
+            class="stage ringing"
+            :aria-label="$t('phoneView.chamada_recebida')"
+        >
+            <p class="to">{{ $t('phoneView.chamada_para', { p: accounts.nameOf(ringing.accountId) }) }}</p>
             <span class="avatar big pulse" aria-hidden="true">{{ initial(nameOf(ringing)) }}</span>
             <h2 class="name">{{ nameOf(ringing) }}</h2>
             <p class="sub mono">{{ ringing.remote }}</p>
             <div class="answer-row">
                 <span class="labelled">
-                    <button class="round stop" aria-label="Recusar" @click="calls.reject(ringing.id)">
+                    <button class="round stop" :aria-label="$t('phoneView.recusar')" @click="calls.reject(ringing.id)">
                         <PhoneIcon name="x" />
                     </button>
-                    Recusar
+                    {{ $t('phoneView.recusar') }}
                 </span>
                 <span class="labelled">
-                    <button class="round go" aria-label="Atender" @click="calls.answer(ringing.id)">
+                    <button class="round go" :aria-label="$t('phoneView.atender')" @click="calls.answer(ringing.id)">
                         <PhoneIcon name="phone" />
                     </button>
-                    Atender
+                    {{ $t('phoneView.atender') }}
                 </span>
             </div>
         </section>
 
         <!-- Em chamada. -->
-        <section v-else-if="screen === 'call' && current" class="stage call" aria-label="Chamada em andamento">
+        <section
+            v-else-if="screen === 'call' && current"
+            class="stage call"
+            :aria-label="$t('phoneView.chamada_em_andamento')"
+        >
             <span class="avatar big" aria-hidden="true">{{ initial(nameOf(current)) }}</span>
             <h2 class="name">{{ nameOf(current) }}</h2>
-            <p class="sub mono">{{ current.remote }} · via {{ accounts.nameOf(current.accountId) }}</p>
+            <p class="sub mono">
+                {{ $t('phoneView.via', { remote: current.remote, p: accounts.nameOf(current.accountId) }) }}
+            </p>
             <p class="state mono tabular" :class="{ hold: current.held || current.heldByRemote }" role="status">
                 {{ stateText(current) }}
             </p>
@@ -218,7 +235,8 @@ defineExpose({ focus: () => input.value?.focus() })
                     :disabled="current.state !== 'established'"
                     @click="calls.toggleMute(current.id)"
                 >
-                    <span><PhoneIcon name="mic" /></span>{{ current.muted ? 'Ativar mic' : 'Mudo' }}
+                    <span><PhoneIcon name="mic" /></span
+                    >{{ current.muted ? $t('phoneView.ativar_mic') : $t('phoneView.mudo') }}
                 </button>
                 <button
                     class="ctrl"
@@ -227,7 +245,8 @@ defineExpose({ focus: () => input.value?.focus() })
                     :disabled="current.state !== 'established'"
                     @click="calls.toggleHold(current.id)"
                 >
-                    <span><PhoneIcon name="pause" /></span>{{ current.held ? 'Retomar' : 'Espera' }}
+                    <span><PhoneIcon name="pause" /></span
+                    >{{ current.held ? $t('phoneView.retomar') : $t('phoneView.espera') }}
                 </button>
                 <button
                     class="ctrl"
@@ -236,7 +255,7 @@ defineExpose({ focus: () => input.value?.focus() })
                     :disabled="current.state !== 'established'"
                     @click="panel = panel === 'dtmf' ? 'none' : 'dtmf'"
                 >
-                    <span><PhoneIcon name="grid" /></span>Teclado
+                    <span><PhoneIcon name="grid" /></span>{{ $t('phoneView.teclado') }}
                 </button>
                 <button
                     class="ctrl"
@@ -245,17 +264,17 @@ defineExpose({ focus: () => input.value?.focus() })
                     :disabled="current.state !== 'established'"
                     @click="panel = panel === 'transfer' ? 'none' : 'transfer'"
                 >
-                    <span><PhoneIcon name="transfer" /></span>Transferir
+                    <span><PhoneIcon name="transfer" /></span>{{ $t('phoneView.transferir') }}
                 </button>
                 <button class="ctrl" @click="dialingAnother = true">
-                    <span><PhoneIcon name="plus" /></span>Outra chamada
+                    <span><PhoneIcon name="plus" /></span>{{ $t('phoneView.outra_chamada') }}
                 </button>
                 <button class="ctrl" @click="emit('bench')">
-                    <span><PhoneIcon name="log" /></span>Ver o log
+                    <span><PhoneIcon name="log" /></span>{{ $t('phoneView.ver_o_log') }}
                 </button>
             </div>
 
-            <div v-if="panel === 'dtmf'" class="pad compact" aria-label="Enviar DTMF">
+            <div v-if="panel === 'dtmf'" class="pad compact" :aria-label="$t('phoneView.enviar_dtmf')">
                 <button
                     v-for="[k] in keys"
                     :key="k"
@@ -270,25 +289,27 @@ defineExpose({ focus: () => input.value?.focus() })
                 <input
                     v-model="transferTo"
                     class="input mono"
-                    placeholder="Transferir para"
-                    aria-label="Destino da transferência"
+                    :placeholder="$t('phoneView.transferir_para')"
+                    :aria-label="$t('phoneView.destino_da_transferencia')"
                 />
-                <button class="btn primary" type="submit" :disabled="!transferTo.trim()">Transferir</button>
+                <button class="btn primary" type="submit" :disabled="!transferTo.trim()">
+                    {{ $t('phoneView.transferir') }}
+                </button>
             </form>
 
-            <button class="round stop hang" aria-label="Desligar" @click="calls.hangup(current.id)">
+            <button class="round stop hang" :aria-label="$t('phoneView.desligar')" @click="calls.hangup(current.id)">
                 <PhoneIcon name="hangup" />
             </button>
         </section>
 
         <!-- Teclado. -->
-        <section v-else class="stage dial" aria-label="Discar">
+        <section v-else class="stage dial" :aria-label="$t('phoneView.discar')">
             <form class="display" @submit.prevent="dial">
                 <input
                     ref="input"
                     v-model="number"
                     class="number mono"
-                    aria-label="Número"
+                    :aria-label="$t('phoneView.numero')"
                     placeholder=" "
                     autocomplete="off"
                 />
@@ -312,28 +333,39 @@ defineExpose({ focus: () => input.value?.focus() })
                         v-if="dialingAnother"
                         type="button"
                         class="side"
-                        title="Voltar para a chamada"
+                        :title="$t('phoneView.voltar_para_a_chamada')"
                         @click="dialingAnother = false"
                     >
-                        Voltar
+                        {{ $t('phoneView.voltar') }}
                     </button>
                     <span v-else class="side"></span>
-                    <button class="round go" type="submit" aria-label="Ligar" :disabled="!registered || !number.trim()">
+                    <button
+                        class="round go"
+                        type="submit"
+                        :aria-label="$t('phoneView.ligar')"
+                        :disabled="!registered || !number.trim()"
+                    >
                         <PhoneIcon name="phone" />
                     </button>
-                    <button type="button" class="side" aria-label="Apagar" :disabled="!number" @click="backspace">
+                    <button
+                        type="button"
+                        class="side"
+                        :aria-label="$t('phoneView.apagar')"
+                        :disabled="!number"
+                        @click="backspace"
+                    >
                         <PhoneIcon name="erase" />
                     </button>
                 </div>
             </form>
             <p v-if="lastEnded && !others.length" class="last mono">
-                Última: {{ lastEnded.direction === 'out' ? '→' : '←' }} {{ nameOf(lastEnded) }}
+                {{ $t('phoneView.ultima', { p: lastEnded.direction === 'out' ? '→' : '←', p2: nameOf(lastEnded) }) }}
                 <span v-if="lastEnded.endText">· {{ lastEnded.endText }}</span>
             </p>
         </section>
 
         <footer v-if="others.length || (screen === 'dial' && current)" class="others">
-            <span class="label">Também em andamento</span>
+            <span class="label">{{ $t('phoneView.tambem_em_andamento') }}</span>
             <button
                 v-for="c in [...(screen === 'dial' && current ? [current] : []), ...others]"
                 :key="c.id"

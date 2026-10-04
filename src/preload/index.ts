@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC, type IrisApi, type CertificateErrorEvent, type UpdateStatus } from '@shared/types'
+import { IPC, type IrisApi, type CertificateErrorEvent, type NativeSipEvent, type UpdateStatus } from '@shared/types'
 
 // A interface só alcança o sistema por estes canais fixos (RNF-08).
 const api: IrisApi = {
@@ -19,13 +19,15 @@ const api: IrisApi = {
     },
     settings: {
         load: () => ipcRenderer.invoke(IPC.settingsLoad),
-        save: (settings) => ipcRenderer.invoke(IPC.settingsSave, settings)
+        update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch)
     },
     files: {
         saveText: (name, content) => ipcRenderer.invoke(IPC.filesSaveText, name, content),
         openText: () => ipcRenderer.invoke(IPC.filesOpenText)
     },
     notify: (title, body) => ipcRenderer.send(IPC.notify, title, body),
+    setTray: (counts) => ipcRenderer.send(IPC.tray, counts),
+    logError: (text) => ipcRenderer.send(IPC.logError, text),
     cli: {
         config: () => ipcRenderer.invoke(IPC.cliConfig),
         print: (line, error) => ipcRenderer.send(IPC.cliPrint, line, Boolean(error)),
@@ -57,6 +59,16 @@ const api: IrisApi = {
         setOptions: (options) => ipcRenderer.invoke(IPC.aiSetOptions, options),
         models: () => ipcRenderer.invoke(IPC.aiModels),
         explain: (request) => ipcRenderer.invoke(IPC.aiExplain, request)
+    },
+    sip: {
+        start: (engineId, config, password) => ipcRenderer.invoke(IPC.sipStart, engineId, config, password),
+        stop: (engineId) => ipcRenderer.invoke(IPC.sipStop, engineId),
+        health: (engineId) => ipcRenderer.invoke(IPC.sipHealth, engineId),
+        onEvent: (listener) => {
+            const handler = (_e: Electron.IpcRendererEvent, event: NativeSipEvent): void => listener(event)
+            ipcRenderer.on(IPC.sipEvent, handler)
+            return () => ipcRenderer.removeListener(IPC.sipEvent, handler)
+        }
     },
     appInfo: () => ipcRenderer.invoke(IPC.appInfo)
 }

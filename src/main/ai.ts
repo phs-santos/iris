@@ -14,7 +14,7 @@ import {
     type AiStatus
 } from '@shared/ai'
 import { check, handle, isPlainObject, isString } from './ipc-guard'
-import { getSecret, loadSettings, saveSettings, setSecret } from './storage'
+import { getSecret, loadSettings, setSecret, updateSettings } from './storage'
 
 /** Id reservado no cofre de senhas; os canais de senha das contas recusam ids com este prefixo. */
 export const AI_SECRET_PREFIX = 'ai:'
@@ -116,8 +116,7 @@ export function registerAiIpc(): void {
                 (options.mask === undefined || typeof options.mask === 'boolean'),
             'opções da IA'
         )
-        const settings = await loadSettings()
-        await saveSettings({ ...settings, ai: { ...settings.ai, ...options } })
+        await updateSettings((settings) => ({ ai: { ...settings.ai, ...options } }))
     })
     handle(IPC.aiModels, () => models())
     handle(IPC.aiExplain, (_e, input: AiRequest) => {

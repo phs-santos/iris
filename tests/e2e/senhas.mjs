@@ -1,7 +1,7 @@
 // Senhas em arquivo local cifrado (RNF-07) e migração do formato antigo, do cofre do sistema (RNF-19).
 // Uso: npm run build && node tests/e2e/senhas.mjs   (Linux sem tela: xvfb-run -a node tests/e2e/senhas.mjs)
 import { _electron as electron } from 'playwright-core'
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 

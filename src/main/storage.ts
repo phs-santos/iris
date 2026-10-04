@@ -2,10 +2,21 @@ import { app, safeStorage } from 'electron'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import type { Account, AccountsFile, Scenario, ScenariosFile, SecretsStatus, Settings } from '@shared/types'
+import type {
+    Account,
+    AccountsFile,
+    Scenario,
+    ScenariosFile,
+    SecretsStatus,
+    Settings,
+    SettingsPatch
+} from '@shared/types'
 
 const dataDir = (): string => app.getPath('userData')
 const file = (name: string): string => join(dataDir(), name)
+
+/** Problemas encontrados nesta execução nos arquivos de dados, mostrados na tela por `secretsStatus`. */
+const problems = new Set<string>()
 
 async function readJson<T>(name: string): Promise<T | null> {
     try {
@@ -16,20 +27,73 @@ async function readJson<T>(name: string): Promise<T | null> {
     }
 }
 
-/** Grava em arquivo temporário e renomeia, para não corromper o JSON se o app cair no meio. */
-async function writeJson(name: string, value: unknown): Promise<void> {
-    await fs.mkdir(dataDir(), { recursive: true })
-    const target = file(name)
-    const tmp = `${target}.tmp`
-    await fs.writeFile(tmp, JSON.stringify(value, null, 2), 'utf8')
-    await fs.rename(tmp, target)
+/** Sufixo para guardar um arquivo estragado ao lado do original, sem apagar nada. */
+const stamp = (): string => new Date().toISOString().replace(/[:.]/g, '-')
+
+/** Tira um arquivo do caminho, guardando uma cópia para recuperar à mão. Devolve o nome novo. */
+async function setAside(name: string, reason: string): Promise<string> {
+    const aside = `${name}.${reason}-${stamp()}`
+    await fs.rename(file(name), file(aside)).catch((error) => {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    })
+    return aside
+}
+
+/**
+ * Lê um arquivo de dados que o app precisa para abrir. Um arquivo que não é JSON, ou que não tem o
+ * formato esperado, nunca é sobrescrito: vai para o lado, a tela avisa e o app segue como se o
+ * arquivo não existisse (RNF-19).
+ */
+async function readDataFile<T>(name: string, what: string, valid: (data: unknown) => boolean): Promise<T | null> {
+    let data: unknown
+    try {
+        data = await readJson<unknown>(name)
+        if (data === null) return null
+    } catch (error) {
+        if (!(error instanceof SyntaxError)) throw error
+        data = undefined
+    }
+    if (data !== undefined && valid(data)) return data as T
+    const aside = await setAside(name, 'corrompido')
+    problems.add(`O arquivo de ${what} (${name}) estava estragado e foi guardado à parte como ${aside}.`)
+    return null
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => Boolean(v) && typeof v === 'object' && !Array.isArray(v)
+
+const writes = new Map<string, Promise<unknown>>()
+let tmpCount = 0
+
+/**
+ * Grava em arquivo temporário e renomeia, para não corromper o JSON se o app cair no meio. As
+ * gravações do mesmo arquivo entram em fila e cada uma usa um temporário próprio: duas ao mesmo
+ * tempo brigavam pelo mesmo `.tmp`.
+ */
+function writeJson(name: string, value: unknown): Promise<void> {
+    const text = JSON.stringify(value, null, 2)
+    const task = async (): Promise<void> => {
+        await fs.mkdir(dataDir(), { recursive: true })
+        const target = file(name)
+        const tmp = `${target}.${process.pid}-${tmpCount++}.tmp`
+        await fs.writeFile(tmp, text, 'utf8')
+        await fs.rename(tmp, target)
+    }
+    const run = (writes.get(name) ?? Promise.resolve()).then(task, task)
+    writes.set(
+        name,
+        run.catch(() => undefined)
+    )
+    return run
 }
 
 export async function loadAccounts(): Promise<Account[]> {
-    const data = await readJson<AccountsFile>('accounts.json')
-    if (!data) return []
     // Única versão até agora; novas versões de esquema migram aqui (RNF-19).
-    return Array.isArray(data.accounts) ? data.accounts : []
+    const data = await readDataFile<AccountsFile>(
+        'accounts.json',
+        'contas',
+        (d) => isObject(d) && Array.isArray(d.accounts)
+    )
+    return data?.accounts ?? []
 }
 
 export async function saveAccounts(accounts: Account[]): Promise<void> {
@@ -38,8 +102,12 @@ export async function saveAccounts(accounts: Account[]): Promise<void> {
 }
 
 export async function loadScenarios(): Promise<Scenario[]> {
-    const data = await readJson<ScenariosFile>('scenarios.json')
-    return Array.isArray(data?.scenarios) ? data.scenarios : []
+    const data = await readDataFile<ScenariosFile>(
+        'scenarios.json',
+        'cenários',
+        (d) => isObject(d) && Array.isArray(d.scenarios)
+    )
+    return data?.scenarios ?? []
 }
 
 export async function saveScenarios(scenarios: Scenario[]): Promise<void> {
@@ -50,12 +118,36 @@ export async function saveScenarios(scenarios: Scenario[]): Promise<void> {
 const defaultSettings: Settings = { schemaVersion: 1, trustedHosts: [] }
 
 export async function loadSettings(): Promise<Settings> {
-    const data = await readJson<Settings>('settings.json')
+    const data = await readDataFile<Settings>(
+        'settings.json',
+        'preferências',
+        (d) => isObject(d) && (d.trustedHosts === undefined || Array.isArray(d.trustedHosts))
+    )
     return { ...defaultSettings, ...(data ?? {}) }
 }
 
-export async function saveSettings(settings: Settings): Promise<void> {
-    await writeJson('settings.json', settings)
+let settingsQueue: Promise<unknown> = Promise.resolve()
+
+/**
+ * Muda só os campos pedidos, uma alteração de cada vez. Várias telas e o próprio processo principal
+ * gravam neste arquivo; com "ler tudo, mudar e gravar tudo" em cada um, uma gravação apagava a outra.
+ */
+export function updateSettings(
+    patch: SettingsPatch | Partial<Settings> | ((current: Settings) => Partial<Settings>)
+): Promise<Settings> {
+    const task = async (): Promise<Settings> => {
+        const current = await loadSettings()
+        const next: Settings = {
+            ...current,
+            ...(typeof patch === 'function' ? patch(current) : patch),
+            schemaVersion: 1
+        }
+        await writeJson('settings.json', next)
+        return next
+    }
+    const run = settingsQueue.then(task, task)
+    settingsQueue = run.catch(() => undefined)
+    return run
 }
 
 // ─── Senhas ────────────────────────────────────────────────────────────────
@@ -78,24 +170,11 @@ const LEGACY_SECRETS_FILE = 'secrets.json'
 const memorySecrets = new Map<string, string>()
 let keyPromise: Promise<Buffer> | null = null
 let queue: Promise<unknown> = Promise.resolve()
-/** Problemas encontrados nesta execução, mostrados na tela por `secretsStatus`. */
-const problems = new Set<string>()
-
 /** Uma operação de cada vez: as contas registram juntas e duas gravações ao mesmo tempo perdem senhas. */
 function serial<T>(task: () => Promise<T>): Promise<T> {
     const run = queue.then(task, task)
     queue = run.catch(() => undefined)
     return run
-}
-
-/** Sufixo para guardar um arquivo estragado ao lado do original, sem apagar nada. */
-const stamp = (): string => new Date().toISOString().replace(/[:.]/g, '-')
-
-/** Tira um arquivo do caminho, guardando uma cópia para recuperar à mão. */
-async function setAside(name: string, reason: string): Promise<void> {
-    await fs.rename(file(name), file(`${name}.${reason}-${stamp()}`)).catch((error) => {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
-    })
 }
 
 /**
@@ -240,7 +319,7 @@ async function status(): Promise<SecretsStatus> {
     return { legacy: (await readLegacy()) !== null, problem: [...problems].join(' ') || null }
 }
 
-/** Situação do arquivo de senhas, para os avisos da tela. Não mostra o pedido de senha do sistema. */
+/** Situação dos arquivos de dados, para os avisos da tela. Não mostra o pedido de senha do sistema. */
 export function secretsStatus(): Promise<SecretsStatus> {
     return serial(async () => {
         // Abre a chave e o arquivo, para que um problema neles já apareça no aviso.

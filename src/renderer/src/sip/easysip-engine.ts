@@ -1,5 +1,6 @@
 import { SipClient, type ISipSession, type SipInvitation } from 'easy-sipjs'
-import type { Account, DtmfMode } from '@shared/types'
+import type { Account, DtmfMode, ReconnectSettings } from '@shared/types'
+import { DEFAULT_RECONNECT } from '@shared/reconnect'
 import { Emitter } from '@renderer/lib/emitter'
 import {
     describeSipError,
@@ -211,7 +212,7 @@ export class EasySipEngine implements SipEngine {
     private emitter = new Emitter<EngineEvents>()
     private client: SipClient
 
-    constructor(account: Account, password: string) {
+    constructor(account: Account, password: string, reconnect: ReconnectSettings = DEFAULT_RECONNECT) {
         const iceServers = account.iceServers
             .split(',')
             .map((url) => url.trim())
@@ -234,13 +235,26 @@ export class EasySipEngine implements SipEngine {
                 preset: account.preset,
                 provider: account.provider,
                 sounds: { ringtone: SILENT_WAV },
+                // Depois de uma queda, a biblioteca reconecta sozinha com espera crescente (RNF-06) e mantém
+                // as chamadas. A primeira conexão que falha é refeita pela store de contas.
                 autoReconnect: true,
+                maxReconnectAttempts: reconnect.maxAttempts || Number.MAX_SAFE_INTEGER,
+                reconnectDelay: 2000,
+                maxReconnectDelay: 60_000,
                 autoRefreshRegistration: true,
                 logRedaction: true
             }
         )
 
         this.client.onSipLog = (level, category, _label, content) => {
+            // A biblioteca desiste em silêncio, só com esta linha de log; sem o aviso a conta ficaria
+            // "desconectada" para sempre, sem dizer por quê.
+            if (level === 'error' && content.startsWith('Número máximo de tentativas de reconexão'))
+                this.emitter.emit('status', {
+                    state: 'error',
+                    reason: `Sem conexão com o PBX depois de ${reconnect.maxAttempts} tentativas`,
+                    final: true
+                })
             const isSipMessage = /SIP\/2\.0/.test(content)
             // Mensagens SIP entram como info; o restante do SIP.js é detalhe interno (debug).
             this.emitter.emit('log', {

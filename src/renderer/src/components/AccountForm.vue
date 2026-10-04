@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { useDialog } from '@renderer/lib/dialog'
 import { computed, reactive, ref } from 'vue'
 import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { ACCOUNT_COLORS, describeStatus, validateAccount } from '@renderer/lib/accounts'
-import { createEngine, type RegStatus } from '@renderer/sip'
+import { createEngine, isNativeAccount, type RegStatus } from '@renderer/sip'
 
 const props = defineProps<{ account: Account }>()
 const emit = defineEmits<{ close: [] }>()
@@ -14,6 +15,8 @@ const accounts = useAccountsStore()
 
 const isNew = !accounts.byId(props.account.id)
 const form = reactive<Account>(JSON.parse(JSON.stringify(props.account)))
+// Contas salvas antes do SIP puro (RF-39) não têm o campo: valem como WebSocket.
+form.transport ??= 'ws'
 const password = ref('')
 const showAdvanced = ref(false)
 const errors = ref<Record<string, string>>({})
@@ -22,7 +25,12 @@ const testResult = ref<{ ok: boolean; text: string } | null>(null)
 const saving = ref(false)
 const quickDialsText = ref(form.quickDials.map((q) => `${q.number} ${q.label}`).join('\n'))
 
-const title = computed(() => (isNew ? 'Nova conta' : `Editar ${props.account.name}`))
+/** SIP puro por UDP, TCP ou TLS (RF-39): some o que é só do WebRTC. */
+const native = computed(() => isNativeAccount(form))
+
+const title = computed(() =>
+    isNew ? t('accountForm.nova_conta') : t('accountForm.editar', { name: props.account.name })
+)
 
 async function effectivePassword(): Promise<string> {
     if (password.value) return password.value
@@ -55,7 +63,10 @@ async function testConnection(): Promise<void> {
     const engine = createEngine(JSON.parse(JSON.stringify(form)), await effectivePassword())
     try {
         const status = await new Promise<RegStatus>((resolve) => {
-            const timer = setTimeout(() => resolve({ state: 'error', reason: 'Sem resposta do PBX em 10 s' }), 10_000)
+            const timer = setTimeout(
+                () => resolve({ state: 'error', reason: t('accountForm.sem_resposta_do_pbx_em') }),
+                10_000
+            )
             engine.on('status', (s) => {
                 if (s.state === 'registered' || s.state === 'error') {
                     clearTimeout(timer)
@@ -66,8 +77,8 @@ async function testConnection(): Promise<void> {
         })
         testResult.value =
             status.state === 'registered'
-                ? { ok: true, text: 'Registrou com sucesso. A conexão de teste já foi encerrada.' }
-                : { ok: false, text: `Falhou: ${describeStatus(status)}` }
+                ? { ok: true, text: t('accountForm.registrou_com_sucesso_a_conexao') }
+                : { ok: false, text: t('accountForm.falhou', { p: describeStatus(status) }) }
     } finally {
         await engine.dispose()
         testing.value = false
@@ -102,23 +113,30 @@ async function save(register: boolean): Promise<void> {
             <header>
                 <span class="swatch" :style="{ background: form.color }"></span>
                 <h2 id="account-title">{{ title }}</h2>
-                <button type="button" class="btn small ghost" aria-label="Fechar" @click="emit('close')">✕</button>
+                <button
+                    type="button"
+                    class="btn small ghost"
+                    :aria-label="$t('accountForm.fechar')"
+                    @click="emit('close')"
+                >
+                    ✕
+                </button>
             </header>
 
             <div class="body">
                 <div class="grid">
                     <label class="field">
-                        <span class="label">Nome</span>
+                        <span class="label">{{ $t('accountForm.nome') }}</span>
                         <input
                             v-model="form.name"
                             class="input"
                             :class="{ invalid: errors.name }"
-                            placeholder="Suporte 1001"
+                            :placeholder="$t('accountForm.suporte_1001')"
                         />
                         <small v-if="errors.name">{{ errors.name }}</small>
                     </label>
                     <label class="field">
-                        <span class="label">Ramal</span>
+                        <span class="label">{{ $t('accountForm.ramal') }}</span>
                         <input
                             v-model="form.extension"
                             class="input mono"
@@ -128,34 +146,58 @@ async function save(register: boolean): Promise<void> {
                         <small v-if="errors.extension">{{ errors.extension }}</small>
                     </label>
                     <label class="field">
-                        <span class="label">Domínio SIP</span>
+                        <span class="label">{{ $t('accountForm.dominio_sip') }}</span>
                         <input
                             v-model="form.domain"
                             class="input mono"
                             :class="{ invalid: errors.domain }"
-                            placeholder="pbx.empresa.com"
+                            :placeholder="$t('accountForm.pbx_empresa_com')"
                         />
                         <small v-if="errors.domain">{{ errors.domain }}</small>
                     </label>
                     <label class="field">
-                        <span class="label">Senha</span>
+                        <span class="label">{{ $t('accountForm.senha') }}</span>
                         <input
                             v-model="password"
                             type="password"
                             class="input mono"
                             :class="{ invalid: errors.password }"
-                            :placeholder="isNew ? '' : 'mantida; digite para trocar'"
+                            :placeholder="isNew ? '' : $t('accountForm.mantida_digite_para_trocar')"
                             autocomplete="new-password"
                         />
                         <small v-if="errors.password">{{ errors.password }}</small>
                     </label>
                     <label class="field wide">
-                        <span class="label">WebSocket (WSS)</span>
+                        <span class="label">{{ $t('accountForm.transporte') }}</span>
+                        <select v-model="form.transport" class="input" :disabled="form.simulated">
+                            <option value="ws">{{ $t('accountForm.websocket_seguro_webrtc') }}</option>
+                            <option value="udp">{{ $t('accountForm.sip_por_udp') }}</option>
+                            <option value="tcp">{{ $t('accountForm.sip_por_tcp') }}</option>
+                            <option value="tls">{{ $t('accountForm.sip_por_tls') }}</option>
+                        </select>
+                        <small v-if="native" class="note">
+                            {{ $t('accountForm.sip_puro_sem_webrtc_por') }}
+                        </small>
+                    </label>
+                    <label v-if="native" class="field wide">
+                        <span class="label">{{ $t('accountForm.servidor_sip_host_e_porta') }}</span>
+                        <input
+                            v-model="form.sipServer"
+                            class="input mono"
+                            :class="{ invalid: errors.sipServer }"
+                            :placeholder="
+                                $t('accountForm.igual_ao_dominio_porta', { p: form.transport === 'tls' ? 5061 : 5060 })
+                            "
+                        />
+                        <small v-if="errors.sipServer">{{ errors.sipServer }}</small>
+                    </label>
+                    <label v-else class="field wide">
+                        <span class="label">{{ $t('accountForm.websocket_wss') }}</span>
                         <input
                             v-model="form.wssUrl"
                             class="input mono"
                             :class="{ invalid: errors.wssUrl }"
-                            placeholder="wss://pbx.empresa.com:8089/ws"
+                            :placeholder="$t('accountForm.wss_pbx_empresa_com_8089')"
                         />
                         <small v-if="errors.wssUrl">{{ errors.wssUrl }}</small>
                     </label>
@@ -163,13 +205,15 @@ async function save(register: boolean): Promise<void> {
 
                 <div class="toggles">
                     <label class="check">
-                        <input v-model="form.simulated" type="checkbox" /> PBX simulado (sem rede)
+                        <input v-model="form.simulated" type="checkbox" /> {{ $t('accountForm.pbx_simulado_sem_rede') }}
                     </label>
                     <label class="check">
-                        <input v-model="form.autoRegister" type="checkbox" /> Registrar ao abrir o app
+                        <input v-model="form.autoRegister" type="checkbox" />
+                        {{ $t('accountForm.registrar_ao_abrir_o_app') }}
                     </label>
                     <label class="check">
-                        <input v-model="form.autoAnswer.enabled" type="checkbox" /> Auto-atender após
+                        <input v-model="form.autoAnswer.enabled" type="checkbox" />
+                        {{ $t('accountForm.auto_atender_apos') }}
                         <input
                             v-model.number="form.autoAnswer.delayMs"
                             type="number"
@@ -178,53 +222,62 @@ async function save(register: boolean): Promise<void> {
                             step="250"
                             class="input mono ms"
                             :disabled="!form.autoAnswer.enabled"
-                            aria-label="Atraso do auto-atender em milissegundos"
+                            :aria-label="$t('accountForm.atraso_do_auto_atender_em')"
                         />
-                        ms
+                        {{ $t('accountForm.ms') }}
                     </label>
                     <label class="check">
-                        <input v-model="form.rawSipLog" type="checkbox" /> Mostrar SIP bruto no log
+                        <input v-model="form.rawSipLog" type="checkbox" />
+                        {{ $t('accountForm.mostrar_sip_bruto_no_log') }}
                     </label>
                 </div>
 
                 <button type="button" class="btn small ghost toggle-adv" @click="showAdvanced = !showAdvanced">
-                    {{ showAdvanced ? '▾' : '▸' }} Avançado
+                    {{ $t('accountForm.avancado', { p: showAdvanced ? '▾' : '▸' }) }}
                 </button>
 
                 <div v-if="showAdvanced" class="grid">
-                    <label class="field">
-                        <span class="label">Preset</span>
+                    <label v-if="!native" class="field">
+                        <span class="label">{{ $t('accountForm.preset') }}</span>
                         <select v-model="form.preset" class="input">
-                            <option value="asterisk">Asterisk</option>
-                            <option value="kamailio">Kamailio</option>
-                            <option value="generic">Genérico</option>
+                            <option value="asterisk">{{ $t('accountForm.asterisk') }}</option>
+                            <option value="kamailio">{{ $t('accountForm.kamailio') }}</option>
+                            <option value="generic">{{ $t('accountForm.generico') }}</option>
                         </select>
                     </label>
-                    <label class="field">
-                        <span class="label">Biblioteca SIP</span>
+                    <label v-if="!native" class="field">
+                        <span class="label">{{ $t('accountForm.biblioteca_sip') }}</span>
                         <select v-model="form.provider" class="input">
-                            <option value="sipjs">SIP.js (padrão)</option>
-                            <option value="jssip">JsSIP</option>
+                            <option value="sipjs">{{ $t('accountForm.sip_js_padrao') }}</option>
+                            <option value="jssip">{{ $t('accountForm.jssip') }}</option>
                         </select>
                     </label>
                     <label class="field">
-                        <span class="label">Usuário de autenticação</span>
-                        <input v-model="form.authUsername" class="input mono" placeholder="igual ao ramal" />
+                        <span class="label">{{ $t('accountForm.usuario_de_autenticacao') }}</span>
+                        <input
+                            v-model="form.authUsername"
+                            class="input mono"
+                            :placeholder="$t('accountForm.igual_ao_ramal')"
+                        />
                     </label>
                     <label class="field">
-                        <span class="label">Nome de exibição</span>
-                        <input v-model="form.displayName" class="input" placeholder="igual ao ramal" />
+                        <span class="label">{{ $t('accountForm.nome_de_exibicao') }}</span>
+                        <input
+                            v-model="form.displayName"
+                            class="input"
+                            :placeholder="$t('accountForm.igual_ao_ramal')"
+                        />
                     </label>
-                    <label class="field">
-                        <span class="label">Modo DTMF</span>
+                    <label v-if="!native" class="field">
+                        <span class="label">{{ $t('accountForm.modo_dtmf') }}</span>
                         <select v-model="form.dtmfMode" class="input">
-                            <option value="auto">Automático</option>
-                            <option value="sip-info">SIP INFO</option>
-                            <option value="rtp-event">RTP (RFC 4733)</option>
+                            <option value="auto">{{ $t('accountForm.automatico') }}</option>
+                            <option value="sip-info">{{ $t('accountForm.sip_info') }}</option>
+                            <option value="rtp-event">{{ $t('accountForm.rtp_rfc_4733') }}</option>
                         </select>
                     </label>
                     <label class="field">
-                        <span class="label">Cor</span>
+                        <span class="label">{{ $t('accountForm.cor') }}</span>
                         <div class="colors">
                             <button
                                 v-for="color in ACCOUNT_COLORS"
@@ -233,26 +286,26 @@ async function save(register: boolean): Promise<void> {
                                 class="color"
                                 :class="{ on: form.color === color }"
                                 :style="{ background: color }"
-                                :aria-label="`Cor ${color}`"
+                                :aria-label="$t('accountForm.cor_2', { color })"
                                 @click="form.color = color"
                             ></button>
                         </div>
                     </label>
-                    <label class="field wide">
-                        <span class="label">STUN / TURN, separados por vírgula</span>
+                    <label v-if="!native" class="field wide">
+                        <span class="label">{{ $t('accountForm.stun_turn_separados_por_virgula') }}</span>
                         <input
                             v-model="form.iceServers"
                             class="input mono"
-                            placeholder="stun:stun.l.google.com:19302, turn:turn.empresa.com:3478"
+                            :placeholder="$t('accountForm.stun_stun_l_google_com')"
                         />
                     </label>
                     <label class="field wide">
-                        <span class="label">Atalhos de discagem, um por linha: número e descrição</span>
+                        <span class="label">{{ $t('accountForm.atalhos_de_discagem_um_por') }}</span>
                         <textarea
                             v-model="quickDialsText"
                             class="input mono"
                             rows="3"
-                            placeholder="8000 URA&#10;*97 correio de voz"
+                            :placeholder="$t('accountForm.t_8000_ura_97_correio_de')"
                         ></textarea>
                     </label>
                 </div>
@@ -262,11 +315,15 @@ async function save(register: boolean): Promise<void> {
 
             <footer>
                 <button type="button" class="btn" :disabled="testing" @click="testConnection">
-                    {{ testing ? 'Testando…' : 'Testar conexão' }}
+                    {{ testing ? $t('accountForm.testando') : $t('accountForm.testar_conexao') }}
                 </button>
                 <span class="spacer"></span>
-                <button type="button" class="btn" :disabled="saving" @click="save(false)">Salvar</button>
-                <button type="submit" class="btn primary" :disabled="saving">Salvar e registrar</button>
+                <button type="button" class="btn" :disabled="saving" @click="save(false)">
+                    {{ $t('accountForm.salvar') }}
+                </button>
+                <button type="submit" class="btn primary" :disabled="saving">
+                    {{ $t('accountForm.salvar_e_registrar') }}
+                </button>
             </footer>
         </form>
     </div>
@@ -297,6 +354,9 @@ async function save(register: boolean): Promise<void> {
 }
 .field small {
     color: var(--bad);
+}
+.field small.note {
+    color: var(--muted);
 }
 .toggles {
     display: grid;

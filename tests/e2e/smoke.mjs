@@ -1,7 +1,7 @@
 // Teste de fumaça de ponta a ponta no modo simulado: abre o app, liga de 1001 para 1002,
 // espera o auto-atender, envia DTMF e desliga. Uso: npm run build && node tests/e2e/smoke.mjs
 import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -151,7 +151,12 @@ try {
     if (/No handler registered|Error occurred in handler/.test(mainErrors))
         throw new Error(`Erro de IPC no processo principal:\n${mainErrors.slice(0, 600)}`)
     if (pageErrors.length) throw new Error(`Erros na interface:\n${pageErrors.join('\n')}`)
-    step('nenhum erro de IPC nem da interface durante o teste')
+    // O log interno (RNF-14) pega também os erros que o Vue trata e não chegam ao pageerror.
+    const logErrors = readFileSync(join(userData, 'logs', 'iris.log'), 'utf8')
+        .split('\n')
+        .filter((line) => / ERROR /.test(line))
+    if (logErrors.length) throw new Error(`Erros no log interno:\n${logErrors.join('\n')}`)
+    step('nenhum erro de IPC, da interface nem no log interno durante o teste')
     console.log('Fumaça OK')
 } catch (error) {
     if (shots) await page.screenshot({ path: join(shots, 'erro.png') })

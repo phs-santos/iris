@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed, ref, watch } from 'vue'
 import type { Scenario, ScenarioStep, ScenarioStepType } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
@@ -90,7 +91,7 @@ async function createIvrExample(): Promise<void> {
     const created = await store.create()
     const s: Scenario = newScenario(created.accountId, {
         id: created.id,
-        name: 'URA 8000: atende e recebe DTMF',
+        name: t('scenariosPane.ura_8000_atende_e_recebe'),
         steps: [
             { type: 'register' },
             { type: 'dial', to: '8000', call: 'c1' },
@@ -106,7 +107,7 @@ async function createIvrExample(): Promise<void> {
 
 async function remove(): Promise<void> {
     const s = scenario.value
-    if (!s || !confirm(`Excluir o cenário "${s.name}"?`)) return
+    if (!s || !confirm(t('scenariosPane.excluir_o_cenario', { name: s.name }))) return
     await store.remove(s.id)
 }
 
@@ -128,7 +129,9 @@ const statusMark = (r?: StepResult): { text: string; cls: string } => {
 const summary = computed(() => {
     const run = store.lastRun
     if (!run || store.batch) return null
-    return run.passed ? `Passou em ${run.ms} ms` : `Falhou no passo ${(run.failedAt ?? 0) + 1} (${run.ms} ms)`
+    return run.passed
+        ? t('scenariosPane.passou_em_ms', { ms: run.ms })
+        : t('scenariosPane.falhou_no_passo_ms', { p: (run.failedAt ?? 0) + 1, ms: run.ms })
 })
 
 async function exportReport(format: 'txt' | 'json'): Promise<void> {
@@ -137,7 +140,7 @@ async function exportReport(format: 'txt' | 'json'): Promise<void> {
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
     const content = format === 'txt' ? reportToText(report) : JSON.stringify(report, null, 2)
     const path = await window.iris.files.saveText(`iris-cenario-${stamp}.${format}`, content)
-    if (path) saved.value = `relatório salvo em ${path}`
+    if (path) saved.value = t('scenariosPane.relatorio_salvo_em', { path })
 }
 
 const accountOptions = computed(() =>
@@ -155,38 +158,47 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                 v-if="store.scenarios.length"
                 v-model="store.selectedId"
                 class="input pick"
-                aria-label="Cenário"
+                :aria-label="$t('scenariosPane.cenario')"
                 :disabled="store.running"
             >
                 <option v-for="s in store.scenarios" :key="s.id" :value="s.id">{{ s.name }}</option>
             </select>
-            <span v-else class="muted">Nenhum cenário ainda</span>
-            <button class="btn small" :disabled="store.running" @click="store.create()">+ Novo</button>
-            <button class="btn small" :disabled="store.running" @click="createIvrExample">+ Exemplo de URA</button>
+            <span v-else class="muted">{{ $t('scenariosPane.nenhum_cenario_ainda') }}</span>
+            <button class="btn small" :disabled="store.running" @click="store.create()">
+                {{ $t('scenariosPane.novo') }}
+            </button>
+            <button class="btn small" :disabled="store.running" @click="createIvrExample">
+                {{ $t('scenariosPane.exemplo_de_ura') }}
+            </button>
             <template v-if="scenario">
                 <button class="btn small" :disabled="store.running" @click="store.duplicate(scenario.id)">
-                    Duplicar
+                    {{ $t('scenariosPane.duplicar') }}
                 </button>
-                <button class="btn small" :disabled="store.running" @click="remove">Excluir</button>
+                <button class="btn small" :disabled="store.running" @click="remove">
+                    {{ $t('scenariosPane.excluir') }}
+                </button>
             </template>
             <span class="note">{{ saved }}</span>
         </div>
 
         <p v-if="!scenario" class="empty">
-            Um cenário é um roteiro de passos (registrar, discar, aguardar estado, DTMF, transferir, verificar) que a
-            Íris executa sozinha e marca como passou ou falhou. Comece pelo exemplo de URA.
+            {{ $t('scenariosPane.um_cenario_e_um_roteiro') }}
         </p>
 
         <template v-else>
             <fieldset class="head" :disabled="store.running">
                 <label>
-                    <span class="label">Nome</span>
-                    <input v-model="scenario.name" class="input" aria-label="Nome do cenário" />
+                    <span class="label">{{ $t('scenariosPane.nome') }}</span>
+                    <input v-model="scenario.name" class="input" :aria-label="$t('scenariosPane.nome_do_cenario')" />
                 </label>
                 <label>
-                    <span class="label">Conta de origem</span>
-                    <select v-model="scenario.accountId" class="input" aria-label="Conta de origem">
-                        <option value="" disabled>Escolha a conta</option>
+                    <span class="label">{{ $t('scenariosPane.conta_de_origem') }}</span>
+                    <select
+                        v-model="scenario.accountId"
+                        class="input"
+                        :aria-label="$t('scenariosPane.conta_de_origem')"
+                    >
+                        <option value="" disabled>{{ $t('scenariosPane.escolha_a_conta') }}</option>
                         <option v-for="a in accountOptions" :key="a.id" :value="a.id">{{ a.label }}</option>
                     </select>
                 </label>
@@ -200,7 +212,7 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                             <select
                                 class="input type"
                                 :value="step.type"
-                                :aria-label="`Tipo do passo ${i + 1}`"
+                                :aria-label="$t('scenariosPane.tipo_do_passo', { p: i + 1 })"
                                 @change="changeType(i, ($event.target as HTMLSelectElement).value as ScenarioStepType)"
                             >
                                 <option v-for="t in STEP_TYPES" :key="t.type" :value="t.type">{{ t.label }}</option>
@@ -210,9 +222,9 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                 <select
                                     v-model="field(step).account"
                                     class="input acct"
-                                    :aria-label="`Conta do passo ${i + 1}`"
+                                    :aria-label="$t('scenariosPane.conta_do_passo', { p: i + 1 })"
                                 >
-                                    <option :value="undefined">conta de origem</option>
+                                    <option :value="undefined">{{ $t('scenariosPane.conta_de_origem_2') }}</option>
                                     <option v-for="a in accountOptions" :key="a.id" :value="a.id">{{ a.label }}</option>
                                 </select>
                             </template>
@@ -221,16 +233,16 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                 <input
                                     v-model="step.to"
                                     class="input mono short"
-                                    placeholder="número"
-                                    :aria-label="`Número do passo ${i + 1}`"
+                                    :placeholder="$t('scenariosPane.numero')"
+                                    :aria-label="$t('scenariosPane.numero_do_passo', { p: i + 1 })"
                                 />
                             </template>
                             <template v-if="step.type === 'dial' || step.type === 'answer'">
-                                <span class="muted">como</span>
+                                <span class="muted">{{ $t('scenariosPane.como') }}</span>
                                 <input
                                     v-model="step.call"
                                     class="input mono tiny"
-                                    :aria-label="`Apelido da chamada do passo ${i + 1}`"
+                                    :aria-label="$t('scenariosPane.apelido_da_chamada_do_passo', { p: i + 1 })"
                                 />
                             </template>
 
@@ -243,7 +255,7 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                 <select
                                     v-model="field(step).call"
                                     class="input tiny"
-                                    :aria-label="`Chamada do passo ${i + 1}`"
+                                    :aria-label="$t('scenariosPane.chamada_do_passo', { p: i + 1 })"
                                 >
                                     <option v-for="a in aliasesBefore(i)" :key="a" :value="a">{{ a }}</option>
                                     <option
@@ -259,7 +271,7 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                 <select
                                     v-model="step.state"
                                     class="input"
-                                    :aria-label="`Estado esperado do passo ${i + 1}`"
+                                    :aria-label="$t('scenariosPane.estado_esperado_do_passo', { p: i + 1 })"
                                 >
                                     <option v-for="s in CALL_STATES" :key="s.state" :value="s.state">
                                         {{ s.label }}
@@ -270,15 +282,15 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                 <input
                                     v-model="step.digits"
                                     class="input mono short"
-                                    placeholder="1,w2,4321#"
-                                    :aria-label="`Dígitos do passo ${i + 1}`"
+                                    :placeholder="$t('scenariosPane.t_1_w2_4321')"
+                                    :aria-label="$t('scenariosPane.digitos_do_passo', { p: i + 1 })"
                                 />
                             </template>
                             <template v-if="step.type === 'verify'">
                                 <select
                                     v-model="step.check"
                                     class="input"
-                                    :aria-label="`Verificação do passo ${i + 1}`"
+                                    :aria-label="$t('scenariosPane.verificacao_do_passo', { p: i + 1 })"
                                 >
                                     <option v-for="c in CHECKS" :key="c.check" :value="c.check">{{ c.label }}</option>
                                 </select>
@@ -286,7 +298,7 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                     v-model="step.expected"
                                     class="input mono short"
                                     :placeholder="CHECKS.find((c) => c.check === step.check)?.hint"
-                                    :aria-label="`Valor esperado do passo ${i + 1}`"
+                                    :aria-label="$t('scenariosPane.valor_esperado_do_passo', { p: i + 1 })"
                                 />
                             </template>
                             <template v-if="step.type === 'wait'">
@@ -296,46 +308,57 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
                                     min="0"
                                     step="0.1"
                                     :value="step.ms / 1000"
-                                    :aria-label="`Segundos do passo ${i + 1}`"
+                                    :aria-label="$t('scenariosPane.segundos_do_passo', { p: i + 1 })"
                                     @input="
                                         step.ms = Math.round(Number(($event.target as HTMLInputElement).value) * 1000)
                                     "
                                 />
-                                <span class="muted">s</span>
+                                <span class="muted">{{ $t('scenariosPane.s') }}</span>
                             </template>
                             <template v-if="step.type === 'waitState' || step.type === 'answer'">
-                                <span class="muted">até</span>
+                                <span class="muted">{{ $t('scenariosPane.ate') }}</span>
                                 <input
                                     class="input mono tiny"
                                     type="number"
                                     min="1"
                                     :value="step.timeoutMs / 1000"
-                                    :aria-label="`Tempo limite do passo ${i + 1}`"
+                                    :aria-label="$t('scenariosPane.tempo_limite_do_passo', { p: i + 1 })"
                                     @input="
                                         step.timeoutMs = Math.round(
                                             Number(($event.target as HTMLInputElement).value) * 1000
                                         )
                                     "
                                 />
-                                <span class="muted">s</span>
+                                <span class="muted">{{ $t('scenariosPane.s') }}</span>
                             </template>
                         </div>
                         <div class="side">
                             <span class="mark mono tabular" :data-testid="`resultado-${i + 1}`">
                                 {{ statusMark(store.live[i]).text }}
                             </span>
-                            <button class="btn small ghost" aria-label="Subir" :disabled="i === 0" @click="move(i, -1)">
+                            <button
+                                class="btn small ghost"
+                                :aria-label="$t('scenariosPane.subir')"
+                                :disabled="i === 0"
+                                @click="move(i, -1)"
+                            >
                                 ↑
                             </button>
                             <button
                                 class="btn small ghost"
-                                aria-label="Descer"
+                                :aria-label="$t('scenariosPane.descer')"
                                 :disabled="i === scenario.steps.length - 1"
                                 @click="move(i, 1)"
                             >
                                 ↓
                             </button>
-                            <button class="btn small ghost" aria-label="Remover passo" @click="removeStep(i)">✕</button>
+                            <button
+                                class="btn small ghost"
+                                :aria-label="$t('scenariosPane.remover_passo')"
+                                @click="removeStep(i)"
+                            >
+                                ✕
+                            </button>
                         </div>
                     </fieldset>
                     <p v-if="store.live[i]?.message" class="msg" :class="statusMark(store.live[i]).cls">
@@ -346,58 +369,92 @@ const hasAccount = (type: ScenarioStepType): boolean => type === 'register' || t
             </ol>
 
             <fieldset class="add" :disabled="store.running">
-                <select v-model="addType" class="input" aria-label="Tipo do novo passo">
+                <select v-model="addType" class="input" :aria-label="$t('scenariosPane.tipo_do_novo_passo')">
                     <option v-for="t in STEP_TYPES" :key="t.type" :value="t.type">{{ t.label }}</option>
                 </select>
-                <button class="btn small" @click="addStep">+ Passo</button>
+                <button class="btn small" @click="addStep">{{ $t('scenariosPane.passo') }}</button>
             </fieldset>
 
             <div class="run">
                 <template v-if="!store.running">
-                    <button class="btn primary" :disabled="!ready" @click="store.run(scenario.id)">Executar</button>
-                    <span class="muted">ou</span>
+                    <button class="btn primary" :disabled="!ready" @click="store.run(scenario.id)">
+                        {{ $t('scenariosPane.executar') }}
+                    </button>
+                    <span class="muted">{{ $t('scenariosPane.ou') }}</span>
                     <input
                         v-model.number="repeat"
                         class="input mono tiny"
                         type="number"
                         min="2"
                         max="500"
-                        aria-label="Quantidade de execuções"
+                        :aria-label="$t('scenariosPane.quantidade_de_execucoes')"
                     />
                     <button class="btn" :disabled="!ready || repeat < 2" @click="store.run(scenario.id, repeat)">
-                        Repetir {{ repeat }}×
+                        {{ $t('scenariosPane.repetir', { repeat }) }}
                     </button>
                 </template>
-                <button v-else class="btn stop" @click="store.stop()">Parar</button>
+                <button v-else class="btn stop" @click="store.stop()">{{ $t('scenariosPane.parar') }}</button>
                 <span v-if="store.batch" class="mono tabular progress">
-                    {{ store.batch.done }}/{{ store.batch.total }} · {{ store.batch.passed }} passaram
+                    {{
+                        $t('scenariosPane.passaram', {
+                            done: store.batch.done,
+                            total: store.batch.total,
+                            passed: store.batch.passed
+                        })
+                    }}
                 </span>
                 <span v-else-if="summary" class="mono" :class="store.lastRun?.passed ? 'ok' : 'bad'">{{
                     summary
                 }}</span>
                 <span class="spacer"></span>
-                <span class="muted tabular">{{ calls.active.length }} chamadas ativas</span>
+                <span class="muted tabular">{{
+                    $t('scenariosPane.chamadas_ativas', { length: calls.active.length })
+                }}</span>
             </div>
             <p v-if="!ready && !store.running" class="hint">
-                {{ !scenario.accountId ? 'Escolha a conta de origem.' : 'Corrija os passos marcados para executar.' }}
+                {{
+                    !scenario.accountId
+                        ? $t('scenariosPane.escolha_a_conta_de_origem')
+                        : $t('scenariosPane.corrija_os_passos_marcados_para')
+                }}
             </p>
 
-            <section v-if="store.report && store.report.runs > 1" class="report" aria-label="Relatório">
+            <section
+                v-if="store.report && store.report.runs > 1"
+                class="report"
+                :aria-label="$t('scenariosPane.relatorio')"
+            >
                 <div class="figures">
                     <span
-                        ><b class="tabular">{{ store.report.successRate }}%</b> de sucesso</span
+                        ><b class="tabular">{{ store.report.successRate }}%</b>
+                        {{ $t('scenariosPane.de_sucesso') }}</span
                     >
-                    <span class="tabular">{{ store.report.passed }}/{{ store.report.runs }} passaram</span>
-                    <span class="tabular">média {{ store.report.avgMs }} ms · p95 {{ store.report.p95Ms }} ms</span>
+                    <span class="tabular">{{
+                        $t('scenariosPane.passaram_2', { passed: store.report.passed, runs: store.report.runs })
+                    }}</span>
+                    <span class="tabular">{{
+                        $t('scenariosPane.media_ms_p95_ms', { avgMs: store.report.avgMs, p95Ms: store.report.p95Ms })
+                    }}</span>
                 </div>
                 <ul v-if="store.report.failures.length" class="failures">
                     <li v-for="f in store.report.failures" :key="f.step">
-                        passo {{ f.step }} ({{ f.description }}): {{ f.count }}× · {{ f.lastMessage }}
+                        {{
+                            $t('scenariosPane.passo_2', {
+                                step: f.step,
+                                description: f.description,
+                                count: f.count,
+                                lastMessage: f.lastMessage
+                            })
+                        }}
                     </li>
                 </ul>
                 <div class="exports">
-                    <button class="btn small" @click="exportReport('txt')">Relatório .txt</button>
-                    <button class="btn small" @click="exportReport('json')">Relatório .json</button>
+                    <button class="btn small" @click="exportReport('txt')">
+                        {{ $t('scenariosPane.relatorio_txt') }}
+                    </button>
+                    <button class="btn small" @click="exportReport('json')">
+                        {{ $t('scenariosPane.relatorio_json') }}
+                    </button>
                 </div>
             </section>
         </template>

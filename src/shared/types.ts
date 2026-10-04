@@ -3,6 +3,8 @@
 import type { AiModel, AiRequest, AiResult, AiSettings, AiStatus } from './ai'
 import type { CliConfig } from './cli'
 import type { Appearance, Profile } from './appearance'
+import type { TrayCounts } from './tray'
+import type { AccountTransport, SipTransportKind } from './sip-target'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
@@ -24,6 +26,10 @@ export interface Account {
     authUsername?: string
     displayName?: string
     wssUrl: string
+    /** Sem o campo vale `ws` (WebRTC por WebSocket). UDP, TCP e TLS usam o motor próprio (RF-39). */
+    transport?: AccountTransport
+    /** SIP puro: host e porta do PBX, ex.: "10.0.0.5:5080". Vazio usa o domínio e a porta padrão. */
+    sipServer?: string
     /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */
     iceServers: string
     dtmfMode: DtmfMode
@@ -86,6 +92,19 @@ export interface Settings {
     /** Tela de Configurações: quem usa e como a interface aparece. */
     profile?: Profile
     appearance?: Appearance
+    /** Sem o campo, vale o padrão de `@shared/reconnect`. */
+    reconnect?: ReconnectSettings
+}
+
+/** Campos que a interface pode mudar em `settings.json`; o canal de atualização e a IA têm canais próprios. */
+export type SettingsPatch = Partial<
+    Pick<Settings, 'trustedHosts' | 'audioInputId' | 'audioOutputId' | 'profile' | 'appearance' | 'reconnect'>
+>
+
+/** Reconexão das contas depois de uma queda (RNF-06). */
+export interface ReconnectSettings {
+    /** Quantas vezes tentar de novo antes de desistir; 0 tenta para sempre. */
+    maxAttempts: number
 }
 
 /** Canais de atualização (RF-35): o beta recebe também as versões de teste (`1.2.0-beta.1`). */
@@ -110,6 +129,34 @@ export interface UpdateInfo {
     manual: boolean
 }
 
+// ─── Motor próprio: SIP puro por UDP, TCP ou TLS (RF-39) ───────────────────
+
+export interface NativeSipConfig {
+    user: string
+    domain: string
+    authUser?: string
+    displayName?: string
+    transport: SipTransportKind
+    /** Host e porta do PBX; vazio usa o domínio. */
+    server?: string
+}
+
+export type NativeSipEventBody =
+    | { type: 'status'; status: { state: RegStateName; code?: number; reason?: string; final?: boolean } }
+    | { type: 'log'; level: 'debug' | 'info' | 'warn' | 'error'; kind: 'event' | 'sip'; text: string }
+
+export type RegStateName = 'disconnected' | 'connecting' | 'connected' | 'registered' | 'error'
+
+/** Evento de um motor, do processo principal para a interface. */
+export type NativeSipEvent = { engineId: string } & NativeSipEventBody
+
+export interface NativeSipHealth {
+    connected: boolean
+    registered: boolean
+    latencyMs?: number
+    error?: string
+}
+
 /** Formato do arquivo de exportação de contas (RF-07). */
 export interface AccountsExport {
     format: 'iris/accounts'
@@ -118,7 +165,7 @@ export interface AccountsExport {
     accounts: Array<Account & { password?: string }>
 }
 
-/** Situação do arquivo de senhas (RNF-07). */
+/** Situação dos arquivos de dados: senhas (RNF-07), contas, cenários e preferências. */
 export interface SecretsStatus {
     /** Ainda há senhas no formato antigo (cofre do sistema, até a 1.0.5) para trazer. */
     legacy: boolean
@@ -151,13 +198,18 @@ export interface IrisApi {
     }
     settings: {
         load(): Promise<Settings>
-        save(settings: Settings): Promise<void>
+        /** Muda só os campos enviados e devolve as preferências já gravadas. */
+        update(patch: SettingsPatch): Promise<Settings>
     }
     files: {
         saveText(defaultName: string, content: string): Promise<string | null>
         openText(): Promise<string | null>
     }
     notify(title: string, body: string): void
+    /** Estado geral para o ícone da bandeja (RF-33). */
+    setTray(counts: TrayCounts): void
+    /** Erro da interface para o log interno do app (RNF-14). */
+    logError(text: string): void
     /** Modo linha de comando (RF-31): null quando o app abriu com janela. */
     cli: {
         config(): Promise<CliConfig | null>
@@ -188,6 +240,13 @@ export interface IrisApi {
         models(): Promise<AiModel[]>
         explain(request: AiRequest): Promise<AiResult>
     }
+    /** Motor próprio (RF-39): os sockets ficam no processo principal. */
+    sip: {
+        start(engineId: string, config: NativeSipConfig, password: string): Promise<void>
+        stop(engineId: string): Promise<void>
+        health(engineId: string): Promise<NativeSipHealth>
+        onEvent(listener: (event: NativeSipEvent) => void): () => void
+    }
     appInfo(): Promise<{ version: string; platform: string; electron: string; chrome: string }>
     /** Ajusta a janela ao modo da tela: estreita no Telefone, larga na Bancada. */
     setWindowMode(mode: WindowMode): Promise<void>
@@ -206,10 +265,12 @@ export const IPC = {
     secretsStatus: 'secrets:status',
     secretsMigrate: 'secrets:migrate',
     settingsLoad: 'settings:load',
-    settingsSave: 'settings:save',
+    settingsUpdate: 'settings:update',
     filesSaveText: 'files:save-text',
     filesOpenText: 'files:open-text',
     notify: 'app:notify',
+    tray: 'app:tray',
+    logError: 'app:log-error',
     appInfo: 'app:info',
     windowMode: 'window:mode',
     certificateError: 'cert:error',
@@ -220,6 +281,10 @@ export const IPC = {
     updateInstall: 'update:install',
     updateOpenDownload: 'update:open-download',
     updateStatus: 'update:status',
+    sipStart: 'sip:start',
+    sipStop: 'sip:stop',
+    sipHealth: 'sip:health',
+    sipEvent: 'sip:event',
     aiStatus: 'ai:status',
     aiSetKey: 'ai:set-key',
     aiSetOptions: 'ai:set-options',

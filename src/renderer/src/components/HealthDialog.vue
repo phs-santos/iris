@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { useDialog } from '@renderer/lib/dialog'
 import { computed, onMounted, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { describeStatus } from '@renderer/lib/accounts'
+import { isNativeAccount } from '@renderer/sip'
 
 type Check = { ok: boolean | null; text: string; hint?: string }
 
@@ -26,26 +28,31 @@ async function run(): Promise<void> {
     const status = accounts.statusOf(a.id)
     list.push({
         ok: status.state === 'registered',
-        text: `Registro: ${describeStatus(status)}`,
-        hint:
-            status.state === 'error' && status.code === 401 ? 'Confira a senha e o usuário de autenticação.' : undefined
+        text: t('healthDialog.registro', { p: describeStatus(status) }),
+        hint: status.state === 'error' && status.code === 401 ? t('healthDialog.confira_a_senha_e_o') : undefined
     })
 
+    // SIP puro (RF-39) não usa WebSocket: mostra o transporte da conta.
+    const link = isNativeAccount(a)
+        ? t('healthDialog.transporte', { p: a.transport?.toUpperCase() })
+        : t('healthDialog.websocket')
     const health = await accounts.checkHealth(a.id)
     if (health) {
         list.push({
             ok: health.websocketConnected,
-            text: health.websocketConnected ? 'WebSocket conectado' : 'WebSocket desconectado'
+            text: `${link} ${health.websocketConnected ? 'conectado' : 'desconectado'}`
         })
         list.push({
             ok: health.latencyMs !== undefined,
             text:
                 health.latencyMs !== undefined
-                    ? `OPTIONS respondeu em ${health.latencyMs} ms`
-                    : `OPTIONS sem resposta${health.error ? `: ${health.error}` : ''}`
+                    ? t('healthDialog.options_respondeu_em_ms', { latencyMs: health.latencyMs })
+                    : health.error
+                      ? t('healthDialog.options_sem_resposta_erro', { error: health.error })
+                      : t('healthDialog.options_sem_resposta')
         })
     } else {
-        list.push({ ok: null, text: 'Registre a conta para medir WebSocket e OPTIONS' })
+        list.push({ ok: null, text: t('healthDialog.registre_a_conta_para_medir', { link }) })
     }
 
     let micOk = false
@@ -58,27 +65,27 @@ async function run(): Promise<void> {
     }
     list.push({
         ok: micOk,
-        text: micOk ? 'Microfone liberado' : 'Microfone indisponível',
-        hint: micOk ? undefined : 'Conecte um microfone e permita o acesso nas configurações de privacidade do sistema.'
+        text: micOk ? t('healthDialog.microfone_liberado') : t('healthDialog.microfone_indisponivel'),
+        hint: micOk ? undefined : t('healthDialog.conecte_um_microfone_e_permita')
     })
 
     const devices = await navigator.mediaDevices.enumerateDevices()
     const outputs = devices.filter((d) => d.kind === 'audiooutput').length
-    list.push({ ok: outputs > 0, text: `${outputs} saídas de áudio encontradas` })
+    list.push({ ok: outputs > 0, text: t('healthDialog.saidas_de_audio_encontradas', { outputs }) })
 
     if (!a.simulated) {
         const hasTurn = /turns?:/i.test(a.iceServers)
         list.push({
             ok: hasTurn ? true : null,
-            text: hasTurn ? 'Servidor TURN configurado' : 'Sem servidor TURN',
-            hint: hasTurn
-                ? undefined
-                : 'Atrás de NAT simétrico a chamada pode ficar muda. Adicione um TURN em Avançado.'
+            text: hasTurn ? t('healthDialog.servidor_turn_configurado') : t('healthDialog.sem_servidor_turn'),
+            hint: hasTurn ? undefined : t('healthDialog.atras_de_nat_simetrico_a')
         })
         list.push({
             ok: a.wssUrl.startsWith('wss://'),
-            text: a.wssUrl.startsWith('wss://') ? 'Transporte seguro (wss://)' : 'Transporte sem TLS (ws://)',
-            hint: a.wssUrl.startsWith('wss://') ? undefined : 'Muitos PBX exigem WSS para WebRTC.'
+            text: a.wssUrl.startsWith('wss://')
+                ? t('healthDialog.transporte_seguro_wss')
+                : t('healthDialog.transporte_sem_tls_ws'),
+            hint: a.wssUrl.startsWith('wss://') ? undefined : t('healthDialog.muitos_pbx_exigem_wss_para')
         })
     }
 
@@ -89,7 +96,12 @@ async function run(): Promise<void> {
 
 async function copyReport(): Promise<void> {
     const text = [
-        `Saúde de ${account.value?.name} (${account.value?.extension}@${account.value?.domain}) às ${checkedAt.value}`,
+        t('healthDialog.saude_de_as', {
+            name: account.value?.name,
+            extension: account.value?.extension,
+            domain: account.value?.domain,
+            p: checkedAt.value
+        }),
         ...checks.value.map(
             (c) => `${c.ok === true ? '✓' : c.ok === false ? '✗' : '!'} ${c.text}${c.hint ? ` (${c.hint})` : ''}`
         )
@@ -104,12 +116,14 @@ onMounted(run)
     <div class="overlay" @click.self="emit('close')">
         <div ref="dialogEl" class="dialog" role="dialog" aria-modal="true" aria-labelledby="health-title" tabindex="-1">
             <header>
-                <h2 id="health-title">Saúde · {{ account?.name }}</h2>
+                <h2 id="health-title">{{ $t('healthDialog.saude', { name: account?.name }) }}</h2>
                 <span class="label">{{ checkedAt }}</span>
-                <button class="btn small ghost" aria-label="Fechar" @click="emit('close')">✕</button>
+                <button class="btn small ghost" :aria-label="$t('healthDialog.fechar')" @click="emit('close')">
+                    ✕
+                </button>
             </header>
             <div class="body">
-                <p v-if="running && checks.length === 0" class="muted">Verificando…</p>
+                <p v-if="running && checks.length === 0" class="muted">{{ $t('healthDialog.verificando') }}</p>
                 <ul class="checks">
                     <li v-for="(c, i) in checks" :key="i">
                         <span class="mark" :class="c.ok === true ? 'ok' : c.ok === false ? 'bad' : 'warn'">
@@ -123,8 +137,10 @@ onMounted(run)
                 </ul>
             </div>
             <footer>
-                <button class="btn" @click="copyReport">Copiar relatório</button>
-                <button class="btn primary" :disabled="running" @click="run">Verificar de novo</button>
+                <button class="btn" @click="copyReport">{{ $t('healthDialog.copiar_relatorio') }}</button>
+                <button class="btn primary" :disabled="running" @click="run">
+                    {{ $t('healthDialog.verificar_de_novo') }}
+                </button>
             </footer>
         </div>
     </div>

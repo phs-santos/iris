@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useAiStore } from '@renderer/stores/ai'
@@ -26,15 +27,15 @@ function toggle(account: Account): void {
 /** Ações menos usadas ficam no menu ⋯, para a conta escolhida não virar uma parede de botões. */
 function moreActions(account: Account): Array<{ label: string; action: () => void; danger?: boolean }> {
     return [
-        { label: 'Saúde', action: () => emit('health', account.id) },
-        { label: 'Duplicar', action: () => void accounts.duplicate(account.id) },
-        { label: 'Excluir', action: () => (confirmDelete.value = account.id), danger: true }
+        { label: t('accountsPane.saude'), action: () => emit('health', account.id) },
+        { label: t('accountsPane.duplicar'), action: () => void accounts.duplicate(account.id) },
+        { label: t('accountsPane.excluir'), action: () => (confirmDelete.value = account.id), danger: true }
     ]
 }
 
 const allActions = [
-    { label: 'Registrar todas', action: () => void accounts.registerAll() },
-    { label: 'Desregistrar todas', action: () => void accounts.unregisterAll() }
+    { label: t('accountsPane.registrar_todas'), action: () => void accounts.registerAll() },
+    { label: t('accountsPane.desregistrar_todas'), action: () => void accounts.unregisterAll() }
 ]
 
 async function remove(id: string): Promise<void> {
@@ -46,10 +47,10 @@ async function remove(id: string): Promise<void> {
 <template>
     <aside class="pane">
         <div class="head">
-            <span class="label">Contas</span>
+            <span class="label">{{ $t('accountsPane.contas') }}</span>
             <span class="head-actions">
-                <MenuButton label="Ações de todas as contas" text="Todas" :items="allActions" />
-                <button class="btn small ghost" @click="emit('new')">+ Nova</button>
+                <MenuButton :label="$t('accountsPane.acoes_de_todas_as_contas')" text="Todas" :items="allActions" />
+                <button class="btn small ghost" @click="emit('new')">{{ $t('accountsPane.nova') }}</button>
             </span>
         </div>
 
@@ -77,14 +78,34 @@ async function remove(id: string): Promise<void> {
                             <div class="name">{{ account.name }}</div>
                             <div class="status mono">
                                 {{ account.extension }} · {{ describeStatus(accounts.statusOf(account.id)) }}
+                                <template v-if="accounts.retryOf(account.id)">
+                                    {{
+                                        $t('accountsPane.tentando_de_novo', {
+                                            p: accounts.retryOf(account.id)?.attempt,
+                                            p2: accounts.retryOf(account.id)?.max
+                                                ? ` de ${accounts.retryOf(account.id)?.max}`
+                                                : ''
+                                        })
+                                    }}
+                                </template>
                             </div>
                         </div>
                         <div class="tags">
-                            <span v-if="callsOf(account.id)" class="tag busy" title="Chamadas ativas">{{
-                                callsOf(account.id)
+                            <span
+                                v-if="callsOf(account.id)"
+                                class="tag busy"
+                                :title="$t('accountsPane.chamadas_ativas')"
+                                >{{ callsOf(account.id) }}</span
+                            >
+                            <span
+                                v-if="account.autoAnswer.enabled"
+                                class="tag"
+                                :title="$t('accountsPane.auto_atender')"
+                                >{{ $t('accountsPane.aa') }}</span
+                            >
+                            <span v-if="account.simulated" class="tag" :title="$t('accountsPane.pbx_simulado')">{{
+                                $t('accountsPane.sim')
                             }}</span>
-                            <span v-if="account.autoAnswer.enabled" class="tag" title="Auto-atender">AA</span>
-                            <span v-if="account.simulated" class="tag" title="PBX simulado">SIM</span>
                         </div>
                     </button>
 
@@ -96,33 +117,42 @@ async function remove(id: string): Promise<void> {
                     >
                         <b>{{ explainRegError(accounts.statusOf(account.id))?.title }}</b>
                         <span>{{ explainRegError(accounts.statusOf(account.id))?.hint }}</span>
-                        <button class="btn small" @click="ai.explainAccount(account.id)">Por que falhou?</button>
+                        <button class="btn small" @click="ai.explainAccount(account.id)">
+                            {{ $t('accountsPane.por_que_falhou') }}
+                        </button>
                     </div>
 
                     <div v-if="accounts.selectedId === account.id" class="actions" @click.stop>
                         <button class="btn small" @click="toggle(account)">
                             {{
                                 ['disconnected', 'error'].includes(accounts.statusOf(account.id).state)
-                                    ? 'Registrar'
-                                    : 'Desregistrar'
+                                    ? $t('accountsPane.registrar')
+                                    : $t('accountsPane.desregistrar')
                             }}
                         </button>
-                        <button class="btn small" @click="emit('edit', account)">Editar</button>
+                        <button class="btn small" @click="emit('edit', account)">
+                            {{ $t('accountsPane.editar') }}
+                        </button>
                         <MenuButton
                             v-if="confirmDelete !== account.id"
-                            :label="`Mais ações de ${account.name}`"
+                            :label="$t('accountsPane.mais_acoes_de', { name: account.name })"
                             :items="moreActions(account)"
                         />
                         <template v-else>
-                            <button class="btn small stop" @click="remove(account.id)">Confirmar exclusão</button>
-                            <button class="btn small" @click="confirmDelete = null">Cancelar</button>
+                            <button class="btn small stop" @click="remove(account.id)">
+                                {{ $t('accountsPane.confirmar_exclusao') }}
+                            </button>
+                            <button class="btn small" @click="confirmDelete = null">
+                                {{ $t('accountsPane.cancelar') }}
+                            </button>
                         </template>
                     </div>
                 </div>
             </section>
 
             <p v-if="accounts.loaded && accounts.accounts.length === 0" class="empty">
-                Nenhuma conta ainda. Clique em <b>+ Nova</b> para cadastrar o primeiro ramal.
+                {{ $t('accountsPane.nenhuma_conta_ainda_clique_em') }} <b>{{ $t('accountsPane.nova') }}</b>
+                {{ $t('accountsPane.para_cadastrar_o_primeiro_ramal') }}
             </p>
         </div>
     </aside>

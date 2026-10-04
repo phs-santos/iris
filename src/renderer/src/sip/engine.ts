@@ -9,6 +9,8 @@ export interface RegStatus {
     state: RegState
     code?: number
     reason?: string
+    /** O motor já esgotou as próprias tentativas: não vale agendar outra (RNF-06). */
+    final?: boolean
 }
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'

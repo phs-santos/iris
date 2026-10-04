@@ -5,11 +5,15 @@ import { createEngine, type HealthReport, type RegStatus, type SipEngine } from 
 import { useLogStore } from './log'
 import { useCallsStore } from './calls'
 import { describeStatus, newAccount, normalizeImported, sampleAccounts } from '@renderer/lib/accounts'
+import { reconnectDelay, shouldReconnect } from '@shared/reconnect'
+import { usePreferencesStore } from './preferences'
 
 interface Runtime {
     status: RegStatus
     engine?: SipEngine
     health?: HealthReport
+    /** Há uma nova tentativa de registro agendada (RNF-06); `max` 0 é sem limite. */
+    retry?: { attempt: number; max: number }
 }
 
 export const useAccountsStore = defineStore('accounts', () => {
@@ -40,14 +44,56 @@ export const useAccountsStore = defineStore('accounts', () => {
         return runtime[id]?.status ?? { state: 'disconnected' }
     }
 
+    // ─── Novas tentativas (RNF-06) ─────────────────────────────────────────
+    // Um registro que falha por algo passageiro (rede, PBX reiniciando, fila de WebSockets cheia na
+    // abertura) é refeito com espera crescente, até o limite das Configurações.
+    const retries = new Map<string, { attempt: number; timer: ReturnType<typeof setTimeout> }>()
+
+    function clearRetry(id: string): void {
+        clearTimeout(retries.get(id)?.timer)
+        retries.delete(id)
+        if (runtime[id]) runtime[id].retry = undefined
+    }
+
+    function scheduleRetry(id: string, status: RegStatus): void {
+        if (status.final || !shouldReconnect(status.code)) return clearRetry(id)
+        const log = useLogStore()
+        const settings = usePreferencesStore().reconnect
+        const attempt = (retries.get(id)?.attempt ?? 0) + 1
+        const delay = reconnectDelay(attempt, settings)
+        if (delay === null) {
+            clearRetry(id)
+            log.add(
+                id,
+                'error',
+                'event',
+                `Sem registro depois de ${settings.maxAttempts} tentativas. Clique em Registrar para tentar de novo.`
+            )
+            return
+        }
+        clearTimeout(retries.get(id)?.timer)
+        retries.set(id, { attempt, timer: setTimeout(() => void register(id, true), delay) })
+        if (runtime[id]) runtime[id].retry = { attempt, max: settings.maxAttempts }
+        const of = settings.maxAttempts ? ` de ${settings.maxAttempts}` : ''
+        log.add(id, 'info', 'event', `Nova tentativa de registro em ${Math.round(delay / 1000)} s (${attempt}${of})`)
+    }
+
+    /** A rede voltou: não espera o resto do tempo para tentar. */
+    function retryNow(): void {
+        for (const id of [...retries.keys()]) void register(id, true)
+    }
+    // Nos testes de unidade não há janela de verdade.
+    globalThis.addEventListener?.('online', retryNow)
+
     async function load(): Promise<void> {
         // As senhas do formato antigo vêm antes de registrar, para as contas já acharem a senha.
         if ((await window.iris.secrets.status()).legacy) {
             migratingSecrets.value = true
             await window.iris.secrets.migrate().finally(() => (migratingSecrets.value = false))
         }
-        secretsProblem.value = (await window.iris.secrets.status()).problem
         let list = await window.iris.accounts.load()
+        // Depois de ler as contas: um accounts.json estragado também vira aviso (RNF-19).
+        await refreshProblems()
         if (list.length === 0) {
             // Primeiro uso: contas simuladas para explorar o app sem PBX (UC-08).
             const samples = sampleAccounts()
@@ -59,6 +105,11 @@ export const useAccountsStore = defineStore('accounts', () => {
         selectedId.value = list[0]?.id ?? null
         loaded.value = true
         for (const account of list) if (account.autoRegister) void register(account.id)
+    }
+
+    /** Relê os avisos sobre os arquivos de dados (senhas, contas, cenários e preferências). */
+    async function refreshProblems(): Promise<void> {
+        secretsProblem.value = (await window.iris.secrets.status()).problem
     }
 
     async function persist(): Promise<void> {
@@ -102,21 +153,32 @@ export const useAccountsStore = defineStore('accounts', () => {
         return copy
     }
 
-    async function register(id: string): Promise<void> {
+    /** `retrying` é a nova tentativa automática: mantém a contagem. Um pedido do usuário zera. */
+    async function register(id: string, retrying = false): Promise<void> {
         const account = byId(id)
-        if (!account) return
+        if (!account) return clearRetry(id)
         const log = useLogStore()
         const calls = useCallsStore()
+        const pending = retries.get(id)
+        clearTimeout(pending?.timer)
+        if (!retrying) retries.delete(id)
         await runtime[id]?.engine?.dispose()
 
         const password = (await window.iris.secrets.get(id)) ?? ''
-        const engine = markRaw(createEngine(account, password))
-        runtime[id] = { status: { state: 'connecting' }, engine }
+        const reconnect = usePreferencesStore().reconnect
+        const engine = markRaw(createEngine(account, password, reconnect))
+        runtime[id] = {
+            status: { state: 'connecting' },
+            engine,
+            retry: retrying && pending ? { attempt: pending.attempt, max: reconnect.maxAttempts } : undefined
+        }
 
         engine.on('status', (status) => {
             if (runtime[id]?.engine !== engine) return
             runtime[id].status = status
             log.add(id, status.state === 'error' ? 'error' : 'info', 'event', `Registro: ${describeStatus(status)}`)
+            if (status.state === 'registered') clearRetry(id)
+            else if (status.state === 'error') scheduleRetry(id, status)
         })
         engine.on('log', (entry) => log.add(id, entry.level, entry.kind, entry.text))
         engine.on('incoming', (call) => calls.addIncoming(id, call))
@@ -131,6 +193,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     }
 
     async function unregister(id: string): Promise<void> {
+        clearRetry(id)
         const rt = runtime[id]
         if (!rt?.engine) return
         const engine = rt.engine
@@ -195,6 +258,8 @@ export const useAccountsStore = defineStore('accounts', () => {
         byId,
         nameOf,
         statusOf,
+        retryOf: (id: string) => runtime[id]?.retry,
+        refreshProblems,
         load,
         save,
         remove,

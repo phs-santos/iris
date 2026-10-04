@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process'
 import { resolve } from 'node:path'
 import { IPC, type UpdateChannel, type UpdateInfo, type UpdateStatus } from '@shared/types'
 import { check, handle } from './ipc-guard'
-import { loadSettings, saveSettings } from './storage'
+import { loadSettings, updateSettings } from './storage'
 import { UpdateController } from '@shared/update'
 import { MacSelfUpdater } from './mac-update'
 
@@ -63,7 +63,7 @@ export function setupUpdater(options: { send: (status: UpdateStatus) => void; be
         check(isUpdateChannel(next), 'canal de atualização')
         const state = await ready
         state.channel = next
-        await saveSettings({ ...(await loadSettings()), updateChannel: next })
+        await updateSettings({ updateChannel: next })
         state.controller?.setChannel(next)
     })
     handle(IPC.updateCheck, async () => (await ready).controller?.check())

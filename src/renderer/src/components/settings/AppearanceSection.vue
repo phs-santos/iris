@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@renderer/i18n'
 import { computed } from 'vue'
 import { accentTokens, PALETTES, type InterfaceSize } from '@shared/appearance'
 import { usePreferencesStore } from '@renderer/stores/preferences'
@@ -9,9 +10,9 @@ const tokens = computed(() => accentTokens(prefs.appearance.accent))
 const custom = computed(() => !PALETTES.some((p) => p.accent === tokens.value.accent))
 
 const sizes: Array<{ id: InterfaceSize; name: string }> = [
-    { id: 'small', name: 'Pequena' },
-    { id: 'medium', name: 'Normal' },
-    { id: 'large', name: 'Grande' }
+    { id: 'small', name: t('appearanceSection.pequena') },
+    { id: 'medium', name: t('appearanceSection.normal') },
+    { id: 'large', name: t('appearanceSection.grande') }
 ]
 const size = computed(() => prefs.appearance.size ?? 'medium')
 </script>
@@ -19,15 +20,15 @@ const size = computed(() => prefs.appearance.size ?? 'medium')
 <template>
     <section class="set-section">
         <div class="set-head">
-            <h3>Aparência</h3>
-            <p>A cor de destaque aparece nos botões principais, nas abas e no contorno do foco.</p>
+            <h3>{{ $t('appearanceSection.aparencia') }}</h3>
+            <p>{{ $t('appearanceSection.a_cor_de_destaque_aparece') }}</p>
         </div>
 
         <div class="set-group">
             <div class="set-row column">
                 <span class="what">
-                    <b id="palette-label">Cor de destaque</b>
-                    <small>Escolha uma paleta pronta ou a sua própria cor.</small>
+                    <b id="palette-label">{{ $t('appearanceSection.cor_de_destaque') }}</b>
+                    <small>{{ $t('appearanceSection.escolha_uma_paleta_pronta_ou') }}</small>
                 </span>
                 <div class="swatches" role="radiogroup" aria-labelledby="palette-label">
                     <button
@@ -41,11 +42,11 @@ const size = computed(() => prefs.appearance.size ?? 'medium')
                         :style="{ background: p.accent }"
                         @click="prefs.setAccent(p.accent)"
                     ></button>
-                    <label class="swatch own" :class="{ on: custom }" title="Sua cor">
+                    <label class="swatch own" :class="{ on: custom }" :title="$t('appearanceSection.sua_cor')">
                         <input
                             type="color"
                             :value="tokens.accent"
-                            aria-label="Escolher outra cor"
+                            :aria-label="$t('appearanceSection.escolher_outra_cor')"
                             @change="prefs.setAccent(($event.target as HTMLInputElement).value)"
                         />
                         <span :style="custom ? { background: tokens.accent } : undefined">+</span>
@@ -53,19 +54,18 @@ const size = computed(() => prefs.appearance.size ?? 'medium')
                     <span class="hex mono">{{ tokens.accent }}</span>
                 </div>
                 <p v-if="tokens.faint" class="warn" role="status">
-                    Essa cor fica apagada contra o fundo escuro, e o contorno de foco pode sumir. Prefira um tom mais
-                    claro.
+                    {{ $t('appearanceSection.essa_cor_fica_apagada_contra') }}
                 </p>
                 <div class="preview" aria-hidden="true">
-                    <span class="btn primary">Ligar</span>
-                    <span class="tab-sample">Telefone</span>
-                    <span class="btn focus-sample">Com foco</span>
+                    <span class="btn primary">{{ $t('appearanceSection.ligar') }}</span>
+                    <span class="tab-sample">{{ $t('appearanceSection.telefone') }}</span>
+                    <span class="btn focus-sample">{{ $t('appearanceSection.com_foco') }}</span>
                 </div>
             </div>
             <div class="set-row">
                 <span class="what">
-                    <b id="size-label">Tamanho da interface</b>
-                    <small>Aumenta ou diminui tudo junto: texto, botões e painéis.</small>
+                    <b id="size-label">{{ $t('appearanceSection.tamanho_da_interface') }}</b>
+                    <small>{{ $t('appearanceSection.aumenta_ou_diminui_tudo_junto') }}</small>
                 </span>
                 <div class="seg" role="radiogroup" aria-labelledby="size-label">
                     <button
