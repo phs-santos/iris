@@ -1,0 +1,36 @@
+{
+    // Esconde da árvore de arquivos o que é gerado ou baixado e nunca é editado à mão.
+    "files.exclude": {
+        "**/node_modules": true,
+        "out": true,
+        "dist": true,
+        "dist-diag": true,
+        "coverage": true,
+        "*.tsbuildinfo": true,
+        "docker/asterisk/keys": true,
+        ".editorconfig": true,
+        ".gitattributes": true,
+        ".gitignore": true,
+        ".npmrc": true,
+        ".prettierignore": true,
+        ".prettierrc.json": true
+    },
+    // A busca também pula esses itens e o package-lock.json, que só atrapalha os resultados.
+    "search.exclude": {
+        "**/node_modules": true,
+        "out": true,
+        "dist": true,
+        "dist-diag": true,
+        "coverage": true,
+        "package-lock.json": true,
+        "src/renderer/src/assets/guide": true
+    },
+    // Não vigia as pastas geradas: o build e os testes reescrevem milhares de arquivos nelas.
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "out/**": true,
+        "dist/**": true,
+        "dist-diag/**": true,
+        "coverage/**": true
+    }
+}
