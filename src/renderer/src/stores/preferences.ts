@@ -14,6 +14,7 @@ import { DEFAULT_RECONNECT } from '@shared/reconnect'
 import type { ReconnectSettings } from '@shared/types'
 import type { NotificationSettings } from '@shared/notifications'
 import type { LinkSettings } from '@shared/links'
+import { modeOn, type ModeId, type ModeSettings } from '@shared/modes'
 import type { ShortcutSettings } from '@shared/shortcuts'
 import { setLocale } from '@renderer/i18n'
 
@@ -30,6 +31,7 @@ export type SettingsSection =
     | 'security'
     | 'data'
     | 'update'
+    | 'modes'
 
 /** Perfil e aparência da tela de Configurações, aplicados na hora e salvos em settings.json. */
 export const usePreferencesStore = defineStore('preferences', () => {
@@ -38,6 +40,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
     const reconnect = ref<ReconnectSettings>({ ...DEFAULT_RECONNECT })
     const notifications = ref<NotificationSettings>({})
     const links = ref<LinkSettings>({})
+    /** Modos ligados na área secreta; sem nada, só o padrão de chamada aparece. */
+    const modes = ref<ModeSettings>({})
     const shortcuts = ref<ShortcutSettings>({})
     /** O botão do fone (tecla Tocar/Pausar) atende e desliga (RF-55). */
     const mediaKey = ref(false)
@@ -71,6 +75,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
         reconnect.value = settings.reconnect ?? { ...DEFAULT_RECONNECT }
         notifications.value = settings.notifications ?? {}
         links.value = settings.links ?? {}
+        modes.value = settings.modes ?? {}
         shortcuts.value = settings.shortcuts ?? {}
         mediaKey.value = Boolean(settings.mediaKey)
         apply()
@@ -138,12 +143,26 @@ export const usePreferencesStore = defineStore('preferences', () => {
         await window.iris.settings.update({ shortcuts: { ...next } })
     }
 
+    const isOn = (mode: ModeId): boolean => modeOn(modes.value, mode)
+
+    async function setModes(next: ModeSettings): Promise<void> {
+        modes.value = next
+        await window.iris.settings.update({ modes: JSON.parse(JSON.stringify(next)) })
+    }
+
+    const setMode = (mode: ModeId, on: boolean): Promise<void> =>
+        setModes({ ...modes.value, enabled: { ...modes.value.enabled, [mode]: on || undefined } })
+
     async function setMediaKey(on: boolean): Promise<void> {
         mediaKey.value = on
         await window.iris.settings.update({ mediaKey: on })
     }
 
     return {
+        modes,
+        isOn,
+        setModes,
+        setMode,
         mediaKey,
         setMediaKey,
         links,

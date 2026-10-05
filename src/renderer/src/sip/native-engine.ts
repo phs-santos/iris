@@ -128,6 +128,10 @@ class NativeSipCall implements EngineCall {
         return this.action({ type: 'play', pcm })
     }
 
+    stopAudio(): Promise<void> {
+        return this.action({ type: 'stopPlay' })
+    }
+
     setRecording(on: boolean): Promise<string | null> {
         return window.iris.sip.record(this.engineId, this.id, on)
     }

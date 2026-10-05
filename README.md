@@ -49,6 +49,8 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, os passos dos cenários, as notificações do sistema e a linha de comando continuam em português |
 | RF-20 | Early media: o cartão diz se o som antes do atendimento é o toque local ou o áudio do PBX (183), e toca esse áudio. Em SIP puro sempre; em WebRTC por opção da conta |
 | RF-52 | Chamada de vídeo em contas WebRTC e no simulado: botão Vídeo no discador, Atender com vídeo, a imagem do outro lado e a própria câmera no cartão, câmera ligável durante a chamada e escolhida em Configurações. SIP puro, modo Telefone, gravação e cenários ainda sem vídeo |
+| RF-58 | Modos: o app abre só com o padrão de chamada; log e diagnóstico, cenários, mensagens, vídeo e modo SDR ligam numa área escondida das Configurações |
+| RF-59 | Modo SDR: fila de ligações por CSV, roteiro com variáveis, abertura gravada, caixa postal com recado, resultado com um clique, retornos, horário permitido, painel com meta, CSV, webhook e resumo pela IA |
 | RF-57 | Áudio de atendimento: um WAV da conta toca para quem ligou logo depois de atender (SIP puro e simulado) |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, salvar a partir do histórico, CSV, e o nome do contato nas chamadas e no histórico |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
@@ -163,6 +165,8 @@ npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e 
 npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
 npm run test:atalhos       # links tel: e sip:, atalhos globais, botão do fone e toque por conta, no simulado
+npm run test:modos         # modos escondidos por padrão e a área secreta
+npm run test:sdr           # fila do modo SDR no simulado: abertura, caixa postal, ocupado, número inexistente, painel e CSV
 npm run test:video         # chamada de vídeo no simulado (com o Asterisk e VP8, entra no test:pbx)
 npm run test:idioma        # interface e guia em inglês: troca na hora, grava e volta ao português
 npm run test:mensagens     # mensagens de texto no simulado (com o Asterisk, entram no test:sip e no test:pbx)

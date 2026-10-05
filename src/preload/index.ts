@@ -22,6 +22,12 @@ const api: IrisApi = {
         load: () => ipcRenderer.invoke(IPC.serversLoad),
         save: (servers) => ipcRenderer.invoke(IPC.serversSave, servers)
     },
+    sdr: {
+        load: () => ipcRenderer.invoke(IPC.sdrLoad),
+        save: (data) => ipcRenderer.invoke(IPC.sdrSave, data),
+        saveWav: (name, pcm) => ipcRenderer.invoke(IPC.sdrSaveWav, name, pcm),
+        webhook: (url, payload) => ipcRenderer.invoke(IPC.sdrWebhook, url, payload)
+    },
     messages: {
         load: () => ipcRenderer.invoke(IPC.messagesLoad),
         save: (messages) => ipcRenderer.invoke(IPC.messagesSave, messages)
@@ -114,7 +120,8 @@ const api: IrisApi = {
         setKey: (key) => ipcRenderer.invoke(IPC.aiSetKey, key),
         setOptions: (options) => ipcRenderer.invoke(IPC.aiSetOptions, options),
         models: () => ipcRenderer.invoke(IPC.aiModels),
-        explain: (request) => ipcRenderer.invoke(IPC.aiExplain, request)
+        explain: (request) => ipcRenderer.invoke(IPC.aiExplain, request),
+        summarize: (model, recording) => ipcRenderer.invoke(IPC.aiSummarize, model, recording)
     },
     sip: {
         start: (engineId, config, password) => ipcRenderer.invoke(IPC.sipStart, engineId, config, password),

@@ -41,6 +41,7 @@ const app = await electron.launch({
         ...process.env,
         IRIS_USER_DATA: userData,
         IRIS_FAKE_MEDIA: '1',
+        IRIS_MODES: 'all',
         IRIS_AI_URL: `http://127.0.0.1:${server.address().port}`
     }
 })

@@ -750,6 +750,69 @@ export const GUIDE: GuideSection[] = [
         ]
     },
     {
+        id: 'sdr',
+        title: 'Modo SDR',
+        summary: 'Uma fila de ligações para o dia, com a mesma abertura em todas e o resultado com um clique.',
+        blocks: [
+            {
+                type: 'p',
+                text: 'A aba **SDR** é para quem faz muitas ligações de prospecção por dia. Você importa a lista, aperta **Começar a fila** e a Íris liga para uma pessoa depois da outra: mostra o roteiro com os dados dela, toca a sua abertura gravada quando ela atende, trata a caixa postal sozinha e, no fim, pede só o resultado.'
+            },
+            {
+                type: 'steps',
+                items: [
+                    '**Importar planilha**: um CSV com as colunas `nome;numero;empresa;segmento`. As outras colunas viram variáveis do roteiro: uma coluna `cargo` vira `{cargo}`. Números repetidos não entram de novo.',
+                    'Em **Opções**, escolha a conta, escreva o roteiro e grave a abertura (ou escolha um WAV). Dá para ter uma abertura por segmento.',
+                    'Ainda em Opções, defina o horário e os dias em que a fila pode ligar, quantas tentativas cada pessoa recebe e a meta do dia.',
+                    'Clique em **Começar a fila**.'
+                ]
+            },
+            { type: 'h', text: 'Durante a chamada' },
+            {
+                type: 'list',
+                items: [
+                    'O **roteiro** aparece grande, com `{nome}`, `{primeiro_nome}`, `{empresa}`, `{segmento}`, `{sdr}` (o seu nome do Perfil) e as colunas da planilha já trocados. Variável sem valor fica à vista, para você notar.',
+                    'Com a **abertura gravada** ligada, ela toca quando a pessoa atende, depois do "Alô?". Você ouve junto. Para falar por cima, aperte **Esc** ou **Interromper a abertura**: o microfone volta na hora. A gravação só toca em contas de SIP puro; em WebRTC, leia o roteiro.',
+                    '**Caixa postal**: pelo som logo depois de atender (uma pessoa diz "Alô?" e espera; a caixa postal fala sem parar), a Íris desliga e passa para a próxima, ou espera o sinal e deixa o seu recado gravado. Também dá para deixar a decisão com você. A detecção acerta a maioria dos casos, não todos.',
+                    'Ocupado, não atendeu e número que não existe fecham sozinhos, sem você clicar.'
+                ]
+            },
+            { type: 'h', text: 'Depois da chamada' },
+            {
+                type: 'table',
+                head: ['Tecla', 'Resultado', 'O que acontece'],
+                rows: [
+                    ['1', 'Interessado', 'Sai da fila e conta como conversão'],
+                    ['2', 'Reunião marcada', 'Sai da fila e conta como conversão'],
+                    ['3', 'Sem interesse', 'Sai da fila'],
+                    ['4', 'Ligar depois', 'Volta na hora que você marcar'],
+                    ['5', 'Não atendeu', 'Volta depois do intervalo, até o limite de tentativas'],
+                    ['6', 'Caixa postal', 'Volta depois do intervalo, até o limite de tentativas'],
+                    ['7', 'Número errado', 'Sai da fila'],
+                    ['8', 'Pediu para não ligar', 'Sai da fila e não é chamado de novo']
+                ]
+            },
+            {
+                type: 'p',
+                text: 'A **nota** vai junto. Depois do resultado, a próxima ligação sai sozinha em alguns segundos (dá para pausar ou ligar na hora). O **painel** no alto mostra as ligações do dia contra a meta, as atendidas, as conversas de 30 s ou mais, as conversões, as caixas postais e o tempo falando.'
+            },
+            { type: 'h', text: 'CRM e resumo' },
+            {
+                type: 'list',
+                items: [
+                    '**Exportar resultados** salva a fila em CSV, com o resultado, as tentativas, a próxima ligação e a nota de cada pessoa.',
+                    'Com um **webhook** em Opções, cada resultado sai na hora para o CRM, como `POST` com JSON.',
+                    'Com **Gravar as chamadas atendidas** (SIP puro), aparece **Resumir com IA** depois da chamada: o áudio vai para o modelo escolhido em Configurações → Ajuda da IA, que precisa entender áudio, e volta um resumo de três linhas, que segue no webhook.'
+                ]
+            },
+            {
+                type: 'note',
+                kind: 'atenção',
+                text: 'Ligação de venda tem regras: no Brasil, o cadastro Não Me Perturbe, os horários permitidos pelo Procon e a LGPD para gravar e guardar dados. A fila só liga no horário configurado e nunca liga de novo para quem pediu para não ligar, mas cumprir as regras é responsabilidade de quem usa. Avise quando a ligação for gravada.'
+            }
+        ]
+    },
+    {
         id: 'configuracoes',
         title: 'Configurações',
         summary: 'Seu perfil, as cores da Íris e as preferências gerais, numa tela só.',

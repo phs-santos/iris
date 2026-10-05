@@ -27,6 +27,7 @@ export const MOCK_NUMBERS = [
     { number: '8000', description: 'URA: atende com early media e registra o DTMF recebido' },
     { number: '486', description: 'Ocupado (486 Busy Here)' },
     { number: '408', description: 'Ninguém atende (408 Request Timeout após 5 s)' },
+    { number: '7000', description: 'Caixa postal: atende, fala a saudação por 4,5 s e espera o recado' },
     { number: 'outro', description: 'Ramal de outra conta simulada do mesmo domínio, ou 404 Not Found' }
 ]
 
@@ -179,6 +180,8 @@ class MockCall implements EngineCall {
             this.peer.respond('in', '200 OK', ['Content-Type: application/sdp'])
             this.peer.ack('out')
             this.peer.engine.log('info', `${this.peer.remote} atendeu`)
+            const now = Date.now()
+            this.peer.greeting = { voiceUntil: now + 800, silentUntil: now + 2500 }
             this.peer.establish()
         }
     }
@@ -224,6 +227,13 @@ class MockCall implements EngineCall {
     }
 
     /** O outro lado tocou um áudio: por `ms`, é esse o volume que esta ponta ouve. */
+    /**
+     * O que esta ponta ouve logo depois de atenderem: quem atende diz "Alô?" e espera; a caixa postal
+     * fala a saudação e fica em silêncio. Serve para o modo SDR saber se atendeu gente ou máquina.
+     */
+    greeting?: { voiceUntil: number; silentUntil: number }
+    private playing?: () => void
+
     hears(db: number, ms: number): void {
         this.heard = { db, until: Date.now() + ms }
     }
@@ -235,7 +245,10 @@ class MockCall implements EngineCall {
     async audioLevel(): Promise<number | null> {
         if (this.state !== 'established' || this.held || this.peer?.held) return SILENCE_DB
         if (this.heard && Date.now() < this.heard.until) return this.heard.db
-        if (this.peer) return this.peer.muted ? SILENCE_DB : MOCK_VOICE_DB
+        if (this.peer?.muted) return SILENCE_DB
+        const now = Date.now()
+        if (this.greeting && now < this.greeting.voiceUntil) return MOCK_VOICE_DB
+        if (this.greeting && now < this.greeting.silentUntil) return SILENCE_DB
         return MOCK_VOICE_DB
     }
 
@@ -244,7 +257,16 @@ class MockCall implements EngineCall {
         const ms = Math.round((pcm.length / SAMPLE_RATE) * 1000)
         this.engine.log('info', `Tocando áudio de ${ms} ms na chamada`)
         this.peer?.hears(levelDb(pcm), ms)
-        await new Promise<void>((done) => this.later(ms, done))
+        await new Promise<void>((done) => {
+            this.playing = done
+            this.later(ms, done)
+        })
+        this.playing = undefined
+    }
+
+    async stopAudio(): Promise<void> {
+        if (this.peer?.heard) this.peer.heard = undefined
+        this.playing?.()
     }
 
     async setHeld(held: boolean): Promise<void> {
@@ -508,6 +530,23 @@ export class MockEngine implements SipEngine {
             return
         }
         if (destination === '486') return fail(486, 'Busy Here')
+        if (destination === '7000') {
+            call.later(MOCK_TIMING.ringing, () => {
+                call.respond('in', '180 Ringing')
+                call.emit('progress', 180, 'Ringing', false)
+            })
+            call.later(MOCK_TIMING.ivrAnswer, () => {
+                call.respond('in', '200 OK', ['Content-Type: application/sdp'])
+                call.ack('out')
+                this.log('info', 'Caixa postal atendeu: "Deixe o seu recado após o sinal"')
+                const now = Date.now()
+                call.greeting = { voiceUntil: now + 4500, silentUntil: Number.POSITIVE_INFINITY }
+                call.establish()
+                // A caixa postal desliga sozinha depois de um tempo.
+                call.later(30_000, () => call.end({ by: 'remote', code: 200, reason: 'Caixa postal encerrou' }))
+            })
+            return
+        }
         if (destination === '408') {
             call.later(MOCK_TIMING.ringing, () => {
                 call.respond('in', '180 Ringing')

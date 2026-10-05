@@ -9,7 +9,10 @@ const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
 // O link chega como argumento, como no Windows e no Linux quando o sistema abre a Íris por ele.
 const args = ['.', 'tel:+55 (11) 3000-0000']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
-const app = await electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
+const app = await electron.launch({
+    args,
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+})
 const page = await app.firstWindow()
 const pageErrors = []
 page.on('pageerror', (error) => pageErrors.push(String(error)))

@@ -102,6 +102,8 @@ export interface EngineCall {
     audioLevel(): Promise<number | null>
     /** Toca um áudio (PCM de 16 bits a 8000 Hz) no lugar do microfone. Só nos motores que conseguem. */
     playAudio?(pcm: Int16Array): Promise<void>
+    /** Para o áudio que está tocando; o microfone volta na hora (a promessa de playAudio resolve). */
+    stopAudio?(): Promise<void>
     /** Liga ou desliga a gravação da chamada e devolve o arquivo (RF-36). Só nos motores que gravam. */
     setRecording?(on: boolean): Promise<string | null>
 }

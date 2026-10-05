@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePreferencesStore } from '@renderer/stores/preferences'
 import { t } from '@renderer/i18n'
 import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
@@ -14,6 +15,7 @@ import { useLogStore } from '@renderer/stores/log'
 import { useToastsStore } from '@renderer/stores/toasts'
 
 const emit = defineEmits<{ new: []; edit: [account: Account]; health: [id: string] }>()
+const prefs = usePreferencesStore()
 const accounts = useAccountsStore()
 const ai = useAiStore()
 const calls = useCallsStore()
@@ -77,17 +79,19 @@ function moreActions(account: Account): Array<{ label: string; action: () => voi
             useToastsStore().show(t('accountsPane.pcap_salvo', { path }))
         }
     }
+    const diag = prefs.isOn('log')
     return [
-        { label: t('accountsPane.saude'), action: () => emit('health', account.id) },
+        // Diagnóstico só com o modo Log e diagnóstico ligado.
+        ...(diag ? [{ label: t('accountsPane.saude'), action: () => emit('health', account.id) }] : []),
         { label: t('accountsPane.duplicar'), action: () => void accounts.duplicate(account.id) },
         // Só com a conta registrada num motor que sabe fazer isso (RF-44, RF-45).
-        ...(engine?.request
+        ...(diag && engine?.request
             ? [{ label: t('accountsPane.requisicao_sip'), action: () => (requestFor.value = account.id) }]
             : []),
-        ...(engine?.loadTest
+        ...(diag && engine?.loadTest
             ? [{ label: t('accountsPane.teste_de_carga'), action: () => (loadFor.value = account.id) }]
             : []),
-        ...(engine?.exportCapture
+        ...(diag && engine?.exportCapture
             ? [
                   { label: t('accountsPane.exportar_pcap'), action: () => void exportPcap(false) },
                   { label: t('accountsPane.exportar_pcap_com_audio'), action: () => void exportPcap(true) }
@@ -213,7 +217,7 @@ async function remove(id: string): Promise<void> {
                     >
                         <b>{{ explainRegError(accounts.statusOf(account.id))?.title }}</b>
                         <span>{{ explainRegError(accounts.statusOf(account.id))?.hint }}</span>
-                        <button class="btn small" @click="ai.explainAccount(account.id)">
+                        <button v-if="prefs.isOn('log')" class="btn small" @click="ai.explainAccount(account.id)">
                             {{ $t('accountsPane.por_que_falhou') }}
                         </button>
                     </div>

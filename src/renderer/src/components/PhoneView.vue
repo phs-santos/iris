@@ -6,11 +6,13 @@ import { useCallsStore, type CallView } from '@renderer/stores/calls'
 import { describeStatus } from '@renderer/lib/accounts'
 import { duration, now } from '@renderer/lib/now'
 import PhoneIcon from './PhoneIcon.vue'
+import { usePreferencesStore } from '@renderer/stores/preferences'
 
 /** Modo Telefone: uma conta por vez, teclado grande e a chamada ocupando a tela. Usa as mesmas stores da Bancada. */
 const emit = defineEmits<{ bench: []; settings: [] }>()
 const accounts = useAccountsStore()
 const calls = useCallsStore()
+const prefs = usePreferencesStore()
 
 const number = ref('')
 const error = ref('')
@@ -275,7 +277,7 @@ defineExpose({
                 <button class="ctrl" @click="dialingAnother = true">
                     <span><PhoneIcon name="plus" /></span>{{ $t('phoneView.outra_chamada') }}
                 </button>
-                <button class="ctrl" @click="emit('bench')">
+                <button v-if="prefs.isOn('log')" class="ctrl" @click="emit('bench')">
                     <span><PhoneIcon name="log" /></span>{{ $t('phoneView.ver_o_log') }}
                 </button>
             </div>

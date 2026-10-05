@@ -728,6 +728,69 @@ export const GUIDE_EN: GuideSection[] = [
         ]
     },
     {
+        id: 'sdr',
+        title: 'SDR mode',
+        summary: 'A call queue for the day, with the same opening on every call and the result in one click.',
+        blocks: [
+            {
+                type: 'p',
+                text: 'The **SDR** tab is for people who make many prospecting calls a day. You import the list, press **Start the queue** and Íris calls one person after another: it shows the script with their details, plays your recorded opening when they answer, handles voicemail on its own and, at the end, asks only for the result.'
+            },
+            {
+                type: 'steps',
+                items: [
+                    '**Import spreadsheet**: a CSV with the columns `nome;numero;empresa;segmento` (name, number, company, segment). Other columns become script variables: a `cargo` column becomes `{cargo}`. Repeated numbers are not added again.',
+                    'In **Options**, pick the account, write the script and record the opening (or choose a WAV). You can have one opening per segment.',
+                    'Still in Options, set the hours and days when the queue may call, how many attempts each person gets and the daily goal.',
+                    'Click **Start the queue**.'
+                ]
+            },
+            { type: 'h', text: 'During the call' },
+            {
+                type: 'list',
+                items: [
+                    'The **script** shows in large type, with `{nome}`, `{primeiro_nome}`, `{empresa}`, `{segmento}`, `{sdr}` (your name from Profile) and the spreadsheet columns filled in. A variable with no value stays visible, so you notice it.',
+                    'With the **recorded opening** on, it plays when the person answers, after their "Hello?". You hear it too. To talk over it, press **Esc** or **Stop the opening**: the microphone comes back right away. The recording only plays on plain SIP accounts; on WebRTC, read the script.',
+                    '**Voicemail**: from the sound right after the answer (a person says "Hello?" and waits; voicemail talks without stopping), Íris hangs up and moves on, or waits for the tone and leaves your recorded message. You can also leave the decision to yourself. Detection gets most cases right, not all.',
+                    'Busy, no answer and numbers that do not exist close on their own, with no click.'
+                ]
+            },
+            { type: 'h', text: 'After the call' },
+            {
+                type: 'table',
+                head: ['Key', 'Result', 'What happens'],
+                rows: [
+                    ['1', 'Interested', 'Leaves the queue and counts as a conversion'],
+                    ['2', 'Meeting booked', 'Leaves the queue and counts as a conversion'],
+                    ['3', 'Not interested', 'Leaves the queue'],
+                    ['4', 'Call back later', 'Comes back at the time you set'],
+                    ['5', 'No answer', 'Comes back after the interval, up to the attempt limit'],
+                    ['6', 'Voicemail', 'Comes back after the interval, up to the attempt limit'],
+                    ['7', 'Wrong number', 'Leaves the queue'],
+                    ['8', 'Asked not to be called', 'Leaves the queue and is never called again']
+                ]
+            },
+            {
+                type: 'p',
+                text: "The **note** goes along. After the result, the next call goes out on its own in a few seconds (you can pause or call right away). The **panel** at the top shows the day's calls against the goal, answered calls, talks of 30 s or more, conversions, voicemails and talk time."
+            },
+            { type: 'h', text: 'CRM and summary' },
+            {
+                type: 'list',
+                items: [
+                    '**Export results** saves the queue as CSV, with the result, attempts, next call and note for each person.',
+                    'With a **webhook** in Options, every result goes to the CRM right away, as a `POST` with JSON.',
+                    'With **Record answered calls** (plain SIP), **Summarize with AI** shows up after the call: the audio goes to the model chosen in Settings → AI help, which must understand audio, and a three-line summary comes back, which also goes in the webhook.'
+                ]
+            },
+            {
+                type: 'note',
+                kind: 'atenção',
+                text: 'Sales calls have rules: do-not-call lists, allowed calling hours and data protection laws for recording and keeping data. The queue only calls during the configured hours and never calls again someone who asked not to be called, but following the rules is up to whoever uses it. Tell people when the call is recorded.'
+            }
+        ]
+    },
+    {
         id: 'configuracoes',
         title: 'Settings',
         summary: 'Your profile, the colors of Íris and the general preferences, on a single screen.',

@@ -3,6 +3,9 @@
 // A interface continua sem poder abrir conexões fora dos PBX (CSP, RNF-08).
 
 import { app, net } from 'electron'
+import { promises as fs } from 'node:fs'
+import { join, resolve, sep } from 'node:path'
+import { parseWav, SAMPLE_RATE, wavHeader } from '@shared/audio'
 import { IPC } from '@shared/types'
 import {
     AI_MAX_CHARS,
@@ -94,6 +97,76 @@ async function explain(input: AiRequest): Promise<AiResult> {
     }
 }
 
+/** Até 5 minutos de conversa: o resto da gravação fica de fora, para o pedido não ficar enorme. */
+const SUMMARY_MAX_SAMPLES = SAMPLE_RATE * 300
+
+/**
+ * Resumo de uma chamada do modo SDR: a gravação (só da pasta gravacoes) vai em mono a 8 kHz para um
+ * modelo que entende áudio. A interface manda só o caminho, e ele é conferido aqui.
+ */
+async function summarize(model: string, recording: string): Promise<AiResult> {
+    // O caminho vem da interface: só arquivos .wav da pasta das gravações são lidos e enviados.
+    const folder = resolve(join(app.getPath('userData'), 'gravacoes')) + sep
+    const path = resolve(recording)
+    if (!path.startsWith(folder) || !path.endsWith('.wav'))
+        return { ok: false, error: 'Gravação fora da pasta das gravações.' }
+    const key = await getSecret(KEY_ID)
+    if (!key) return { ok: false, error: 'Cadastre a chave da OpenRouter antes de pedir o resumo.' }
+    let wav: Buffer
+    try {
+        const pcm = parseWav(await fs.readFile(path)).subarray(0, SUMMARY_MAX_SAMPLES)
+        const body = Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength)
+        wav = Buffer.concat([Buffer.from(wavHeader(body.length, 1)), body])
+    } catch (error) {
+        return { ok: false, error: `Não deu para ler a gravação: ${(error as Error).message}` }
+    }
+    try {
+        const response = await request('/chat/completions', {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${key}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': 'https://github.com/phs-santos/iris',
+                'X-Title': 'Iris'
+            },
+            body: JSON.stringify({
+                model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'text',
+                                text: 'Esta é a gravação de uma ligação de prospecção (o vendedor num canal, o cliente no outro). Escreva, em português, um resumo de no máximo três linhas para o CRM: o interesse do cliente, as objeções e o próximo passo combinado. Não invente o que não foi dito.'
+                            },
+                            { type: 'input_audio', input_audio: { data: wav.toString('base64'), format: 'wav' } }
+                        ]
+                    }
+                ]
+            })
+        })
+        const body = await response.text()
+        if (!response.ok) return { ok: false, error: describe(response.status, body) }
+        const data = JSON.parse(body) as {
+            choices?: { message?: { content?: unknown } }[]
+            error?: { message?: string }
+        }
+        const text = data.choices?.[0]?.message?.content
+        if (typeof text !== 'string' || !text.trim())
+            return {
+                ok: false,
+                error: data.error?.message?.slice(0, 200) ?? 'O modelo respondeu sem texto. Ele entende áudio?'
+            }
+        return { ok: true, text: text.trim().slice(0, 5000) }
+    } catch (error) {
+        const aborted = error instanceof Error && error.name === 'AbortError'
+        return {
+            ok: false,
+            error: aborted ? 'A OpenRouter demorou demais para responder.' : 'Não deu para falar com a OpenRouter.'
+        }
+    }
+}
+
 async function models(): Promise<AiModel[]> {
     const response = await request('/models')
     if (!response.ok) throw new Error(describe(response.status, await response.text()))
@@ -119,6 +192,10 @@ export function registerAiIpc(): void {
         await updateSettings((settings) => ({ ai: { ...settings.ai, ...options } }))
     })
     handle(IPC.aiModels, () => models())
+    handle(IPC.aiSummarize, (_e, model: string, recording: string) => {
+        check(isString(model, 200) && model.length > 0 && isString(recording, 2000), 'resumo da chamada')
+        return summarize(model, recording)
+    })
     handle(IPC.aiExplain, (_e, input: AiRequest) => {
         check(
             isPlainObject(input) &&

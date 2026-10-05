@@ -4,12 +4,14 @@ import { computed, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
 import { useContactsStore } from '@renderer/stores/contacts'
+import { usePreferencesStore } from '@renderer/stores/preferences'
 import PhoneIcon from './PhoneIcon.vue'
 import { MOCK_NUMBERS } from '@renderer/sip/mock-engine'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
 const contacts = useContactsStore()
+const prefs = usePreferencesStore()
 const destination = ref('')
 const headersText = ref('')
 const showHeaders = ref(false)
@@ -136,7 +138,7 @@ defineExpose({
                 <PhoneIcon name="phone" class="dial-icon" />{{ $t('dialerPane.ligar') }}
             </button>
             <button
-                v-if="from"
+                v-if="from && prefs.isOn('video')"
                 class="btn big video-call"
                 type="button"
                 :disabled="!canVideo || !registered || !destination.trim()"
@@ -166,7 +168,7 @@ defineExpose({
             <button class="chip mono" type="button" @click="showKeypad = !showKeypad">
                 {{ $t('dialerPane.teclado') }}
             </button>
-            <button class="chip mono" type="button" @click="showHeaders = !showHeaders">
+            <button v-if="prefs.isOn('log')" class="chip mono" type="button" @click="showHeaders = !showHeaders">
                 {{ $t('dialerPane.cabecalhos_sip') }}
             </button>
         </div>
@@ -206,7 +208,7 @@ defineExpose({
             </button>
         </div>
 
-        <div v-if="showHeaders" class="headers">
+        <div v-if="showHeaders && prefs.isOn('log')" class="headers">
             <label class="label" for="extra-headers">{{ $t('dialerPane.cabecalhos_extras_no_invite_um') }}</label>
             <textarea
                 id="extra-headers"

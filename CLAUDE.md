@@ -84,6 +84,11 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 - Asterisk de teste: `message_context`, 602 (183 com tom), 603 (só toca), 2007 (só G.722), `vp8` nos ramais WebRTC. **O áudio do Asterisk de teste só tem 50 portas (10000 a 10100)**: depois de vários testes com chamadas, o `test:carga-sip` atende menos de 50; recrie o contêiner antes de concluir que há defeito. Ele também não converte para Opus: tom gerado pelo Asterisk chega mudo num ramal WebRTC que prefere Opus (use o 1021).
 - Não visto numa máquina de verdade: link `tel:` aberto pelo sistema no app instalado, atalho global e botão do fone com outro app em foco, o som dos toques e do toque local, a câmera de verdade (os testes usam a falsa do Chromium), e a voz em G.722 ouvida por uma pessoa.
 
+**Depois da 1.8, pedidos pelo usuário em 05/10/2026 (RF-57 a RF-59), na `main` local, sem release.**
+- **RF-57 áudio de atendimento** (`Account.answerAudio`, só SIP puro e simulado).
+- **RF-58 modos** (`src/shared/modes.ts`, `settings.modes`): o app abre só com o padrão de chamada. Log e diagnóstico, cenários, mensagens, vídeo e SDR ficam escondidos até ligar na área secreta (cinco cliques no logo ou Ctrl+Alt+Shift+M; seção "Modos" das Configurações). **Recurso novo que não seja chamada entra como modo.** Os testes de tela abrem com `IRIS_MODES=all` (ignorado no app empacotado); `test:modos` confere o padrão escondido.
+- **RF-59 modo SDR**: regras em `src/shared/sdr.ts` (fila, roteiro, resultados, painel, detector de caixa postal), condução em `stores/sdr.ts`, telas em `components/sdr/`, dados em `sdr.json`. O simulado tem o 7000 (caixa postal) e quem atende diz "Alô?" por 0,8 s. A detecção de caixa postal é por volume e tempo de fala; não foi vista contra caixa postal de operadora de verdade. O resumo pela IA manda áudio (`input_audio`) e não foi testado com chave real.
+
 **Fora do 1.0** (não faça sem o usuário pedir): RF-20 (early media), RF-27 (BLF), RF-34 (atalhos globais) e RF-36 (gravação). O RF-31 também era "depois", mas já foi feito.
 
 **Decisões em aberto na especificação** (pergunte ao usuário, não decida sozinho): quem providencia os certificados e quais PBX além do Asterisk entram nos testes automáticos. Já decidido: o nome é Íris, a licença é MIT (arquivo `LICENSE`) e os instaladores e atualizações ficam no GitHub Releases.

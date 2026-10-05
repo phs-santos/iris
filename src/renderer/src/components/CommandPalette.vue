@@ -5,6 +5,7 @@ import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
 import { useContactsStore } from '@renderer/stores/contacts'
 import { useScenariosStore } from '@renderer/stores/scenarios'
+import { usePreferencesStore } from '@renderer/stores/preferences'
 import { searchContacts, digits } from '@shared/contacts'
 import { t } from '@renderer/i18n'
 
@@ -26,6 +27,7 @@ const accounts = useAccountsStore()
 const calls = useCallsStore()
 const contacts = useContactsStore()
 const scenarios = useScenariosStore()
+const prefs = usePreferencesStore()
 const query = ref('')
 const active = ref(0)
 
@@ -72,7 +74,7 @@ const results = computed<PaletteAction[]>(() => {
             run: () => void (registered ? accounts.unregister(a.id) : accounts.register(a.id))
         })
     }
-    for (const s of scenarios.scenarios) {
+    for (const s of prefs.isOn('scenarios') ? scenarios.scenarios : []) {
         if (q && !plain(s.name).includes(q)) continue
         list.push({
             label: t('commandPalette.rodar_cenario', { name: s.name }),

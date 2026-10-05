@@ -56,7 +56,7 @@ export function findContact(contacts: Contact[], number: string): Contact | unde
     })
 }
 
-const plain = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+export const plain = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
 /** Busca por nome, número, empresa ou observação, sem diferenciar acento nem maiúscula; favoritos primeiro. */
 export function searchContacts(contacts: Contact[], query: string): Contact[] {
@@ -90,7 +90,7 @@ const COLUMNS: Record<string, keyof Contact> = {
 }
 export const CONTACTS_CSV_HEADER = 'nome;numero;empresa;observacao;favorito'
 
-function splitLine(line: string, separator: string): string[] {
+export function splitLine(line: string, separator: string): string[] {
     const out: string[] = []
     let field = ''
     let quoted = false
@@ -149,7 +149,7 @@ export function parseContactsCsv(csv: string, newId: () => string): { contacts: 
     return { contacts, skipped }
 }
 
-const csvField = (value: string | undefined): string => {
+export const csvField = (value: string | undefined): string => {
     const v = value ?? ''
     return /[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v
 }

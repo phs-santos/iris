@@ -10,7 +10,11 @@ import { join } from 'node:path'
 const userData = mkdtempSync(join(tmpdir(), 'iris-monitor-'))
 const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
-const launch = () => electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
+const launch = () =>
+    electron.launch({
+        args,
+        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+    })
 const step = (msg) => console.log(`✓ ${msg}`)
 // Prazo do teste inteiro: um travamento vira falha com mensagem, e não um CI parado por horas.
 const deadline = setTimeout(() => {

@@ -7,10 +7,12 @@ import { DtmfSyntaxError, parseDtmfSequence } from '@renderer/lib/dtmf'
 import { duration, now } from '@renderer/lib/now'
 import { useAiStore } from '@renderer/stores/ai'
 import CallVideo from './CallVideo.vue'
+import { usePreferencesStore } from '@renderer/stores/preferences'
 import PhoneIcon from './PhoneIcon.vue'
 
 const props = defineProps<{ call: CallView }>()
 const accounts = useAccountsStore()
+const prefs = usePreferencesStore()
 const calls = useCallsStore()
 const ai = useAiStore()
 
@@ -141,7 +143,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                 $t('callCard.dtmf_recebido', { dtmfReceived: call.dtmfReceived })
             }}</span>
             <span v-if="call.endText">· {{ call.endText }}</span>
-            <button v-if="!live" class="btn small explain" @click.stop="ai.explainCall(call)">
+            <button v-if="!live && prefs.isOn('log')" class="btn small explain" @click.stop="ai.explainCall(call)">
                 {{ $t('callCard.explicar_com_ia') }}
             </button>
         </div>
@@ -165,7 +167,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                         {{ $t('callCard.auto_em_s', { autoAnswerIn }) }}</span
                     >
                 </button>
-                <button v-if="call.video" class="btn go" @click="calls.answer(call.id, true)">
+                <button v-if="call.video && prefs.isOn('video')" class="btn go" @click="calls.answer(call.id, true)">
                     <PhoneIcon name="video" />{{ $t('callCard.com_video') }}
                 </button>
                 <button class="btn stop" @click="calls.reject(call.id)">{{ $t('callCard.recusar') }}</button>
@@ -276,7 +278,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
             </p>
         </div>
 
-        <CallVideo v-if="established && call.video" :call="call" />
+        <CallVideo v-if="established && call.video && prefs.isOn('video')" :call="call" />
 
         <div v-if="(established || call.ringback === 'pbx') && (meter || call.quality)" class="signal">
             <span

@@ -16,7 +16,10 @@ const shots = process.env.SHOTS_DIR
 const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 
-const app = await electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
+const app = await electron.launch({
+    args,
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+})
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)
 const reportFile = join(userData, 'relatorio.txt')

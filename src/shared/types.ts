@@ -17,6 +17,8 @@ import type { LinkSettings, LinkStatus } from './links'
 import type { ShortcutAction, ShortcutSettings } from './shortcuts'
 import type { RingtoneId } from './ringtones'
 import type { ChatMessage } from './messages'
+import type { ModeSettings } from './modes'
+import type { SdrData, SdrWebhookPayload } from './sdr'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
@@ -139,6 +141,8 @@ export interface Settings {
     reconnect?: ReconnectSettings
     /** Quais eventos viram notificação do sistema. */
     notifications?: NotificationSettings
+    /** Modos ligados na área secreta (padrão: só a chamada). */
+    modes?: ModeSettings
     /** Links tel: e sip: (RF-53). */
     links?: LinkSettings
     /** Atalhos globais (RF-34). */
@@ -160,6 +164,7 @@ export type SettingsPatch = Partial<
         | 'reconnect'
         | 'notifications'
         | 'links'
+        | 'modes'
         | 'shortcuts'
     >
 >
@@ -239,6 +244,8 @@ export type NativeCallAction =
     | { type: 'attended'; consultCallId: string }
     /** Toca um áudio (PCM de 16 bits a 8000 Hz) no lugar do microfone; termina quando o áudio acaba. */
     | { type: 'play'; pcm: Int16Array }
+    /** Para o áudio tocado; o microfone volta. */
+    | { type: 'stopPlay' }
 
 /** Pedido SIP manual (RF-45), fora de qualquer chamada. */
 export interface SipManualRequest {
@@ -322,6 +329,15 @@ export interface IrisApi {
     servers: {
         load(): Promise<SipServer[]>
         save(servers: SipServer[]): Promise<void>
+    }
+    /** Modo SDR: a fila, a gravação da abertura e o webhook para o CRM. */
+    sdr: {
+        load(): Promise<SdrData>
+        save(data: SdrData): Promise<void>
+        /** Grava o PCM (16 bits, 8000 Hz) como WAV na pasta sdr dos dados e devolve o caminho. */
+        saveWav(name: string, pcm: Int16Array): Promise<string>
+        /** POST do resultado; devolve o código HTTP da resposta. */
+        webhook(url: string, payload: SdrWebhookPayload): Promise<number>
     }
     /** Conversas por mensagem de texto (RF-54). */
     messages: {
@@ -422,6 +438,8 @@ export interface IrisApi {
         setOptions(options: AiSettings): Promise<void>
         models(): Promise<AiModel[]>
         explain(request: AiRequest): Promise<AiResult>
+        /** Resumo de uma chamada gravada (modo SDR): o áudio vai para um modelo que entende áudio. */
+        summarize(model: string, recording: string): Promise<AiResult>
     }
     /** Motor próprio (RF-39): os sockets ficam no processo principal. */
     sip: {
@@ -469,6 +487,11 @@ export const IPC = {
     serversLoad: 'servers:load',
     serversSave: 'servers:save',
     historySave: 'history:save',
+    sdrLoad: 'sdr:load',
+    sdrSave: 'sdr:save',
+    sdrSaveWav: 'sdr:save-wav',
+    sdrWebhook: 'sdr:webhook',
+    aiSummarize: 'ai:summarize',
     messagesLoad: 'messages:load',
     messagesSave: 'messages:save',
     secretsGet: 'secrets:get',

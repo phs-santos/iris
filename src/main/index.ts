@@ -25,6 +25,8 @@ import {
     saveServers,
     saveHistory,
     loadMessages,
+    loadSdr,
+    saveSdr,
     saveMessages,
     loadScenarios,
     loadSettings,
@@ -49,6 +51,9 @@ import { isSipServer, type SipServer } from '@shared/servers'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { isRingVolume } from '@shared/ringtones'
 import { isChatMessage, MESSAGES_LIMIT, type ChatMessage } from '@shared/messages'
+import { ALL_MODES, isModeSettings } from '@shared/modes'
+import { isSdrData, isSdrWebhookPayload, type SdrData, type SdrWebhookPayload } from '@shared/sdr'
+import { wavHeader } from '@shared/audio'
 import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
 import { diagnoseNetwork } from './net-diag'
@@ -314,6 +319,32 @@ function registerIpc(): void {
         check(isList(entries, HISTORY_LIMIT) && entries.every(isHistoryEntry), 'histórico de chamadas')
         return saveHistory(entries)
     })
+    handle(IPC.sdrLoad, () => loadSdr())
+    handle(IPC.sdrSave, (_e, data: SdrData) => {
+        check(isSdrData(data), 'fila do modo SDR')
+        return saveSdr(data)
+    })
+    // Gravação da abertura: o nome vira um arquivo da pasta sdr; a interface não escolhe a pasta.
+    handle(IPC.sdrSaveWav, async (_e, name: string, pcm: Int16Array) => {
+        check(
+            isString(name, 80) &&
+                /^[\w-]+$/.test(name) &&
+                pcm instanceof Int16Array &&
+                pcm.length > 0 &&
+                pcm.length <= 8000 * 120,
+            'gravação da abertura'
+        )
+        const dir = join(app.getPath('userData'), 'sdr')
+        await fs.mkdir(dir, { recursive: true })
+        const path = join(dir, `${name}.wav`)
+        const body = Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength)
+        await fs.writeFile(path, Buffer.concat([Buffer.from(wavHeader(body.length, 1)), body]))
+        return path
+    })
+    handle(IPC.sdrWebhook, async (_e, url: string, payload: SdrWebhookPayload) => {
+        check(isString(url, 2000) && isWebhookUrl(url) && isSdrWebhookPayload(payload), 'webhook do modo SDR')
+        return postJson(url, payload)
+    })
     handle(IPC.messagesLoad, () => loadMessages())
     handle(IPC.messagesSave, (_e, messages: ChatMessage[]) => {
         check(isList(messages, MESSAGES_LIMIT) && messages.every(isChatMessage), 'mensagens de texto')
@@ -330,7 +361,11 @@ function registerIpc(): void {
     })
     if (!cli) handle(IPC.cliConfig, () => null)
     handle(IPC.secretsStatus, () => secretsStatus())
-    handle(IPC.settingsLoad, () => loadSettings())
+    // IRIS_MODES=all liga todos os modos, para os testes de ponta a ponta; o app empacotado ignora.
+    const allModes = process.env['IRIS_MODES'] === 'all' && !app.isPackaged
+    const withModes = <T extends { modes?: unknown }>(settings: T): T =>
+        allModes ? { ...settings, modes: { ...ALL_MODES, unlocked: true } } : settings
+    handle(IPC.settingsLoad, async () => withModes(await loadSettings()))
     // A interface manda só os campos que mudou; os outros (canal de atualização, IA) ela não alcança.
     const patchKeys = [
         'trustedHosts',
@@ -344,6 +379,7 @@ function registerIpc(): void {
         'reconnect',
         'notifications',
         'links',
+        'modes',
         'shortcuts'
     ]
     const isDeviceId = (v: unknown): boolean => v === undefined || isString(v, 500)
@@ -363,6 +399,7 @@ function registerIpc(): void {
                 isReconnect(patch.reconnect) &&
                 isNotificationSettings(patch.notifications) &&
                 isLinkSettings(patch.links) &&
+                isModeSettings(patch.modes) &&
                 isShortcutSettings(patch.shortcuts),
             'preferências'
         )
@@ -502,19 +539,7 @@ function registerIpc(): void {
     // não abre conexões por conta própria (CSP), então o POST sai daqui.
     handle(IPC.monitorWebhook, async (_e, url: string, payload: WebhookPayload) => {
         check(isString(url, 2000) && isWebhookUrl(url) && isWebhookPayload(payload), 'webhook do monitor')
-        const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 10_000)
-        try {
-            const response = await net.fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'User-Agent': `Iris/${app.getVersion()}` },
-                body: JSON.stringify(payload),
-                signal: controller.signal
-            })
-            return response.status
-        } finally {
-            clearTimeout(timer)
-        }
+        return postJson(url, payload)
     })
 
     handle(IPC.netDiagnose, (_e, request: NetDiagRequest) => {
@@ -561,6 +586,23 @@ function registerIpc(): void {
         check(mode === 'phone' || mode === 'bench', 'modo da janela')
         setWindowMode(mode)
     })
+}
+
+/** POST de JSON com prazo de 10 s, para os webhooks do monitor e do modo SDR; devolve o código HTTP. */
+async function postJson(url: string, payload: unknown): Promise<number> {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 10_000)
+    try {
+        const response = await net.fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'User-Agent': `Iris/${app.getVersion()}` },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        })
+        return response.status
+    } finally {
+        clearTimeout(timer)
+    }
 }
 
 function setWindowMode(mode: WindowMode): void {

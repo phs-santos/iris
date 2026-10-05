@@ -108,6 +108,7 @@ function isCallAction(v: unknown): v is NativeCallAction {
     if (v.type === 'hold') return typeof v.held === 'boolean'
     if (v.type === 'transfer') return isSipUser(v.target)
     if (v.type === 'attended') return isCallId(v.consultCallId)
+    if (v.type === 'stopPlay') return true
     if (v.type === 'play') return v.pcm instanceof Int16Array && v.pcm.length > 0 && v.pcm.length <= MAX_PLAY_SAMPLES
     return (
         v.type === 'dtmf' &&
@@ -237,6 +238,7 @@ export function registerNativeSipIpc(options: Options): void {
         else if (action.type === 'hold') await call.setHeld(action.held)
         else if (action.type === 'transfer') await call.transfer(action.target)
         else if (action.type === 'play') await call.play(action.pcm)
+        else if (action.type === 'stopPlay') call.stopPlaying()
         else if (action.type === 'attended') {
             const consult = calls.get(callKey(engineId, action.consultCallId))
             if (!consult) throw new Error('A chamada de consulta não existe mais')

@@ -36,6 +36,8 @@ import { usePreferencesStore, type SettingsSection } from './stores/preferences'
 import logoMarkDark from './assets/logo-mark.svg'
 import logoMarkLight from './assets/logo-mark-light.svg'
 import { accountHost } from './lib/accounts'
+import { secretTap } from '@shared/modes'
+import SdrView from './components/sdr/SdrView.vue'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
@@ -46,7 +48,7 @@ const ai = useAiStore()
 const prefs = usePreferencesStore()
 const history = useHistoryStore()
 const toasts = useToastsStore()
-const centerTab = ref<'phone' | 'contacts' | 'messages' | 'scenarios' | 'history'>('phone')
+const centerTab = ref<'phone' | 'contacts' | 'messages' | 'scenarios' | 'history' | 'sdr'>('phone')
 const messages = useMessagesStore()
 /** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
 const mode = ref<WindowMode>('bench')
@@ -69,9 +71,16 @@ const paletteActions = computed<PaletteAction[]>(() => [
     { label: t('app.acao_registrar_todas'), run: () => void accounts.registerAll() },
     { label: t('app.acao_desregistrar_todas'), run: () => void accounts.unregisterAll() },
     { label: t('app.acao_aba', { name: t('app.contatos') }), run: () => (centerTab.value = 'contacts') },
-    { label: t('app.acao_aba', { name: t('app.mensagens') }), run: () => (centerTab.value = 'messages') },
+    ...(prefs.isOn('messages')
+        ? [{ label: t('app.acao_aba', { name: t('app.mensagens') }), run: () => (centerTab.value = 'messages') }]
+        : []),
+    ...(prefs.isOn('sdr')
+        ? [{ label: t('app.acao_aba', { name: t('app.sdr') }), run: () => (centerTab.value = 'sdr') }]
+        : []),
     { label: t('app.acao_aba', { name: t('app.historico') }), run: () => (centerTab.value = 'history') },
-    { label: t('app.acao_aba', { name: t('app.cenarios') }), run: () => (centerTab.value = 'scenarios') },
+    ...(prefs.isOn('scenarios')
+        ? [{ label: t('app.acao_aba', { name: t('app.cenarios') }), run: () => (centerTab.value = 'scenarios') }]
+        : []),
     { label: t('app.configuracoes'), hint: t('app.atalho_configuracoes'), run: () => (settingsAt.value = 'profile') },
     { label: t('app.acao_servidores'), run: () => (settingsAt.value = 'servers') },
     { label: t('app.acao_notificacoes'), run: () => (settingsAt.value = 'notifications') },
@@ -105,6 +114,28 @@ watch(
     }),
     (counts) => window.iris.setTray(counts),
     { deep: true }
+)
+
+// Área secreta dos modos: cinco cliques seguidos no logo (ou Ctrl+Alt+Shift+M) abrem as Configurações nela.
+let logoTaps: number[] = []
+async function openModes(): Promise<void> {
+    if (!prefs.modes.unlocked) await prefs.setModes({ ...prefs.modes, unlocked: true })
+    settingsAt.value = 'modes'
+}
+function tapLogo(): void {
+    const { taps, open } = secretTap(logoTaps, Date.now())
+    logoTaps = taps
+    if (open) void openModes()
+}
+
+// Aba de um modo que foi desligado volta para o Telefone; o monitor só roda com os cenários ligados.
+watch(
+    () => [prefs.isOn('messages'), prefs.isOn('scenarios'), prefs.isOn('sdr')],
+    ([messagesOn, scenariosOn, sdrOn]) => {
+        const tab = centerTab.value
+        if ((tab === 'messages' && !messagesOn) || (tab === 'scenarios' && !scenariosOn) || (tab === 'sdr' && !sdrOn))
+            centerTab.value = 'phone'
+    }
 )
 
 // Trocar o idioma refaz as telas; as Configurações voltam abertas onde a pessoa estava.
@@ -145,6 +176,11 @@ async function setUpdateChannel(channel: UpdateChannel): Promise<void> {
 function onKey(event: KeyboardEvent): void {
     if (event.key === 'F1') {
         showGuide.value = true
+        return event.preventDefault()
+    }
+    const secretKey = event.ctrlKey && event.altKey && event.shiftKey && event.code === 'KeyM' // i18n-ok: tecla
+    if (secretKey) {
+        void openModes()
         return event.preventDefault()
     }
     const mod = event.ctrlKey || event.metaKey
@@ -260,7 +296,12 @@ onMounted(async () => {
     const main = prefs.profile.mainAccountId
     if (main && accounts.accounts.some((a) => a.id === main)) accounts.selectedId = main
     await scenarios.load()
-    useMonitorStore().start()
+    // O monitor de cenários só roda com o modo Cenários ligado.
+    watch(
+        () => prefs.isOn('scenarios'),
+        (on) => (on ? useMonitorStore().start() : useMonitorStore().stop()),
+        { immediate: true }
+    )
     await history.load()
     await useContactsStore().load()
     await messages.load()
@@ -284,7 +325,7 @@ onUnmounted(() => {
     <!-- A chave refaz as telas quando o idioma muda: há textos lidos uma vez só, na criação (RF-56). -->
     <div :key="currentLocale()" class="shell">
         <header v-if="mode === 'bench'" class="topbar">
-            <span class="brand"
+            <span class="brand" @click="tapLogo"
                 ><img class="brand-mark" :src="prefs.theme === 'light' ? logoMarkLight : logoMarkDark" alt="" />{{
                     $t('app.iris')
                 }}</span
@@ -335,7 +376,7 @@ onUnmounted(() => {
             @bench="setMode('bench')"
             @settings="settingsAt = 'profile'"
         />
-        <main v-else class="columns">
+        <main v-else class="columns" :class="{ 'no-log': !prefs.isOn('log') }">
             <AccountsPane @new="newAccount" @edit="(a) => (editing = a)" @health="(id) => (healthFor = id)" />
 
             <section class="center">
@@ -360,6 +401,7 @@ onUnmounted(() => {
                         {{ $t('app.contatos') }}
                     </button>
                     <button
+                        v-if="prefs.isOn('messages')"
                         role="tab"
                         class="ctab"
                         :class="{ on: centerTab === 'messages' }"
@@ -370,6 +412,17 @@ onUnmounted(() => {
                         <span v-if="messages.unread" class="count run tabular">{{ messages.unread }}</span>
                     </button>
                     <button
+                        v-if="prefs.isOn('sdr')"
+                        role="tab"
+                        class="ctab"
+                        :class="{ on: centerTab === 'sdr' }"
+                        :aria-selected="centerTab === 'sdr'"
+                        @click="centerTab = 'sdr'"
+                    >
+                        {{ $t('app.sdr') }}
+                    </button>
+                    <button
+                        v-if="prefs.isOn('scenarios')"
                         role="tab"
                         class="ctab"
                         :class="{ on: centerTab === 'scenarios' }"
@@ -404,7 +457,11 @@ onUnmounted(() => {
                         <span class="mono">{{ call.remote }} → {{ accounts.nameOf(call.accountId) }}</span>
                     </span>
                     <button class="btn go" @click="calls.answer(call.id)">{{ $t('app.atender') }}</button>
-                    <button v-if="call.video" class="btn go" @click="calls.answer(call.id, true)">
+                    <button
+                        v-if="call.video && prefs.isOn('video')"
+                        class="btn go"
+                        @click="calls.answer(call.id, true)"
+                    >
                         {{ $t('app.atender_com_video') }}
                     </button>
                     <button class="btn stop" @click="calls.reject(call.id)">{{ $t('app.recusar') }}</button>
@@ -426,10 +483,11 @@ onUnmounted(() => {
                 <HistoryPane v-else-if="centerTab === 'history'" @dialed="centerTab = 'phone'" />
                 <ContactsPane v-else-if="centerTab === 'contacts'" @dialed="centerTab = 'phone'" />
                 <MessagesPane v-else-if="centerTab === 'messages'" @dialed="centerTab = 'phone'" />
-                <ScenariosPane v-else />
+                <SdrView v-else-if="centerTab === 'sdr'" />
+                <ScenariosPane v-else-if="centerTab === 'scenarios'" />
             </section>
 
-            <LogPane />
+            <LogPane v-if="prefs.isOn('log')" />
         </main>
 
         <AccountForm v-if="editing" :account="editing" @close="editing = null" />
@@ -507,6 +565,10 @@ onUnmounted(() => {
     min-height: 0;
     display: grid;
     grid-template-columns: 260px minmax(380px, 1fr) minmax(340px, 0.9fr);
+}
+/* Sem o log, o telefone ocupa o lugar dele. */
+.columns.no-log {
+    grid-template-columns: 260px minmax(380px, 1fr);
 }
 .center {
     display: flex;

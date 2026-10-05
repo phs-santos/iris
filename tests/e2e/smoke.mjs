@@ -16,7 +16,7 @@ const app = await electron.launch({
     executablePath,
     args,
     // IRIS_FAKE_MEDIA: microfone falso, sem depender de hardware nem do pedido de permissão do sistema.
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
 })
 // Erros do processo principal e da página: um canal de IPC que a interface chama antes de existir
 // não derruba nenhum passo abaixo, mas quebra o app instalado (aconteceu na 1.0.4).

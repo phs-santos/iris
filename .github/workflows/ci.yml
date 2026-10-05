@@ -98,6 +98,12 @@ jobs:
             - name: Áudio de atendimento (RF-57)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/atendimento.mjs
+            - name: Modos e área secreta
+              if: ${{ !cancelled() }}
+              run: xvfb-run -a node tests/e2e/modos.mjs
+            - name: Modo SDR no simulado
+              if: ${{ !cancelled() }}
+              run: xvfb-run -a node tests/e2e/sdr.mjs
             - name: Monitor com webhook num servidor local (RF-43)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/monitor.mjs

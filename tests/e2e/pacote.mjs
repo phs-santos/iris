@@ -45,7 +45,7 @@ try {
     app = await electron.launch({
         executablePath: executable(),
         args,
-        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
+        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
     })
     const page = await app.firstWindow()
     const errors = []

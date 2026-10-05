@@ -20,7 +20,7 @@ const contacts = () => execSync(`docker exec ${CONTAINER} asterisk -rx "pjsip sh
 // Com IRIS_APP, roda contra o app empacotado (o pacote de diagnóstico do test:pacote).
 const app = await electron.launch({
     ...(process.env.IRIS_APP ? { executablePath: process.env.IRIS_APP, args: args.slice(1) } : { args }),
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
 })
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)

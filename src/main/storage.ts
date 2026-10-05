@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { isHistoryEntry, type HistoryEntry, type HistoryFile } from '@shared/history'
 import { isChatMessage, type ChatMessage, type MessagesFile } from '@shared/messages'
+import { emptySdr, isSdrData, type SdrData } from '@shared/sdr'
 import { isContact, type Contact, type ContactsFile } from '@shared/contacts'
 import { isSipServer, type ServersFile, type SipServer } from '@shared/servers'
 import type {
@@ -172,6 +173,16 @@ export async function loadMessages(): Promise<ChatMessage[]> {
 export async function saveMessages(messages: ChatMessage[]): Promise<void> {
     const data: MessagesFile = { schemaVersion: 1, messages }
     await writeJson('messages.json', data)
+}
+
+/** Fila do modo SDR: as pessoas, as ligações feitas e as opções da campanha. */
+export async function loadSdr(): Promise<SdrData> {
+    const data = await readDataFile<SdrData>('sdr.json', 'fila do modo SDR', (d) => isSdrData(d))
+    return data ?? emptySdr()
+}
+
+export async function saveSdr(data: SdrData): Promise<void> {
+    await writeJson('sdr.json', data)
 }
 
 const defaultSettings: Settings = { schemaVersion: 1, trustedHosts: [] }

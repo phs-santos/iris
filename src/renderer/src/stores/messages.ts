@@ -13,6 +13,7 @@ import { useAccountsStore } from './accounts'
 import { useContactsStore } from './contacts'
 import { useLogStore } from './log'
 import { useToastsStore } from './toasts'
+import { usePreferencesStore } from './preferences'
 
 let nextId = 1
 
@@ -45,6 +46,8 @@ export const useMessagesStore = defineStore('messages', () => {
         visible.value && open.value?.accountId === accountId && open.value.peer === peer
 
     function receive(accountId: string, from: string, text: string, fromName?: string): void {
+        // Com o modo Mensagens desligado, o que chega é respondido pelo motor e ignorado aqui.
+        if (!usePreferencesStore().isOn('messages')) return
         const accounts = useAccountsStore()
         const peerName = fromName || useContactsStore().nameOf(from)
         const seen = watching(accountId, from)

@@ -8,7 +8,10 @@ import { join } from 'node:path'
 const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
 const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
-const app = await electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
+const app = await electron.launch({
+    args,
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+})
 const page = await app.firstWindow()
 const pageErrors = []
 page.on('pageerror', (error) => pageErrors.push(String(error)))

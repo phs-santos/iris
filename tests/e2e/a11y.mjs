@@ -10,7 +10,10 @@ const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/
 const userData = mkdtempSync(join(tmpdir(), 'iris-a11y-'))
 const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
-const app = await electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
+const app = await electron.launch({
+    args,
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+})
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)
 const problems = []
@@ -133,6 +136,19 @@ try {
     await page.keyboard.press('Enter')
     await page.getByRole('log').getByText('oi', { exact: true }).waitFor()
     await scan('mensagens, com conversa')
+    await page.getByRole('tab', { name: 'SDR' }).click()
+    await scan('SDR, fila vazia')
+    await page.getByRole('button', { name: 'Opções' }).click()
+    await page.getByRole('dialog', { name: 'Opções do modo SDR' }).waitFor()
+    await scan('SDR, opções')
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Control+Alt+Shift+M')
+    await page
+        .getByRole('dialog', { name: 'Configurações' })
+        .getByRole('tab', { name: 'Modos', selected: true })
+        .waitFor()
+    await scan('configurações, modos')
+    await page.keyboard.press('Escape')
     await page.getByRole('tab', { name: 'Telefone' }).click()
     await page.getByLabel('Número', { exact: true }).fill('1002')
     await page.getByRole('button', { name: 'Ligar com vídeo' }).click()
@@ -253,6 +269,8 @@ try {
     await page.getByRole('button', { name: 'teclado' }).click()
     await page.getByRole('tab', { name: 'Contatos' }).click()
     await scan('tema claro › contatos')
+    await page.getByRole('tab', { name: 'SDR' }).click()
+    await scan('tema claro › SDR')
     await page.getByRole('tab', { name: /^Mensagens/ }).click()
     await scan('tema claro › mensagens')
     if (process.env.SHOTS_DIR) await page.screenshot({ path: join(process.env.SHOTS_DIR, 'tema-claro.png') })

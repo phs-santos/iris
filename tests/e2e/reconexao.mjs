@@ -17,7 +17,7 @@ const docker = (command) => execSync(`docker ${command} ${CONTAINER}`, { stdio: 
 
 const app = await electron.launch({
     args,
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
 })
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)

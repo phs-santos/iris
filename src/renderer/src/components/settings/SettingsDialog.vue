@@ -12,6 +12,7 @@ import ConnectionSection from './ConnectionSection.vue'
 import ServersSection from './ServersSection.vue'
 import NotificationsSection from './NotificationsSection.vue'
 import ShortcutsSection from './ShortcutsSection.vue'
+import ModesSection from './ModesSection.vue'
 import AiSection from './AiSection.vue'
 import SecuritySection from './SecuritySection.vue'
 import ImportExportSection from './ImportExportSection.vue'
@@ -38,8 +39,9 @@ const sections = computed(() =>
         { id: 'ai' as const, name: t('settingsDialog.ajuda_da_ia') },
         { id: 'security' as const, name: t('settingsDialog.certificados') },
         { id: 'data' as const, name: t('settingsDialog.importar_e_exportar') },
-        { id: 'update' as const, name: t('settingsDialog.atualizacao'), badge: props.update?.currentVersion }
-    ].filter((s) => s.id !== 'update' || props.update)
+        { id: 'update' as const, name: t('settingsDialog.atualizacao'), badge: props.update?.currentVersion },
+        { id: 'modes' as const, name: t('settingsDialog.modos') }
+    ].filter((s) => (s.id !== 'update' || props.update) && (s.id !== 'modes' || prefs.modes.unlocked))
 )
 
 const initials = computed(() => {
@@ -125,6 +127,7 @@ function onNavKey(event: KeyboardEvent): void {
                     <AudioSection v-else-if="current === 'audio'" />
                     <NotificationsSection v-else-if="current === 'notifications'" />
                     <ShortcutsSection v-else-if="current === 'shortcuts'" />
+                    <ModesSection v-else-if="current === 'modes'" @hidden="current = 'profile'" />
                     <ServersSection v-else-if="current === 'servers'" />
                     <ConnectionSection v-else-if="current === 'connection'" />
                     <AiSection v-else-if="current === 'ai'" />

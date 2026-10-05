@@ -32,6 +32,8 @@ export interface CallView {
     /** Último código SIP recebido, ex.: "180 Ringing". */
     progress?: string
     endText?: string
+    /** Código SIP do fim, quando houve (486, 404…). */
+    endCode?: number
     failed: boolean
     transfer?: string
     /** Último retorno da transferência, para quem precisa do código (cenários). */
@@ -164,6 +166,7 @@ export const useCallsStore = defineStore('calls', () => {
             c.recording = undefined
             const wasEstablished = c.state === 'established'
             c.state = 'ended'
+            c.endCode = end.code
             c.ringback = undefined
             c.endedAt = Date.now()
             c.failed = !wasEstablished && end.by !== 'local' && Boolean(end.code && end.code >= 400)
@@ -393,6 +396,14 @@ export const useCallsStore = defineStore('calls', () => {
         await call.playAudio(pcm)
     }
 
+    /** Para o áudio tocado na chamada; o microfone volta (modo SDR: interromper a abertura). */
+    async function stopAudio(id: string): Promise<void> {
+        await engineCalls.get(id)?.stopAudio?.()
+    }
+
+    /** A chamada consegue tocar um áudio no lugar do microfone (SIP puro e simulado). */
+    const canPlay = (id: string): boolean => typeof engineCalls.get(id)?.playAudio === 'function'
+
     /** Envia uma sequência como "1,w2,4321#". Lança erro de sintaxe antes de enviar qualquer dígito. */
     async function sendDtmf(id: string, sequence: string): Promise<void> {
         const c = view(id)
@@ -540,6 +551,8 @@ export const useCallsStore = defineStore('calls', () => {
         toggleRecording,
         audioLevel,
         playAudio,
+        stopAudio,
+        canPlay,
         sendDtmf,
         stopDtmf,
         transfer,

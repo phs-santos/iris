@@ -599,7 +599,7 @@ export class SipCall {
         })
     }
 
-    private stopPlaying(): void {
+    stopPlaying(): void {
         const playing = this.playing
         if (!playing) return
         this.playing = undefined

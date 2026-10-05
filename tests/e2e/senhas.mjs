@@ -8,7 +8,11 @@ import { join } from 'node:path'
 const userData = mkdtempSync(join(tmpdir(), 'iris-senhas-'))
 const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
-const launch = () => electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
+const launch = () =>
+    electron.launch({
+        args,
+        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+    })
 const step = (msg) => console.log(`✓ ${msg}`)
 const fail = (msg) => {
     throw new Error(msg)

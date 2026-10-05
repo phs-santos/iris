@@ -395,7 +395,7 @@ async function save(register: boolean): Promise<void> {
                         </div>
                     </label>
                     <div class="field wide">
-                        <span class="label" id="answer-audio-label">{{ $t('accountForm.audio_ao_atender') }}</span>
+                        <span id="answer-audio-label" class="label">{{ $t('accountForm.audio_ao_atender') }}</span>
                         <span class="ring-row">
                             <input
                                 :value="form.answerAudio ? form.answerAudio.split(/[\\/]/).pop() : ''"
