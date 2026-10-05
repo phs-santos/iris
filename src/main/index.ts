@@ -18,7 +18,6 @@ import {
     saveScenarios,
     secretsStatus,
     setSecret,
-    migrateLegacySecrets,
     updateSettings
 } from './storage'
 import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
@@ -66,6 +65,12 @@ app.on('render-process-gone', (_e, _wc, details) =>
 app.on('child-process-gone', (_e, details) =>
     appLog('error', `Processo ${details.type} caiu: ${details.reason} (código ${details.exitCode})`)
 )
+
+// Nada da Íris usa o cofre de senhas do sistema (Chaves do macOS, Secret Service do Linux): as senhas
+// ficam no arquivo próprio (RNF-07). Sem estas opções o Chromium ainda abriria o cofre por conta própria
+// e o macOS pediria a senha de login, decisão do usuário em 04/10/2026.
+app.commandLine.appendSwitch('use-mock-keychain')
+app.commandLine.appendSwitch('password-store', 'basic')
 
 // Linha de comando (RF-31): sem janela visível, sem bandeja e sem trava de instância única.
 const cli = prepareCli()
@@ -232,7 +237,6 @@ function registerIpc(): void {
     })
     if (!cli) handle(IPC.cliConfig, () => null)
     handle(IPC.secretsStatus, () => secretsStatus())
-    handle(IPC.secretsMigrate, () => migrateLegacySecrets())
     handle(IPC.settingsLoad, () => loadSettings())
     // A interface manda só os campos que mudou; os outros (canal de atualização, IA) ela não alcança.
     const patchKeys = ['trustedHosts', 'audioInputId', 'audioOutputId', 'profile', 'appearance', 'reconnect']

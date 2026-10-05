@@ -1153,7 +1153,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'note',
                 kind: 'dica',
-                text: 'A Íris não usa mais o cofre de senhas do sistema, então o macOS não pede a senha de login ao abrir. Quem veio de uma versão até a 1.0.5 pode ver esse pedido uma última vez, enquanto as senhas antigas são trazidas para o arquivo novo.'
+                text: 'A Íris não usa o cofre de senhas do sistema (as Chaves do macOS), então o sistema não pede a senha de login ao abrir. Se esse pedido aparecer numa versão antiga, atualize para a 1.6.1 ou mais nova.'
             }
         ]
     },

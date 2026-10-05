@@ -1,4 +1,4 @@
-// Senhas em arquivo local cifrado (RNF-07) e migração do formato antigo, do cofre do sistema (RNF-19).
+// Senhas em arquivo local cifrado (RNF-07), sem nunca usar o cofre de senhas do sistema.
 // Uso: npm run build && node tests/e2e/senhas.mjs   (Linux sem tela: xvfb-run -a node tests/e2e/senhas.mjs)
 import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -42,38 +42,24 @@ try {
     step('senhas cifradas em senhas.json, legíveis só pelo usuário')
 
     const ids = Object.keys(JSON.parse(text).entries)
-    // Sem cofre do sistema (o Linux do CI), a versão antiga guardava as senhas só na memória:
-    // não existe secrets.json para migrar.
-    const vault = await app.evaluate(({ safeStorage }) => safeStorage.isEncryptionAvailable())
-    if (!vault) console.log('  (sem cofre do sistema aqui: migração do formato antigo não se aplica)')
-    else {
-        // Simula uma instalação antiga: as senhas no cofre do sistema (secrets.json) e nada no arquivo novo.
-        // Uma entrada a mais não abre no cofre, como quando o usuário nega o pedido das Chaves.
-        const legacy = await app.evaluate(
-            ({ safeStorage }, list) =>
-                Object.fromEntries(list.map((id) => [id, safeStorage.encryptString('1234').toString('base64')])),
-            ids
-        )
-        legacy['conta-negada'] = Buffer.from('não abre').toString('base64')
-        await app.close()
-        writeFileSync(join(userData, 'secrets.json'), JSON.stringify(legacy))
-        rmSync(local)
+    // O cofre do sistema nunca é usado: o Chromium sobe com o cofre falso e sem o Secret Service.
+    const switches = await app.evaluate(({ app }) => [
+        app.commandLine.hasSwitch('use-mock-keychain'),
+        app.commandLine.getSwitchValue('password-store')
+    ])
+    if (!switches[0] || switches[1] !== 'basic') fail(`o app ainda pode abrir o cofre do sistema: ${switches}`)
+    step('o app sobe sem acesso ao cofre de senhas do sistema')
 
-        // 2ª abertura: as senhas antigas são migradas e as contas registram.
-        app = await launch()
-        page = await app.firstWindow()
-        await page.getByText('3 contas').waitFor()
-        await registered(page)
-        const migrated = JSON.parse(readFileSync(local, 'utf8'))
-        if (ids.some((id) => !migrated.entries[id])) fail('nem todas as senhas foram migradas')
-        step('senhas do cofre do sistema migradas para o arquivo local')
-
-        // A que não abriu continua no arquivo antigo, para tentar de novo, e a tela avisa.
-        const left = JSON.parse(readFileSync(join(userData, 'secrets.json'), 'utf8'))
-        if (Object.keys(left).join() !== 'conta-negada') fail(`o secrets.json ficou com ${Object.keys(left)}`)
-        await page.getByText('não pôde ser lida do cofre do sistema').waitFor()
-        step('senha que o cofre não abriu fica no arquivo antigo, com aviso na tela')
-    }
+    // Um secrets.json de versões antigas (até a 1.0.5) é ignorado e fica onde está: nada pede o cofre.
+    await app.close()
+    const legacy = JSON.stringify({ [ids[0]]: Buffer.from('cifrado pelo cofre').toString('base64') })
+    writeFileSync(join(userData, 'secrets.json'), legacy)
+    app = await launch()
+    page = await app.firstWindow()
+    await page.getByText('3 contas').waitFor()
+    await registered(page)
+    if (readFileSync(join(userData, 'secrets.json'), 'utf8') !== legacy) fail('o secrets.json antigo foi mexido')
+    step('secrets.json antigo é ignorado, e as contas registram com as senhas do arquivo próprio')
 
     // Arquivo de senhas mexido não derruba o app; a conta só fica sem senha.
     rmSync(join(userData, 'secrets.json'), { force: true })

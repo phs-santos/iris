@@ -251,8 +251,6 @@ export interface AccountsExport {
 
 /** Situação dos arquivos de dados: senhas (RNF-07), contas, cenários e preferências. */
 export interface SecretsStatus {
-    /** Ainda há senhas no formato antigo (cofre do sistema, até a 1.0.5) para trazer. */
-    legacy: boolean
     /** Algo deu errado e precisa de aviso na tela; null quando está tudo certo. */
     problem: string | null
 }
@@ -291,8 +289,6 @@ export interface IrisApi {
         set(accountId: string, password: string | null): Promise<void>
         /** Situação do arquivo de senhas, sem mexer em nada. */
         status(): Promise<SecretsStatus>
-        /** Traz as senhas do formato antigo (até a 1.0.5), se houver, e devolve a situação depois. */
-        migrate(): Promise<SecretsStatus>
     }
     settings: {
         load(): Promise<Settings>
@@ -400,7 +396,6 @@ export const IPC = {
     secretsGet: 'secrets:get',
     secretsSet: 'secrets:set',
     secretsStatus: 'secrets:status',
-    secretsMigrate: 'secrets:migrate',
     settingsLoad: 'settings:load',
     settingsUpdate: 'settings:update',
     filesSaveText: 'files:save-text',

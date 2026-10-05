@@ -194,8 +194,6 @@ export const ptBR = {
             'foi recusado ({error}). Se este PBX é seu e usa certificado autoassinado, você pode confiar nele.',
         confiar_neste_host: 'Confiar neste host',
         ignorar: 'Ignorar',
-        trazendo_as_senhas_salvas_por:
-            'Trazendo as senhas salvas por uma versão anterior. Se o sistema pedir a senha de login (no macOS, o pedido das Chaves), digite e confirme; isso acontece só uma vez. As contas aparecem em seguida.',
         entendi: 'Entendi',
         area_central: 'Área central',
         telefone: 'Telefone',

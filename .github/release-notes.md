@@ -29,7 +29,6 @@ Os instaladores ainda não são assinados, então o sistema avisa na primeira ve
 
 - **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. Se aparecer "O controle inteligente de aplicativos bloqueou um aplicativo", não há botão para liberar: esse recurso do Windows 11 só deixa rodar instalador assinado. Enquanto a Íris não for assinada, ela não instala nessas máquinas, a não ser que o Controle Inteligente de Aplicativos seja desligado em **Segurança do Windows → Controle de aplicativos e do navegador** (o Windows não deixa religar depois sem reinstalar o sistema).
 - **macOS, pelo `.dmg`:** arraste a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**. Pelo comando do Terminal acima, esse aviso não aparece.
-- **macOS, senha das Chaves:** quem atualiza de uma versão até a 1.0.5 pode ver uma última vez o pedido de senha das Chaves, enquanto a Íris traz as senhas antigas para o arquivo próprio. Digite a senha de login do Mac e confirme. Depois disso o pedido não volta. Se você negar, nenhuma senha se perde: a Íris pergunta de novo na próxima abertura.
 - **Linux, `.deb`:** instale com `sudo apt install ./iris_VERSION_amd64.deb`. Para atualizar, baixe e instale o `.deb` da versão nova.
 - **Linux, AppImage:** dê permissão de execução (`chmod +x Iris-VERSION.AppImage`) e abra. O AppImage se atualiza sozinho.
 

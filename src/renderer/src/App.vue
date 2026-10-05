@@ -134,10 +134,6 @@ function onKey(event: KeyboardEvent): void {
     event.preventDefault()
 }
 
-// Ao trazer as senhas do formato antigo, o macOS pode pedir a senha de login uma última vez (RNF-07).
-const VAULT_NOTICE_DELAY_MS = 1500
-const vaultSlow = ref(false)
-const waitingVault = computed(() => vaultSlow.value && accounts.migratingSecrets)
 /** Espera a tela ser desenhada; o tempo limite cobre a janela que ainda não apareceu. */
 const firstPaint = (): Promise<void> =>
     new Promise((resolve) => {
@@ -191,7 +187,6 @@ onMounted(async () => {
     await devices.load()
     // As contas leem as senhas: a interface aparece antes, com um aviso se demorar.
     await firstPaint()
-    setTimeout(() => (vaultSlow.value = true), VAULT_NOTICE_DELAY_MS)
     await accounts.load()
     const main = prefs.profile.mainAccountId
     if (main && accounts.accounts.some((a) => a.id === main)) accounts.selectedId = main
@@ -243,10 +238,6 @@ onUnmounted(() => {
             </span>
             <button class="btn small stop" @click="trustHost">{{ $t('app.confiar_neste_host') }}</button>
             <button class="btn small" @click="certError = null">{{ $t('app.ignorar') }}</button>
-        </div>
-
-        <div v-if="waitingVault" class="banner warn" role="status">
-            {{ $t('app.trazendo_as_senhas_salvas_por') }}
         </div>
 
         <div v-if="accounts.secretsProblem" class="banner warn" role="status">

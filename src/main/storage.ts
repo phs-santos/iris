@@ -1,4 +1,4 @@
-import { app, safeStorage } from 'electron'
+import { app } from 'electron'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
@@ -208,8 +208,6 @@ interface LocalSecretsFile {
 
 const SECRETS_FILE = 'senhas.json'
 const KEY_FILE = 'chave-local.bin'
-/** Formato antigo, cifrado pelo cofre do sistema: migrado ao abrir o app (RNF-19). */
-const LEGACY_SECRETS_FILE = 'secrets.json'
 const memorySecrets = new Map<string, string>()
 let keyPromise: Promise<Buffer> | null = null
 let queue: Promise<unknown> = Promise.resolve()
@@ -308,61 +306,11 @@ async function writeSecrets(data: LocalSecretsFile): Promise<void> {
     await fs.chmod(file(SECRETS_FILE), 0o600)
 }
 
-async function readLegacy(): Promise<Record<string, string> | null> {
-    try {
-        return await readJson<Record<string, string>>(LEGACY_SECRETS_FILE)
-    } catch {
-        return null
-    }
-}
-
-async function writeLegacy(legacy: Record<string, string>): Promise<void> {
-    if (Object.keys(legacy).length) await writeJson(LEGACY_SECRETS_FILE, legacy)
-    else await fs.rm(file(LEGACY_SECRETS_FILE), { force: true })
-}
-
-/**
- * Traz as senhas do formato antigo (até a 1.0.5) para o arquivo local, todas de uma vez, ao abrir o
- * app. Pode mostrar o pedido de senha do sistema. Só apaga do arquivo antigo o que foi lido; se o
- * usuário negar o pedido, as senhas continuam lá e a migração tenta de novo na próxima abertura.
- */
-export function migrateLegacySecrets(): Promise<SecretsStatus> {
-    return serial(async () => {
-        const legacy = await readLegacy()
-        if (!legacy) return status()
-        const data = await readSecrets()
-        let failed = 0
-        for (const [id, encrypted] of Object.entries(legacy)) {
-            if (data.entries[id]) {
-                // Já existe senha nova para esta conta: a antiga não serve mais.
-                delete legacy[id]
-                continue
-            }
-            try {
-                if (!(await safeStorage.isAsyncEncryptionAvailable())) throw new Error('cofre indisponível')
-                const { result } = await safeStorage.decryptStringAsync(Buffer.from(encrypted, 'base64'))
-                data.entries[id] = await encrypt(result)
-                memorySecrets.set(id, result)
-                delete legacy[id]
-            } catch {
-                failed++
-            }
-        }
-        await writeSecrets(data)
-        await writeLegacy(legacy)
-        if (failed)
-            problems.add(
-                `${failed === 1 ? 'Uma senha salva' : `${failed} senhas salvas`} por uma versão anterior não ${failed === 1 ? 'pôde' : 'puderam'} ser lida${failed === 1 ? '' : 's'} do cofre do sistema. A Íris tenta de novo na próxima abertura; se preferir, digite a senha na conta.`
-            )
-        return status()
-    })
-}
-
 async function status(): Promise<SecretsStatus> {
-    return { legacy: (await readLegacy()) !== null, problem: [...problems].join(' ') || null }
+    return { problem: [...problems].join(' ') || null }
 }
 
-/** Situação dos arquivos de dados, para os avisos da tela. Não mostra o pedido de senha do sistema. */
+/** Situação dos arquivos de dados, para os avisos da tela. */
 export function secretsStatus(): Promise<SecretsStatus> {
     return serial(async () => {
         // Abre a chave e o arquivo, para que um problema neles já apareça no aviso.
@@ -392,10 +340,4 @@ async function storeSecret(accountId: string, password: string | null): Promise<
     if (password === null) delete data.entries[accountId]
     else data.entries[accountId] = await encrypt(password)
     await writeSecrets(data)
-    // A senha digitada vale mais que a antiga: não pergunta mais ao cofre do sistema por ela.
-    const legacy = await readLegacy()
-    if (legacy && accountId in legacy) {
-        delete legacy[accountId]
-        await writeLegacy(legacy)
-    }
 }

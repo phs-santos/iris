@@ -73,7 +73,6 @@ Os instaladores ainda não são assinados (RNF-17), então o sistema avisa na pr
 
 - **Windows:** no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. Se aparecer "O controle inteligente de aplicativos bloqueou um aplicativo", não há botão para liberar: esse recurso do Windows 11 só deixa rodar instalador assinado. Enquanto a Íris não for assinada, ela não instala nessas máquinas, a não ser que o Controle Inteligente de Aplicativos seja desligado em **Segurança do Windows → Controle de aplicativos e do navegador** (o Windows não deixa religar depois sem reinstalar o sistema).
 - **macOS, pelo `.dmg`:** o aviso aparece porque o navegador marca o arquivo baixado e a Íris não tem assinatura da Apple. Use o comando do Terminal acima, que não passa pelo navegador. Se já baixou o `.dmg`, arraste a Íris para Aplicativos, abra uma vez e, em **Ajustes do Sistema → Privacidade e Segurança**, clique em **Abrir Mesmo Assim**.
-- **macOS, senha das Chaves:** quem atualiza de uma versão até a 1.0.5 pode ver uma última vez o pedido de senha das Chaves, enquanto a Íris traz as senhas antigas para o arquivo próprio. Digite a senha de login do Mac e confirme. Depois disso o pedido não volta. Se você negar, nenhuma senha se perde: a Íris pergunta de novo na próxima abertura.
 
 ## Rodar a partir do código
 
@@ -146,7 +145,7 @@ npm run test:coverage   # os mesmos, com cobertura da camada de domínio (mínim
 npm run test:e2e    # ponta a ponta no modo simulado (abre o app)
 npm run test:scenarios   # cenários: executa, força falha, repete 20× e exporta relatório
 npm run test:cli    # linha de comando: códigos de saída 0, 1 e 2
-npm run test:senhas # senhas cifradas em arquivo local e migração do cofre do sistema
+npm run test:senhas # senhas cifradas em arquivo local, sem nunca usar o cofre do sistema
 npm run test:ai     # ajuda da IA com uma OpenRouter falsa: máscara, chave cifrada e resposta na tela
 npm run test:a11y   # acessibilidade: axe (WCAG A/AA) em todas as telas e atalhos de teclado
 npm run licenses    # licenças das bibliotecas que vão dentro do app
@@ -248,7 +247,7 @@ O easy-sipjs 2.7.6 registra com `transport=wss` no Contact. O Asterisk responde 
 ## Dados e segurança
 
 - Contas em `accounts.json`, preferências em `settings.json` e histórico de chamadas em `history.json`, contatos em `contacts.json` e servidores em `servers.json`, na pasta de dados do usuário.
-- Senhas em `senhas.json`, cifradas com AES-256-GCM por uma chave própria (`chave-local.bin`), os dois legíveis só pela sua conta. O cofre do sistema não é usado, para o macOS não pedir a senha de login. Trate a pasta de dados como confidencial.
+- Senhas em `senhas.json`, cifradas com AES-256-GCM por uma chave própria (`chave-local.bin`), os dois legíveis só pela sua conta. O cofre do sistema (Chaves do macOS, Secret Service do Linux) não é usado de jeito nenhum, nem pelo Chromium, para o sistema não pedir a senha de login. O `secrets.json` de versões até a 1.0.5 é ignorado. Trate a pasta de dados como confidencial.
 - Um arquivo de dados estragado nunca é sobrescrito: vai para o lado (`accounts.json.corrompido-<data>`), a tela avisa e o app abre.
 - O log interno do app fica em `logs/iris.log` na pasta de dados (5 arquivos de 10 MB). Guarda só falhas do próprio app, sem SIP e sem senha; é o primeiro lugar para olhar quando algo não abre.
 - A interface roda isolada (`contextIsolation`, `sandbox`, CSP) e só fala com o sistema pelos canais de `src/preload`.

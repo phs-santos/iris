@@ -24,8 +24,6 @@ export const useAccountsStore = defineStore('accounts', () => {
     const accounts = ref<Account[]>([])
     const runtime = reactive<Record<string, Runtime>>({})
     const selectedId = ref<string | null>(null)
-    /** Trazendo as senhas do formato antigo; o macOS pode estar mostrando o pedido das Chaves. */
-    const migratingSecrets = ref(false)
     /** Aviso sobre o arquivo de senhas (RNF-07); null quando está tudo certo. */
     const secretsProblem = ref<string | null>(null)
     const loaded = ref(false)
@@ -91,10 +89,6 @@ export const useAccountsStore = defineStore('accounts', () => {
 
     async function load(): Promise<void> {
         // As senhas do formato antigo vêm antes de registrar, para as contas já acharem a senha.
-        if ((await window.iris.secrets.status()).legacy) {
-            migratingSecrets.value = true
-            await window.iris.secrets.migrate().finally(() => (migratingSecrets.value = false))
-        }
         let list = await window.iris.accounts.load()
         // Depois de ler as contas: um accounts.json estragado também vira aviso (RNF-19).
         await refreshProblems()
@@ -285,7 +279,6 @@ export const useAccountsStore = defineStore('accounts', () => {
         selected,
         groups,
         loaded,
-        migratingSecrets,
         secretsProblem,
         byId,
         nameOf,

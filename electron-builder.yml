@@ -12,7 +12,9 @@ files:
 # grantFileProtocolExtraPrivileges fica ligado: a interface carrega módulos por file://.
 electronFuses:
     runAsNode: false
-    enableCookieEncryption: true
+    # Sem cifra de cookies: ela usa o cofre do sistema, e o macOS pediria a senha de login. A Íris não
+    # guarda nada em cookie.
+    enableCookieEncryption: false
     enableNodeOptionsEnvironmentVariable: false
     enableNodeCliInspectArguments: false
     enableEmbeddedAsarIntegrityValidation: true
