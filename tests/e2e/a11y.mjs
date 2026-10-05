@@ -124,6 +124,14 @@ try {
     await scan('novo contato')
     await page.keyboard.press('Escape')
     await scan('agenda de contatos')
+    await page.getByRole('tab', { name: 'Mensagens' }).click()
+    await scan('mensagens, sem conversa')
+    await page.getByLabel('Nova conversa com o ramal').fill('1002')
+    await page.getByRole('button', { name: 'Nova conversa' }).click()
+    await page.getByLabel('Mensagem', { exact: true }).fill('oi')
+    await page.keyboard.press('Enter')
+    await page.getByRole('log').getByText('oi', { exact: true }).waitFor()
+    await scan('mensagens, com conversa')
     await page.getByRole('tab', { name: 'Telefone' }).click()
 
     await page.getByRole('button', { name: 'Explicar com IA' }).last().click()
@@ -226,7 +234,7 @@ try {
     await settings.getByRole('radio', { name: 'Claro' }).click()
     if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'light')
         problems.push('[tema claro] o tema não mudou')
-    for (const name of ['Aparência', 'Servidores', 'Notificações']) {
+    for (const name of ['Aparência', 'Servidores', 'Notificações', 'Atalhos e links']) {
         await settings.getByRole('tab', { name }).click()
         await scan(`tema claro › configurações › ${name}`)
     }
@@ -235,6 +243,8 @@ try {
     await scan('tema claro › janela principal')
     await page.getByRole('tab', { name: 'Contatos' }).click()
     await scan('tema claro › contatos')
+    await page.getByRole('tab', { name: /^Mensagens/ }).click()
+    await scan('tema claro › mensagens')
     if (process.env.SHOTS_DIR) await page.screenshot({ path: join(process.env.SHOTS_DIR, 'tema-claro.png') })
     await page.getByRole('tab', { name: 'Telefone' }).click()
 

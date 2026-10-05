@@ -12,6 +12,7 @@ const label = (kind: NotificationKind): { name: string; hint: string } =>
     ({
         incoming: { name: t('notificationsSection.recebida'), hint: t('notificationsSection.recebida_dica') },
         missed: { name: t('notificationsSection.perdida'), hint: t('notificationsSection.perdida_dica') },
+        message: { name: t('notificationsSection.mensagem'), hint: t('notificationsSection.mensagem_dica') },
         registration: { name: t('notificationsSection.caiu'), hint: t('notificationsSection.caiu_dica') },
         voicemail: { name: t('notificationsSection.correio'), hint: t('notificationsSection.correio_dica') },
         monitor: { name: t('notificationsSection.monitor'), hint: t('notificationsSection.monitor_dica') }

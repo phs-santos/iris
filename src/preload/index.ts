@@ -22,6 +22,10 @@ const api: IrisApi = {
         load: () => ipcRenderer.invoke(IPC.serversLoad),
         save: (servers) => ipcRenderer.invoke(IPC.serversSave, servers)
     },
+    messages: {
+        load: () => ipcRenderer.invoke(IPC.messagesLoad),
+        save: (messages) => ipcRenderer.invoke(IPC.messagesSave, messages)
+    },
     history: {
         load: () => ipcRenderer.invoke(IPC.historyLoad),
         save: (entries) => ipcRenderer.invoke(IPC.historySave, entries)
@@ -120,6 +124,7 @@ const api: IrisApi = {
         callStats: (engineId, callId) => ipcRenderer.invoke(IPC.sipCallStats, engineId, callId),
         callLevel: (engineId, callId) => ipcRenderer.invoke(IPC.sipCallLevel, engineId, callId),
         record: (engineId, callId, on) => ipcRenderer.invoke(IPC.sipRecord, engineId, callId, on),
+        message: (engineId, to, text) => ipcRenderer.invoke(IPC.sipMessage, engineId, to, text),
         request: (engineId, request) => ipcRenderer.invoke(IPC.sipRequest, engineId, request),
         exportPcap: (engineId, withRtp) => ipcRenderer.invoke(IPC.sipPcap, engineId, withRtp),
         loadStart: (engineId, spec) => ipcRenderer.invoke(IPC.sipLoadStart, engineId, spec),

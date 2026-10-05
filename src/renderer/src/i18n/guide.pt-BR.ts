@@ -486,6 +486,44 @@ export const GUIDE: GuideSection[] = [
         ]
     },
     {
+        id: 'mensagens',
+        title: 'Mensagens',
+        summary: 'Conversa por texto entre ramais, pelo próprio PBX.',
+        blocks: [
+            {
+                type: 'p',
+                text: 'A aba **Mensagens** manda e recebe texto por SIP MESSAGE, o recurso de mensagem do próprio protocolo. Funciona nas contas WebRTC, de SIP puro e simuladas, desde que o PBX repasse mensagens entre ramais.'
+            },
+            {
+                type: 'steps',
+                items: [
+                    'Escolha a conta de origem na lista de contas.',
+                    'Na aba Mensagens, digite o ramal em **Nova conversa** e clique no botão.',
+                    'Escreva e tecle **Enter**. Shift+Enter quebra a linha.'
+                ]
+            },
+            {
+                type: 'list',
+                items: [
+                    'Cada conversa é de uma conta com um ramal. O número ao lado do nome da aba são as mensagens ainda não lidas.',
+                    'Mensagem que chega com a conversa fechada vira aviso na tela e notificação do sistema (dá para desligar em Configurações → Notificações).',
+                    'Se o PBX recusar, a mensagem fica marcada como **não entregue**, com a resposta dele (por exemplo, 404 Not Found).',
+                    '**Ligar** chama o ramal da conversa; **Apagar conversa** tira as mensagens desta máquina.'
+                ]
+            },
+            {
+                type: 'note',
+                kind: 'atenção',
+                text: 'Em contas WebRTC a Íris não recebe a confirmação do PBX: sem erro, a mensagem saiu, mas pode não ter chegado. Em SIP puro o "não entregue" é o que o PBX respondeu. As mensagens ficam em messages.json na pasta de dados, sem cifra, e o texto aparece no log de eventos.'
+            },
+            {
+                type: 'note',
+                kind: 'dica',
+                text: 'No PBX simulado, mande uma mensagem para **8000**: a URA responde sozinha, e dá para ver a conversa funcionando com uma conta só. No Asterisk, o ramal precisa de `message_context` apontando para um contexto com `MessageSend`.'
+            }
+        ]
+    },
+    {
         id: 'historico',
         title: 'Histórico de chamadas',
         summary: 'O que aconteceu com cada chamada, depois que o cartão dela sumiu da tela.',

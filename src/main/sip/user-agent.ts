@@ -2,6 +2,7 @@
 // transações cliente (RFC 3261, 17.1), da autenticação digest, da renovação do registro e de entregar
 // cada pedido à chamada dona dele. O diálogo e o áudio de cada chamada ficam em call.ts.
 
+import { isTextContent } from '@shared/messages'
 import { randomBytes } from 'node:crypto'
 import type { SipTransportKind } from '@shared/sip-target'
 import { digestAuthorization, parseChallenge, type DigestChallenge } from './digest'
@@ -61,6 +62,8 @@ export interface UaEvents {
     /** Estado de um ramal acompanhado (BLF) e aviso de correio de voz (RF-27). */
     presence?(extension: string, state: PresenceState): void
     mwi?(info: MwiInfo): void
+    /** Mensagem de texto recebida (SIP MESSAGE, RF-54). */
+    message?(from: string, fromName: string | undefined, text: string): void
     /** Chamada recebida: devolve quem vai ouvir os eventos dela. */
     incoming?(call: SipCall): CallEvents
 }
@@ -72,7 +75,7 @@ export const TIMER_F = 64 * T1
 
 const KEEPALIVE_MS = 25_000
 const MIN_REFRESH_S = 5
-const ALLOW = 'INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, NOTIFY, REFER, SUBSCRIBE'
+const ALLOW = 'INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, MESSAGE, NOTIFY, REFER, SUBSCRIBE'
 /** Depois de um provisório, o INVITE espera o outro lado atender; o PBX costuma desistir antes disso. */
 const INVITE_WAIT_MS = 180_000
 /** Validade pedida nas assinaturas de presença. */
@@ -129,6 +132,11 @@ export class SipUserAgent {
 
     get currentState(): UaState {
         return this.state
+    }
+
+    /** Domínio da conta, para montar o endereço de quem recebe (RF-54). */
+    get domain(): string {
+        return this.config.domain
     }
 
     get connected(): boolean {
@@ -647,6 +655,14 @@ export class SipUserAgent {
         if (request.method === 'NOTIFY') {
             this.reply(request, 200, 'OK')
             return this.onNotify(request)
+        }
+        if (request.method === 'MESSAGE') {
+            // Texto simples entra na conversa; "digitando" e outros corpos recebem 200 e são ignorados.
+            this.reply(request, 200, 'OK')
+            if (!this.events.message || !request.body || !isTextContent(header(request, 'Content-Type'))) return
+            const from = addressOf(header(request, 'From') ?? '')
+            const user = /^sips?:([^@;>]+)@/i.exec(from.uri)?.[1] ?? 'desconhecido'
+            return this.events.message(decodeURIComponent(user), from.display, request.body)
         }
         if (request.method === 'INVITE') {
             this.events.log('warn', 'event', 'Chamada recebida e recusada: não há quem atenda nesta conta')

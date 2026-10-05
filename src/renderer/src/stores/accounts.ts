@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useMessagesStore } from './messages'
 import { computed, markRaw, reactive, ref } from 'vue'
 import type { Account, AccountsExport } from '@shared/types'
 import { createEngine, type HealthReport, type RegStatus, type SipEngine } from '@renderer/sip'
@@ -185,6 +186,7 @@ export const useAccountsStore = defineStore('accounts', () => {
         })
         engine.on('log', (entry) => log.add(id, entry.level, entry.kind, entry.text))
         engine.on('incoming', (call) => calls.addIncoming(id, call))
+        engine.on('message', (from, text, fromName) => useMessagesStore().receive(id, from, text, fromName))
         engine.on('presence', (extension, state) => {
             if (runtime[id]?.engine !== engine) return
             runtime[id].presence = { ...runtime[id].presence, [extension]: state }

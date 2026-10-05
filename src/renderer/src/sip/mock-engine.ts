@@ -497,6 +497,31 @@ export class MockEngine implements SipEngine {
         return call
     }
 
+    /**
+     * Mensagem de texto no PBX simulado (RF-54): chega à outra conta registrada do mesmo domínio. A URA
+     * (números começados em 8) responde sozinha, para dar para testar com uma conta só.
+     */
+    async sendMessage(to: string, text: string): Promise<void> {
+        if (!this.registered) throw new Error('Registre a conta antes de mandar mensagem')
+        const uri = `sip:${to}@${this.domain}`
+        this.log(
+            'info',
+            `MESSAGE ${uri} SIP/2.0\nFrom: <sip:${this.extension}@${this.domain}>\nTo: <${uri}>\nContent-Type: text/plain\n\n${text}`,
+            'sip'
+        )
+        const target = [...registry].find((e) => e.domain === this.domain && e.extension === to && e.registered)
+        if (target) {
+            const name = this.account.displayName || this.account.name
+            setTimeout(() => target.emitter.emit('message', this.extension, text, name), MOCK_TIMING.trying)
+        } else if (to.startsWith('8')) {
+            setTimeout(() => this.emitter.emit('message', to, `URA recebeu: ${text}`, 'URA'), MOCK_TIMING.ringing)
+        } else {
+            this.log('info', `SIP/2.0 404 Not Found\nTo: <${uri}>`, 'sip')
+            throw new Error('404 Not Found')
+        }
+        this.log('info', `SIP/2.0 200 OK\nTo: <${uri}>`, 'sip')
+    }
+
     /** Pedido manual no PBX simulado (RF-45): responde 200 ao que conhece e 489 a assinaturas. */
     async request(spec: SipManualRequest): Promise<SipManualResponse> {
         if (!this.registered) throw new Error('Registre a conta antes de mandar um pedido')

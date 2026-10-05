@@ -353,6 +353,32 @@ try {
         .waitFor({ timeout: 15000 })
     step('recusar devolve ocupado para quem ligou')
 
+    // Mensagens de texto (RF-54): o MESSAGE de 2001 chega a 2002 pelo Asterisk, e a resposta volta.
+    await account('Puro UDP').locator('.row').click()
+    await page.getByRole('tab', { name: 'Mensagens' }).click()
+    await page.getByLabel('Nova conversa com o ramal').fill('2002')
+    await page.getByRole('button', { name: 'Nova conversa' }).click()
+    const box = page.getByLabel('Mensagem', { exact: true })
+    await box.fill('Olá pelo SIP puro: ação ✓')
+    await page.keyboard.press('Enter')
+    const reply = page.getByRole('button', { name: /2001 · Puro TCP/ })
+    await reply.waitFor({ timeout: 10000 })
+    await reply.click()
+    await page.getByRole('log').locator('.bubble.in', { hasText: 'Olá pelo SIP puro: ação ✓' }).waitFor()
+    await box.fill('Recebido')
+    await page.keyboard.press('Enter')
+    await page.getByRole('button', { name: /2002 · Puro UDP/ }).click()
+    await page.getByRole('log').locator('.bubble.in', { hasText: 'Recebido' }).waitFor({ timeout: 10000 })
+    if (
+        await page
+            .getByRole('log')
+            .getByText(/não entregue/)
+            .count()
+    )
+        throw new Error('uma mensagem não foi entregue')
+    step('mensagens de texto: 2001 e 2002 trocam SIP MESSAGE pelo Asterisk, com acento')
+    await page.getByRole('tab', { name: 'Telefone' }).click()
+
     // Captura em PCAP (RF-44). O diálogo de salvar é do sistema; aqui ele é trocado por um caminho fixo.
     const pcapPath = join(userData, 'captura.pcap')
     await app.evaluate(({ dialog }, filePath) => {

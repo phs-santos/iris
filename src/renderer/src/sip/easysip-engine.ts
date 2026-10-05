@@ -15,6 +15,7 @@ import {
 } from './engine'
 import { audioOutput } from './audio'
 import { SILENCE_DB } from '@shared/audio'
+import { isTextContent } from '@shared/messages'
 
 /**
  * Silêncio de verdade (200 ms, 8 kHz, 8 bits) para desligar o toque próprio de cada SipClient; o app
@@ -46,6 +47,16 @@ function silentWav(ms = 200, rate = 8000): string {
 }
 
 const SILENT_WAV = silentWav()
+
+/** O pedaço da mensagem recebida do SIP.js que o app usa (RF-54). */
+interface SipJsMessage {
+    accept?(): Promise<void>
+    request?: {
+        body?: unknown
+        getHeader?(name: string): string | undefined
+        from?: { displayName?: string; uri?: { user?: string } }
+    }
+}
 
 let nextId = 1
 
@@ -306,6 +317,22 @@ export class EasySipEngine implements SipEngine {
             const name = invitation.remoteIdentity?.displayName || undefined
             this.emitter.emit('incoming', new EasySipCall(this.client, 'in', user, name, invitation))
         })
+        // Mensagem de texto (RF-54). A biblioteca entrega a mensagem do SIP.js sem responder: o 200 sai daqui.
+        this.client.on('message', (raw: unknown) => {
+            // Conforme o caminho dentro da biblioteca, vem a mensagem do SIP.js ou um evento com ela dentro.
+            const message = ((raw as { message?: SipJsMessage } | undefined)?.message ?? raw) as
+                SipJsMessage | undefined
+            void message?.accept?.().catch(() => undefined)
+            const request = message?.request
+            const text = typeof request?.body === 'string' ? request.body : ''
+            if (!text || !isTextContent(request?.getHeader?.('Content-Type'))) return
+            this.emitter.emit(
+                'message',
+                request?.from?.uri?.user ?? 'desconhecido',
+                text.slice(0, 4000),
+                request?.from?.displayName || undefined
+            )
+        })
     }
 
     on<K extends keyof EngineEvents>(event: K, listener: (...args: EngineEvents[K]) => void): () => void {
@@ -334,6 +361,11 @@ export class EasySipEngine implements SipEngine {
         })
         call.bind(session)
         return call
+    }
+
+    /** O SIP.js não espera a resposta do PBX: sem erro aqui, a mensagem saiu, mas pode não ter chegado. */
+    async sendMessage(to: string, text: string): Promise<void> {
+        await this.client.sendMessage(to, text)
     }
 
     async health(): Promise<HealthReport> {

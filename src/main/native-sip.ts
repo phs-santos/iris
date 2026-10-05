@@ -2,6 +2,7 @@
 // processo principal; a interface fala com eles por estes canais fixos, com os argumentos conferidos
 // (RNF-08). Cada motor da interface tem um id; os eventos voltam marcados com ele.
 
+import { MESSAGE_MAX_BYTES, messageBytes } from '@shared/messages'
 import { app, type WebContents } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -150,6 +151,8 @@ export function registerNativeSipIpc(options: Options): void {
                 certificate: (host, error) => options.onCertificateError(host, error),
                 presence: (extension, state) => send(sender, engineId, { type: 'presence', extension, state }),
                 mwi: (info) => send(sender, engineId, { type: 'mwi', info }),
+                message: (from, fromName, text) =>
+                    send(sender, engineId, { type: 'message', from, fromName, text: text.slice(0, 4000) }),
                 incoming: (call) => {
                     calls.set(callKey(engineId, call.callId), call)
                     send(sender, engineId, {
@@ -306,6 +309,29 @@ export function registerNativeSipIpc(options: Options): void {
             text: serializeMessage(response).replace(/\r\n/g, '\n'),
             ms
         }
+    })
+
+    // Mensagem de texto (RF-54): um MESSAGE para o ramal, no domínio da conta.
+    handle(IPC.sipMessage, async (_e, engineId: string, to: string, text: string): Promise<void> => {
+        check(
+            isEngineId(engineId) &&
+                isSipUser(to) &&
+                isString(text, 4000) &&
+                text.length > 0 &&
+                !text.includes('\0') &&
+                messageBytes(text) <= MESSAGE_MAX_BYTES,
+            'mensagem de texto'
+        )
+        const agent = agents.get(engineId)
+        if (!agent?.connected) throw new Error('Registre a conta antes de mandar mensagem')
+        const { response } = await agent.sendRequest({
+            method: 'MESSAGE',
+            uri: `sip:${to}@${agent.domain}`,
+            headers: [],
+            body: text.replace(/\r?\n/g, '\r\n'),
+            contentType: 'text/plain;charset=UTF-8'
+        })
+        if (response.status >= 300) throw new Error(`${response.status} ${response.reason}`)
     })
 
     handle(IPC.sipPcap, async (_e, engineId: string, withRtp: boolean): Promise<string | null> => {

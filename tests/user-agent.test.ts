@@ -293,6 +293,40 @@ describe('motor próprio: registro por SIP puro (RF-39)', () => {
         await agent.stop()
     })
 
+    it('mensagem de texto (RF-54): responde 200, entrega o texto e ignora o aviso de "digitando"', async () => {
+        const received: Array<[string, string | undefined, string]> = []
+        let transport!: FakeTransport
+        const agent = new SipUserAgent(config, (options) => (transport = new FakeTransport(options)), {
+            status: () => {},
+            log: () => {},
+            certificate: () => {},
+            message: (from, name, text) => received.push([from, name, text])
+        })
+        await agent.start()
+        const message = (type: string, body: string, seq: number): string =>
+            [
+                'MESSAGE sip:2001@192.168.0.10:50600 SIP/2.0',
+                'Via: SIP/2.0/UDP pbx.teste:5060;branch=z9hG4bKmsg' + seq,
+                'From: "Vendas" <sip:1002@pbx.teste>;tag=a',
+                'To: <sip:2001@pbx.teste>',
+                `Call-ID: msg-${seq}`,
+                `CSeq: ${seq} MESSAGE`,
+                `Content-Type: ${type}`,
+                `Content-Length: ${Buffer.byteLength(body)}`,
+                '',
+                body
+            ].join('\r\n')
+        transport.onMessage(message('text/plain;charset=UTF-8', 'Olá, tudo bem?', 1))
+        transport.onMessage(message('application/im-iscomposing+xml', '<isComposing/>', 2))
+        const replies = transport.raw.slice(-2).map((text) => parseMessage(text))
+        expect(replies).toMatchObject([
+            { kind: 'response', status: 200 },
+            { kind: 'response', status: 200 }
+        ])
+        expect(received).toEqual([['1002', 'Vendas', 'Olá, tudo bem?']])
+        await agent.stop()
+    })
+
     it('mede a ida e volta do OPTIONS', async () => {
         const { agent, transport } = setup()
         await agent.start()

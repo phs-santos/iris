@@ -23,6 +23,8 @@ import ToastStack from './components/ToastStack.vue'
 import FirstSteps from './components/FirstSteps.vue'
 import CommandPalette, { type PaletteAction } from './components/CommandPalette.vue'
 import ContactsPane from './components/ContactsPane.vue'
+import MessagesPane from './components/MessagesPane.vue'
+import { useMessagesStore } from './stores/messages'
 import { useContactsStore } from './stores/contacts'
 import { useServersStore } from './stores/servers'
 import { useHistoryStore } from './stores/history'
@@ -44,7 +46,8 @@ const ai = useAiStore()
 const prefs = usePreferencesStore()
 const history = useHistoryStore()
 const toasts = useToastsStore()
-const centerTab = ref<'phone' | 'contacts' | 'scenarios' | 'history'>('phone')
+const centerTab = ref<'phone' | 'contacts' | 'messages' | 'scenarios' | 'history'>('phone')
+const messages = useMessagesStore()
 /** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
 const mode = ref<WindowMode>('bench')
 const phone = ref<InstanceType<typeof PhoneView> | null>(null)
@@ -66,6 +69,7 @@ const paletteActions = computed<PaletteAction[]>(() => [
     { label: t('app.acao_registrar_todas'), run: () => void accounts.registerAll() },
     { label: t('app.acao_desregistrar_todas'), run: () => void accounts.unregisterAll() },
     { label: t('app.acao_aba', { name: t('app.contatos') }), run: () => (centerTab.value = 'contacts') },
+    { label: t('app.acao_aba', { name: t('app.mensagens') }), run: () => (centerTab.value = 'messages') },
     { label: t('app.acao_aba', { name: t('app.historico') }), run: () => (centerTab.value = 'history') },
     { label: t('app.acao_aba', { name: t('app.cenarios') }), run: () => (centerTab.value = 'scenarios') },
     { label: t('app.configuracoes'), hint: t('app.atalho_configuracoes'), run: () => (settingsAt.value = 'profile') },
@@ -253,6 +257,7 @@ onMounted(async () => {
     useMonitorStore().start()
     await history.load()
     await useContactsStore().load()
+    await messages.load()
     await useServersStore().load()
     await accounts.refreshProblems()
     offLink = window.iris.links.onArrived(() => void takeLink())
@@ -350,6 +355,16 @@ onUnmounted(() => {
                     <button
                         role="tab"
                         class="ctab"
+                        :class="{ on: centerTab === 'messages' }"
+                        :aria-selected="centerTab === 'messages'"
+                        @click="centerTab = 'messages'"
+                    >
+                        {{ $t('app.mensagens') }}
+                        <span v-if="messages.unread" class="count run tabular">{{ messages.unread }}</span>
+                    </button>
+                    <button
+                        role="tab"
+                        class="ctab"
                         :class="{ on: centerTab === 'scenarios' }"
                         :aria-selected="centerTab === 'scenarios'"
                         @click="centerTab = 'scenarios'"
@@ -400,6 +415,7 @@ onUnmounted(() => {
                 </template>
                 <HistoryPane v-else-if="centerTab === 'history'" @dialed="centerTab = 'phone'" />
                 <ContactsPane v-else-if="centerTab === 'contacts'" @dialed="centerTab = 'phone'" />
+                <MessagesPane v-else-if="centerTab === 'messages'" @dialed="centerTab = 'phone'" />
                 <ScenariosPane v-else />
             </section>
 

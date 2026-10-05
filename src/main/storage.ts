@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { isHistoryEntry, type HistoryEntry, type HistoryFile } from '@shared/history'
+import { isChatMessage, type ChatMessage, type MessagesFile } from '@shared/messages'
 import { isContact, type Contact, type ContactsFile } from '@shared/contacts'
 import { isSipServer, type ServersFile, type SipServer } from '@shared/servers'
 import type {
@@ -156,6 +157,21 @@ export async function loadHistory(): Promise<HistoryEntry[]> {
 export async function saveHistory(entries: HistoryEntry[]): Promise<void> {
     const data: HistoryFile = { schemaVersion: 1, entries }
     await writeJson('history.json', data)
+}
+
+/** Conversas por mensagem de texto (RF-54). */
+export async function loadMessages(): Promise<ChatMessage[]> {
+    const data = await readDataFile<MessagesFile>(
+        'messages.json',
+        'mensagens de texto',
+        (d) => isObject(d) && Array.isArray(d.messages)
+    )
+    return (data?.messages ?? []).filter(isChatMessage)
+}
+
+export async function saveMessages(messages: ChatMessage[]): Promise<void> {
+    const data: MessagesFile = { schemaVersion: 1, messages }
+    await writeJson('messages.json', data)
 }
 
 const defaultSettings: Settings = { schemaVersion: 1, trustedHosts: [] }

@@ -24,6 +24,8 @@ import {
     loadServers,
     saveServers,
     saveHistory,
+    loadMessages,
+    saveMessages,
     loadScenarios,
     loadSettings,
     saveAccounts,
@@ -46,6 +48,7 @@ import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { isRingVolume } from '@shared/ringtones'
+import { isChatMessage, MESSAGES_LIMIT, type ChatMessage } from '@shared/messages'
 import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
 import { diagnoseNetwork } from './net-diag'
@@ -310,6 +313,11 @@ function registerIpc(): void {
     handle(IPC.historySave, (_e, entries: HistoryEntry[]) => {
         check(isList(entries, HISTORY_LIMIT) && entries.every(isHistoryEntry), 'histórico de chamadas')
         return saveHistory(entries)
+    })
+    handle(IPC.messagesLoad, () => loadMessages())
+    handle(IPC.messagesSave, (_e, messages: ChatMessage[]) => {
+        check(isList(messages, MESSAGES_LIMIT) && messages.every(isChatMessage), 'mensagens de texto')
+        return saveMessages(messages)
     })
     handle(IPC.secretsGet, (_e, id: string) => {
         check(isAccountId(id), 'id da conta')

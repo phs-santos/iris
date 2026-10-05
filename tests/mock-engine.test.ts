@@ -31,6 +31,26 @@ describe('MockEngine', () => {
         expect(statuses.at(-1)).toEqual({ state: 'error', code: 403, reason: 'Forbidden' })
     })
 
+    it('mensagem de texto (RF-54): chega à outra conta, a URA responde e ramal desconhecido dá 404', async () => {
+        const a = make('1001')
+        const b = make('1002')
+        await registered(a)
+        await registered(b)
+        const got: Array<[string, string, string]> = []
+        a.on('message', (from, text) => got.push(['a', from, text]))
+        b.on('message', (from, text) => got.push(['b', from, text]))
+
+        await a.sendMessage('1002', 'oi')
+        await a.sendMessage('8000', 'teste')
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.ringing)
+        expect(got).toEqual([
+            ['b', '1001', 'oi'],
+            ['a', '8000', 'URA recebeu: teste']
+        ])
+        await expect(a.sendMessage('1999', 'alguém?')).rejects.toThrow('404 Not Found')
+        await expect(make('1003').sendMessage('1001', 'x')).rejects.toThrow('Registre a conta')
+    })
+
     it('liga entre duas contas do mesmo domínio e encerra dos dois lados', async () => {
         const a = make('1001')
         const b = make('1002')

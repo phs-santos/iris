@@ -150,6 +150,25 @@ try {
     await page.getByText('0 chamadas').waitFor({ timeout: 15000 })
     step('desligar 1001 encerrou também 1003')
 
+    // Mensagens de texto (RF-54) em WebRTC: o MESSAGE de 1001 chega a 1002 pelo Asterisk e a resposta volta.
+    await page.locator('.acc', { hasText: 'PBX 1001' }).locator('.row').click()
+    await page.getByRole('tab', { name: 'Mensagens' }).click()
+    await page.getByLabel('Nova conversa com o ramal').fill('1002')
+    await page.getByRole('button', { name: 'Nova conversa' }).click()
+    const box = page.getByLabel('Mensagem', { exact: true })
+    await box.fill('Olá pelo WebRTC: ação ✓')
+    await page.keyboard.press('Enter')
+    const reply = page.getByRole('button', { name: /1001 · PBX 1002/ })
+    await reply.waitFor({ timeout: 10000 })
+    await reply.click()
+    await page.getByRole('log').locator('.bubble.in', { hasText: 'Olá pelo WebRTC: ação ✓' }).waitFor()
+    await box.fill('Recebido')
+    await page.keyboard.press('Enter')
+    await page.getByRole('button', { name: /1002 · PBX 1001/ }).click()
+    await page.getByRole('log').locator('.bubble.in', { hasText: 'Recebido' }).waitFor({ timeout: 10000 })
+    step('mensagens de texto: 1001 e 1002 trocam SIP MESSAGE pelo Asterisk em WebRTC')
+    await page.getByRole('tab', { name: 'Telefone' }).click()
+
     await page.getByRole('tab', { name: 'SIP bruto' }).click()
     await page.locator('.line.sip', { hasText: 'SIP/2.0 200 OK' }).first().waitFor()
     // RNF-10: nem a tela nem os arquivos exportados podem ter Authorization, hash, nonce ou senha.

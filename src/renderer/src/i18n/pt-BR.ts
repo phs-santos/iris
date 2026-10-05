@@ -3,6 +3,31 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    messagesPane: {
+        ramal: 'Ramal',
+        nova_conversa_com: 'Nova conversa com o ramal',
+        nova: 'Nova conversa',
+        vazio: 'Nenhuma conversa ainda. Digite um ramal acima para começar.',
+        conversas: 'Conversas',
+        nao_lidas: ' não lidas',
+        conversa_com: 'Conversa com {name}',
+        conta_apagada: 'conta apagada',
+        ligar: 'Ligar',
+        apagar: 'Apagar conversa',
+        confirmar_apagar: 'Apagar tudo',
+        cancelar: 'Cancelar',
+        primeira_mensagem: 'Nenhuma mensagem ainda. Escreva a primeira abaixo.',
+        voce: 'Você',
+        nao_entregue: 'não entregue: {reason}',
+        escreva: 'Escreva a mensagem. Enter envia; Shift+Enter quebra a linha.',
+        mensagem: 'Mensagem',
+        enviar: 'Enviar',
+        registre_antes: 'A conta desta conversa não está registrada. Registre-a para mandar mensagem.',
+        grande_demais: 'A mensagem tem {bytes} bytes; o limite de uma mensagem SIP é {max}.',
+        escolha: 'Escolha uma conversa à esquerda ou comece uma nova pelo ramal.',
+        sem_conta: 'Escolha uma conta antes de começar a conversa.',
+        numero_invalido: 'Use só o ramal ou o número, sem espaços.'
+    },
     shortcutsSection: {
         atalhos: 'Atalhos globais',
         explicacao:
@@ -73,6 +98,8 @@ export const ptBR = {
         recebida: 'Chamada recebida',
         recebida_dica: 'Com Atender e Recusar no próprio aviso (no macOS). Contas com auto-atender não avisam.',
         perdida: 'Chamada perdida',
+        mensagem: 'Mensagem de texto',
+        mensagem_dica: 'Quando chega uma mensagem numa conversa que não está aberta na tela.',
         perdida_dica: 'Quem ligou desistiu antes de alguém atender.',
         caiu: 'Conta caiu',
         caiu_dica: 'Uma conta registrada perdeu o registro. A Íris continua tentando sozinha.',
@@ -277,6 +304,7 @@ export const ptBR = {
         acao_atalhos: 'Configurações › Atalhos e links',
         link_recebido: 'Número {number} recebido de um link. Aperte Enter para ligar.',
         contatos: 'Contatos',
+        mensagens: 'Mensagens',
         historico: 'Histórico',
         iris: 'Íris',
         contas_pbx_registradas_chamadas:

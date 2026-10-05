@@ -16,6 +16,7 @@ import type { AccountTransport, SipTransportKind } from './sip-target'
 import type { LinkSettings, LinkStatus } from './links'
 import type { ShortcutAction, ShortcutSettings } from './shortcuts'
 import type { RingtoneId } from './ringtones'
+import type { ChatMessage } from './messages'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
@@ -199,6 +200,7 @@ export type NativeSipEventBody =
     | { type: 'call'; callId: string; event: NativeCallEvent }
     | { type: 'presence'; extension: string; state: PresenceState }
     | { type: 'mwi'; info: MwiInfo }
+    | { type: 'message'; from: string; fromName?: string; text: string }
     /** 20 ms de áudio recebido: 160 amostras de 16 bits a 8000 Hz. */
     | { type: 'audio'; callId: string; pcm: Int16Array }
 
@@ -308,6 +310,11 @@ export interface IrisApi {
         load(): Promise<SipServer[]>
         save(servers: SipServer[]): Promise<void>
     }
+    /** Conversas por mensagem de texto (RF-54). */
+    messages: {
+        load(): Promise<ChatMessage[]>
+        save(messages: ChatMessage[]): Promise<void>
+    }
     /** Histórico de chamadas (RF-40). */
     history: {
         load(): Promise<HistoryEntry[]>
@@ -414,6 +421,8 @@ export interface IrisApi {
         callLevel(engineId: string, callId: string): Promise<number | null>
         /** Liga ou desliga a gravação (RF-36). Devolve o caminho do arquivo, ou null se a chamada não existe. */
         record(engineId: string, callId: string, on: boolean): Promise<string | null>
+        /** Mensagem de texto para um ramal (RF-54); rejeita com a resposta do PBX se ele recusar. */
+        message(engineId: string, to: string, text: string): Promise<void>
         /** Pedido SIP manual (RF-45). */
         request(engineId: string, request: SipManualRequest): Promise<SipManualResponse>
         /** Salva a captura da conta em PCAP (RF-44); devolve o caminho, ou null se o usuário cancelou. */
@@ -445,6 +454,8 @@ export const IPC = {
     serversLoad: 'servers:load',
     serversSave: 'servers:save',
     historySave: 'history:save',
+    messagesLoad: 'messages:load',
+    messagesSave: 'messages:save',
     secretsGet: 'secrets:get',
     secretsSet: 'secrets:set',
     secretsStatus: 'secrets:status',
@@ -488,6 +499,7 @@ export const IPC = {
     sipCallLevel: 'sip:call-level',
     sipRecord: 'sip:record',
     sipRequest: 'sip:request',
+    sipMessage: 'sip:message',
     sipPcap: 'sip:pcap',
     sipLoadStart: 'sip:load-start',
     sipLoadStop: 'sip:load-stop',

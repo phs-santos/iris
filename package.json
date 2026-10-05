@@ -37,6 +37,7 @@
         "test:notificacoes": "electron-vite build && node tests/e2e/notificacoes.mjs",
         "test:contatos": "electron-vite build && node tests/e2e/contatos.mjs",
         "test:atalhos": "electron-vite build && node tests/e2e/atalhos.mjs",
+        "test:mensagens": "electron-vite build && node tests/e2e/mensagens.mjs",
         "test:monitor": "electron-vite build && node tests/e2e/monitor.mjs",
         "test:audio": "electron-vite build && node tests/e2e/audio.mjs",
         "test:sip": "electron-vite build && node tests/e2e/sip-puro.mjs",
