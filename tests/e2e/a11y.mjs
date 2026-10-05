@@ -216,6 +216,24 @@ try {
     if (!/Vendas 1002/.test(chosen)) problems.push('[atalhos] Ctrl/Cmd+2 não trocou a conta de origem')
     if (!problems.some((p) => p.startsWith('[atalhos]'))) step('atalhos Ctrl/Cmd + L, Enter, M, H, E e 1 a 9 funcionam')
 
+    // Tema claro: as mesmas telas principais, com o contraste conferido de novo.
+    await page.keyboard.press('ControlOrMeta+,')
+    await settings.getByRole('tab', { name: 'Aparência' }).click()
+    await settings.getByRole('radio', { name: 'Claro' }).click()
+    if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'light')
+        problems.push('[tema claro] o tema não mudou')
+    for (const name of ['Aparência', 'Servidores', 'Notificações']) {
+        await settings.getByRole('tab', { name }).click()
+        await scan(`tema claro › configurações › ${name}`)
+    }
+    await page.keyboard.press('Escape')
+    await page.getByRole('tab', { name: 'Telefone' }).click()
+    await scan('tema claro › janela principal')
+    await page.getByRole('tab', { name: 'Contatos' }).click()
+    await scan('tema claro › contatos')
+    if (process.env.SHOTS_DIR) await page.screenshot({ path: join(process.env.SHOTS_DIR, 'tema-claro.png') })
+    await page.getByRole('tab', { name: 'Telefone' }).click()
+
     if (problems.length) {
         console.error(problems.join('\n'))
         process.exitCode = 1

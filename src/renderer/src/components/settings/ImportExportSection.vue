@@ -110,6 +110,6 @@ h4 {
 }
 .result.bad {
     background: rgba(240, 103, 94, 0.12);
-    color: #ff8f86;
+    color: var(--bad-text);
 }
 </style>

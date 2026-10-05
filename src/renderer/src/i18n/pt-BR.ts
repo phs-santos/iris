@@ -664,6 +664,13 @@ export const ptBR = {
         cole_a_chave_da_openrouter: 'Cole a chave da OpenRouter.'
     },
     appearanceSection: {
+        tema: 'Tema',
+        tema_dica: 'Sistema acompanha o modo claro ou escuro do computador, e troca sozinho.',
+        escuro: 'Escuro',
+        claro: 'Claro',
+        sistema: 'Sistema',
+        compacta: 'Listas compactas',
+        compacta_dica: 'Linhas mais baixas nas contas, no histórico e nos contatos, para caber mais.',
         aparencia: 'Aparência',
         a_cor_de_destaque_aparece: 'A cor de destaque aparece nos botões principais, nas abas e no contorno do foco.',
         cor_de_destaque: 'Cor de destaque',

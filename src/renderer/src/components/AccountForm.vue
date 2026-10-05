@@ -464,7 +464,7 @@ async function save(register: boolean): Promise<void> {
 }
 .result.bad {
     background: rgba(240, 103, 94, 0.12);
-    color: #ff8f86;
+    color: var(--bad-text);
 }
 .spacer {
     flex: 1;

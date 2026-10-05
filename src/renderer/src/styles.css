@@ -16,10 +16,38 @@
     --ok: #3fcf86;
     --warn: #f0b13e;
     --bad: #f0675e;
+    /* Vermelho para texto de erro sobre o fundo avermelhado dos avisos. */
+    --bad-text: #ff8f86;
     --hold: #a9bcff;
     --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     --mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, Consolas, monospace;
     color-scheme: dark;
+}
+
+/* Tema claro: as mesmas variáveis, com estado em tons mais escuros para o contraste AA sobre o branco. */
+:root[data-theme='light'] {
+    --bg: #eef2f6;
+    --panel: #ffffff;
+    --panel-2: #f4f6f9;
+    --raise: #e3e9ef;
+    --line: #d2dae3;
+    --fg: #16202a;
+    --muted: #4f5f70;
+    --faint: #56677a;
+    --ok: #157a47;
+    --warn: #8a5700;
+    --bad: #c0352c;
+    --bad-text: #a3241c;
+    --hold: #4153b8;
+    color-scheme: light;
+}
+
+/* Densidade compacta: menos espaço vertical nas listas. */
+:root[data-density='compact'] .acc .row,
+:root[data-density='compact'] .history .entry,
+:root[data-density='compact'] .contact {
+    padding-top: 3px;
+    padding-bottom: 3px;
 }
 
 * {
@@ -191,7 +219,7 @@ textarea.input {
 }
 .pill.bad {
     background: rgba(240, 103, 94, 0.16);
-    color: #ff8f86;
+    color: var(--bad-text);
 }
 .pill.hold {
     background: rgba(120, 150, 255, 0.16);
@@ -321,4 +349,9 @@ textarea.input {
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+/* A cor de cada conta é viva, pensada para o fundo escuro; no claro, o texto dela escurece. */
+:root[data-theme='light'] .account-text {
+    color: color-mix(in srgb, var(--account) 45%, #000) !important;
 }

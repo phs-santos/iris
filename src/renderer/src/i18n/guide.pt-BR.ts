@@ -694,9 +694,13 @@ export const GUIDE: GuideSection[] = [
                     ],
                     [
                         'Aparência',
-                        'A cor de destaque (seis paletas prontas ou a sua própria cor) e o tamanho da interface'
+                        'O tema (escuro, claro ou o do sistema), a cor de destaque (seis paletas prontas ou a sua própria cor), listas compactas e o tamanho da interface'
                     ],
                     ['Áudio', 'Microfone e alto-falante. Veja "Áudio"'],
+                    [
+                        'Notificações',
+                        'Quais avisos do sistema aparecem e o botão para testar. Veja "Bandeja e notificações"'
+                    ],
                     ['Servidores', 'Os PBX cadastrados, para as contas reaproveitarem a conexão. Veja "Contas"'],
                     [
                         'Conexão',
@@ -707,6 +711,11 @@ export const GUIDE: GuideSection[] = [
                     ['Importar e exportar', 'Levar as contas para outra máquina. Veja "Importar e exportar contas"'],
                     ['Atualização', 'A versão instalada e a busca por versão nova. Veja "Atualização"']
                 ]
+            },
+            { type: 'h', text: 'Tema e densidade' },
+            {
+                type: 'p',
+                text: 'Em **Aparência**, o **Tema** pode ser Escuro (o padrão), Claro ou **Sistema**, que acompanha o modo claro ou escuro do computador e troca sozinho. **Listas compactas** deixa as linhas das contas, do histórico e dos contatos mais baixas, para caber mais na tela.'
             },
             { type: 'h', text: 'Cor de destaque' },
             {

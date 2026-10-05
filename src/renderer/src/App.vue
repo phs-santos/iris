@@ -26,7 +26,8 @@ import { useMonitorStore } from './stores/monitor'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
-import logoMark from './assets/logo-mark.svg'
+import logoMarkDark from './assets/logo-mark.svg'
+import logoMarkLight from './assets/logo-mark-light.svg'
 import { accountHost } from './lib/accounts'
 
 const accounts = useAccountsStore()
@@ -215,7 +216,11 @@ onUnmounted(() => {
 <template>
     <div class="shell">
         <header v-if="mode === 'bench'" class="topbar">
-            <span class="brand"><img class="brand-mark" :src="logoMark" alt="" />{{ $t('app.iris') }}</span>
+            <span class="brand"
+                ><img class="brand-mark" :src="prefs.theme === 'light' ? logoMarkLight : logoMarkDark" alt="" />{{
+                    $t('app.iris')
+                }}</span
+            >
             <span class="summary mono tabular">
                 {{
                     $t('app.contas_pbx_registradas_chamadas', {

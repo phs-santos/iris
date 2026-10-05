@@ -131,9 +131,14 @@ async function save(format: 'txt' | 'json'): Promise<void> {
             </p>
             <div v-for="e in visible" :key="e.id" class="line" :class="[e.level, e.kind]">
                 <span class="t">{{ formatTime(e.ts) }}</span>
-                <span class="a" :style="{ color: accounts.byId(e.accountId ?? '')?.color }">{{
-                    accounts.nameOf(e.accountId)
-                }}</span>
+                <span
+                    class="a account-text"
+                    :style="{
+                        color: accounts.byId(e.accountId ?? '')?.color,
+                        '--account': accounts.byId(e.accountId ?? '')?.color
+                    }"
+                    >{{ accounts.nameOf(e.accountId) }}</span
+                >
                 <span class="x">{{ e.text }}</span>
             </div>
             <p v-if="matching.length === 0" class="trimmed">
@@ -234,7 +239,7 @@ async function save(format: 'txt' | 'json'): Promise<void> {
     color: #f3c56f;
 }
 .line.error .x {
-    color: #ff8f86;
+    color: var(--bad-text);
 }
 .line.debug .x {
     color: var(--muted);

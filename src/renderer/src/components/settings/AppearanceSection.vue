@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { t } from '@renderer/i18n'
 import { computed } from 'vue'
-import { accentTokens, PALETTES, type InterfaceSize } from '@shared/appearance'
+import { accentTokens, PALETTES, type InterfaceSize, type Theme } from '@shared/appearance'
 import { usePreferencesStore } from '@renderer/stores/preferences'
 
 const prefs = usePreferencesStore()
@@ -15,6 +15,12 @@ const sizes: Array<{ id: InterfaceSize; name: string }> = [
     { id: 'large', name: t('appearanceSection.grande') }
 ]
 const size = computed(() => prefs.appearance.size ?? 'medium')
+const themes: Array<{ id: Theme; name: string }> = [
+    { id: 'dark', name: t('appearanceSection.escuro') },
+    { id: 'light', name: t('appearanceSection.claro') },
+    { id: 'system', name: t('appearanceSection.sistema') }
+]
+const theme = computed(() => prefs.appearance.theme ?? 'dark')
 </script>
 
 <template>
@@ -62,6 +68,35 @@ const size = computed(() => prefs.appearance.size ?? 'medium')
                     <span class="btn focus-sample">{{ $t('appearanceSection.com_foco') }}</span>
                 </div>
             </div>
+            <div class="set-row">
+                <span class="what">
+                    <b id="theme-label">{{ $t('appearanceSection.tema') }}</b>
+                    <small>{{ $t('appearanceSection.tema_dica') }}</small>
+                </span>
+                <div class="seg" role="radiogroup" aria-labelledby="theme-label">
+                    <button
+                        v-for="th in themes"
+                        :key="th.id"
+                        role="radio"
+                        :aria-checked="theme === th.id"
+                        :class="{ on: theme === th.id }"
+                        @click="prefs.setTheme(th.id)"
+                    >
+                        {{ th.name }}
+                    </button>
+                </div>
+            </div>
+            <label class="set-row">
+                <span class="what">
+                    <b>{{ $t('appearanceSection.compacta') }}</b>
+                    <small>{{ $t('appearanceSection.compacta_dica') }}</small>
+                </span>
+                <input
+                    type="checkbox"
+                    :checked="Boolean(prefs.appearance.compact)"
+                    @change="prefs.setCompact(($event.target as HTMLInputElement).checked)"
+                />
+            </label>
             <div class="set-row">
                 <span class="what">
                     <b id="size-label">{{ $t('appearanceSection.tamanho_da_interface') }}</b>

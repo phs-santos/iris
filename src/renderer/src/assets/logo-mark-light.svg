@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="200 195 630 640">
+    <!-- Marca da Íris para o cabeçalho no tema claro: o fone escuro, porque o branco some no fundo claro. Mesmas formas de build/icon.svg. -->
+    <defs>
+        <mask id="cuts">
+            <rect width="1024" height="1024" fill="#16202a" />
+            <path d="M262 364 L356 500 M540 662 L672 756" stroke="#000" stroke-width="15" />
+        </mask>
+    </defs>
+    <path
+        fill="#4f8ff7"
+        d="M452 580 C430 480 450 390 520 355 L780 205 Q800 195 804 218 C810 270 780 315 735 335 L565 418 C510 445 480 500 462 580 Q457 590 452 580 Z"
+    />
+    <path
+        fill="#a9bcff"
+        d="M474 602 C478 520 510 460 565 438 L760 345 Q780 338 782 360 C785 405 760 440 715 458 L590 505 C540 525 510 560 486 604 Q479 612 474 602 Z"
+    />
+    <path
+        fill="#3fcf86"
+        d="M492 630 C505 580 540 545 590 528 L725 488 Q745 483 745 503 C742 545 715 575 670 580 L590 588 C550 592 525 610 502 633 Q495 638 492 630 Z"
+    />
+    <path
+        fill="#16202a"
+        mask="url(#cuts)"
+        d="M300 352 Q325 345 340 365 L392 440 Q402 460 385 475 L345 508 Q335 525 345 545 C385 615 440 670 490 700 Q510 712 525 695 L555 660 Q572 640 595 652 L668 705 Q690 722 680 745 C660 790 620 825 575 822 C470 815 300 690 235 500 C205 420 250 365 300 352 Z"
+    />
+</svg>

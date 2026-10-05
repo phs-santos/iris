@@ -1,6 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { accentTokens, INTERFACE_ZOOM, type Appearance, type InterfaceSize, type Profile } from '@shared/appearance'
+import {
+    accentTokens,
+    INTERFACE_ZOOM,
+    type Appearance,
+    type InterfaceSize,
+    type Profile,
+    type Theme
+} from '@shared/appearance'
 import { DEFAULT_RECONNECT } from '@shared/reconnect'
 import type { ReconnectSettings } from '@shared/types'
 import type { NotificationSettings } from '@shared/notifications'
@@ -24,9 +31,22 @@ export const usePreferencesStore = defineStore('preferences', () => {
     const appearance = ref<Appearance>({})
     const reconnect = ref<ReconnectSettings>({ ...DEFAULT_RECONNECT })
     const notifications = ref<NotificationSettings>({})
+    /** Tema em uso agora, já resolvido: para o que não dá para trocar só por CSS (o logo). */
+    const theme = ref<'dark' | 'light'>('dark')
+
+    /** O tema escolhido, resolvendo "sistema" pelo que o sistema operacional usa agora. */
+    const dark = window.matchMedia?.('(prefers-color-scheme: dark)')
+    const resolvedTheme = (): 'dark' | 'light' => {
+        const theme = appearance.value.theme ?? 'dark'
+        return theme === 'system' ? (dark?.matches === false ? 'light' : 'dark') : theme
+    }
+    dark?.addEventListener?.('change', () => apply())
 
     function apply(): void {
         const root = document.documentElement
+        theme.value = resolvedTheme()
+        root.dataset.theme = theme.value
+        root.dataset.density = appearance.value.compact ? 'compact' : 'normal'
         const tokens = accentTokens(appearance.value.accent)
         root.style.setProperty('--accent', tokens.accent)
         root.style.setProperty('--accent-strong', tokens.strong)
@@ -58,6 +78,18 @@ export const usePreferencesStore = defineStore('preferences', () => {
         await persist()
     }
 
+    async function setTheme(theme: Theme): Promise<void> {
+        appearance.value = { ...appearance.value, theme }
+        apply()
+        await persist()
+    }
+
+    async function setCompact(compact: boolean): Promise<void> {
+        appearance.value = { ...appearance.value, compact: compact || undefined }
+        apply()
+        await persist()
+    }
+
     async function setSize(size: InterfaceSize): Promise<void> {
         appearance.value = { ...appearance.value, size }
         apply()
@@ -80,11 +112,14 @@ export const usePreferencesStore = defineStore('preferences', () => {
         appearance,
         reconnect,
         notifications,
+        theme,
         setNotifications,
         load,
         setProfile,
         setAccent,
         setSize,
+        setTheme,
+        setCompact,
         setReconnect
     }
 })

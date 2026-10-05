@@ -136,6 +136,6 @@ onUnmounted(() => document.removeEventListener('mousedown', onOutside))
     box-shadow: inset 0 0 0 2px var(--accent);
 }
 .item.danger {
-    color: #ff8f86;
+    color: var(--bad-text);
 }
 </style>

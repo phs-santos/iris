@@ -10,10 +10,17 @@ export interface Profile {
 
 export type InterfaceSize = 'small' | 'medium' | 'large'
 
+/** Escuro (o padrão), claro, ou o mesmo do sistema operacional. */
+export type Theme = 'dark' | 'light' | 'system'
+export const isTheme = (v: unknown): v is Theme => v === 'dark' || v === 'light' || v === 'system'
+
 export interface Appearance {
     /** Cor de destaque em #rrggbb: uma das paletas ou a cor que a pessoa escolheu. */
     accent?: string
     size?: InterfaceSize
+    theme?: Theme
+    /** Linhas mais baixas nas listas, para caber mais contas e chamadas. */
+    compact?: boolean
 }
 
 export interface Palette {
@@ -103,5 +110,10 @@ export function isAppearance(value: unknown): value is Appearance {
     if (value === undefined) return true
     if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
     const a = value as Record<string, unknown>
-    return (a.accent === undefined || isHexColor(a.accent)) && (a.size === undefined || isInterfaceSize(a.size))
+    return (
+        (a.accent === undefined || isHexColor(a.accent)) &&
+        (a.size === undefined || isInterfaceSize(a.size)) &&
+        (a.theme === undefined || isTheme(a.theme)) &&
+        (a.compact === undefined || typeof a.compact === 'boolean')
+    )
 }

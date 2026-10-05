@@ -327,7 +327,7 @@ async function remove(id: string): Promise<void> {
     cursor: default;
 }
 .problem b {
-    color: #ff8f86;
+    color: var(--bad-text);
 }
 .problem span {
     color: var(--fg);
