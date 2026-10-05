@@ -21,6 +21,7 @@
         "tests/user-agent.test.ts",
         "tests/transport.test.ts",
         "tests/media.test.ts",
-        "tests/audio.test.ts"
+        "tests/audio.test.ts",
+        "tests/g722.test.ts"
     ]
 }

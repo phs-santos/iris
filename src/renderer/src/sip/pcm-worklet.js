@@ -1,12 +1,12 @@
-// Ponte de áudio do motor próprio (RF-39), dentro do AudioWorklet: o contexto roda a 8000 Hz, a
-// taxa do G.711. A captura junta o microfone em blocos de 160 amostras (20 ms) de 16 bits; a
+// Ponte de áudio do motor próprio (RF-39), dentro do AudioWorklet: o contexto roda a 16000 Hz, a
+// taxa do G.722. A captura junta o microfone em blocos de 320 amostras (20 ms) de 16 bits; a
 // reprodução guarda o que chega da rede numa fila curta, que absorve a variação do atraso.
 /* global AudioWorkletProcessor, registerProcessor */
 
-const FRAME = 160
+const FRAME = 320
 /** Fila de reprodução: começa a tocar com 60 ms e descarta o que passar de 240 ms. */
-const START = 480
-const LIMIT = 1920
+const START = 960
+const LIMIT = 3840
 
 class CaptureProcessor extends AudioWorkletProcessor {
     constructor() {

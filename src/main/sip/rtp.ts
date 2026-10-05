@@ -5,6 +5,7 @@
 import { createSocket, type Socket } from 'node:dgram'
 import { randomBytes } from 'node:crypto'
 import { createCodec, type AudioCodec, type CodecInstance } from './codec'
+import { Downsampler } from './resample'
 import { SrtpContext } from './srtp'
 
 export const FRAME_SAMPLES = 160
@@ -84,8 +85,11 @@ export interface RtpRemote {
 }
 
 export interface RtpEvents {
-    /** 20 ms de áudio recebido, já em PCM de 16 bits. */
-    audio(pcm: Int16Array): void
+    /**
+     * 20 ms de áudio recebido, já em PCM de 16 bits a 8000 Hz. Com um codec de banda larga (G.722), vem
+     * junto o mesmo áudio a 16000 Hz, para o alto-falante.
+     */
+    audio(pcm: Int16Array, wide?: Int16Array): void
     dtmf(tone: string): void
 }
 
@@ -94,6 +98,8 @@ export class RtpSession {
     private rtcp!: Socket
     private remote?: RtpRemote
     private codec?: CodecInstance
+    /** O áudio de banda larga que chega, reduzido a 8 kHz para a gravação, o medidor e os cenários. */
+    private narrow?: Downsampler
     private rtcpRemote?: { address: string; port: number }
     private srtpOut?: SrtpContext
     private srtpIn?: SrtpContext
@@ -165,6 +171,7 @@ export class RtpSession {
         if (this.codec?.name !== remote.codec) {
             this.codec?.close()
             this.codec = createCodec(remote.codec)
+            this.narrow = undefined
         }
         this.remote = { ...remote }
         this.rtcpRemote = { address: remote.address, port: remote.port + 1 }
@@ -193,7 +200,12 @@ export class RtpSession {
         if (packet.payloadType === remote.dtmfPayload) return this.receiveDtmf(packet)
         if (packet.payloadType !== remote.payload || !this.receiveAudio) return
         try {
-            this.events.audio(this.codec!.decode(packet.payload))
+            const codec = this.codec!
+            if (codec.decodeWide) {
+                const wide = codec.decodeWide(packet.payload)
+                this.narrow ??= new Downsampler()
+                this.events.audio(this.narrow.process(wide), wide)
+            } else this.events.audio(codec.decode(packet.payload))
         } catch {
             // Pacote que o codec não entende (corrompido): fica um buraco de 20 ms.
         }
@@ -239,12 +251,16 @@ export class RtpSession {
         this.socket.send(data, remote.port, remote.address, () => undefined)
     }
 
-    /** 20 ms do microfone. O relógio do RTP anda mesmo quando nada é mandado. */
-    sendPcm(pcm: Int16Array): void {
+    /**
+     * 20 ms do microfone, a 8000 Hz. `wide` é o mesmo trecho a 16000 Hz: um codec de banda larga usa
+     * esse, e os outros ficam com o de 8 kHz. O relógio do RTP anda mesmo quando nada é mandado.
+     */
+    sendPcm(pcm: Int16Array, wide?: Int16Array): void {
         const remote = this.remote
         const codec = this.codec
         if (remote && codec && this.sendAudio && !this.sendingDtmf) {
-            this.send(remote.payload, codec.encode(pcm), this.markNext)
+            const payload = wide && codec.encodeWide ? codec.encodeWide(wide) : codec.encode(pcm)
+            this.send(remote.payload, payload, this.markNext)
             this.markNext = false
         } else this.markNext = true
         this.timestamp = (this.timestamp + pcm.length * (codec?.clockScale ?? 1)) >>> 0

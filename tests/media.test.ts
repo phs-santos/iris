@@ -65,11 +65,27 @@ describe('SDP (RF-39)', () => {
         })
     })
 
-    it('escolhe o primeiro G.711 da lista do outro lado, mesmo sem rtpmap', () => {
+    it('escolhe o primeiro codec conhecido da lista do outro lado, mesmo sem rtpmap', () => {
         const media = parseSdp(
-            'v=0\r\nc=IN IP4 10.0.0.1\r\nm=audio 4000 RTP/AVP 9 8 0 96\r\na=rtpmap:96 telephone-event/8000\r\n'
+            'v=0\r\nc=IN IP4 10.0.0.1\r\nm=audio 4000 RTP/AVP 18 8 0 96\r\na=rtpmap:96 telephone-event/8000\r\n'
         )
         expect(media).toMatchObject({ codec: 'PCMA', payload: 8, dtmfPayload: 96, address: '10.0.0.1', port: 4000 })
+    })
+
+    it('G.722: o payload 9 vale sem rtpmap, e a oferta o põe primeiro, anunciado a 8000', () => {
+        const media = parseSdp('v=0\r\nc=IN IP4 10.0.0.1\r\nm=audio 4000 RTP/AVP 9 8 0\r\n')
+        expect(media).toMatchObject({ codec: 'G722', payload: 9, dtmfRate: 8000 })
+        const sdp = buildSdp({
+            address: '10.0.0.2',
+            port: 20000,
+            codecs: ['G722', 'PCMU'],
+            dtmfPayload: 101,
+            direction: 'sendrecv',
+            sessionId: 1,
+            version: 1
+        })
+        expect(sdp).toContain('m=audio 20000 RTP/AVP 9 0 101')
+        expect(sdp).toContain('a=rtpmap:9 G722/8000')
     })
 
     it('o endereço da seção de áudio vale mais que o da sessão', () => {

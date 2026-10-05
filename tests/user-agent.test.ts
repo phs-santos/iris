@@ -557,7 +557,7 @@ describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
         expect(invite.uri).toBe('sip:600@pbx.teste')
         expect(header(invite, 'X-Teste')).toBe('1')
         expect(header(invite, 'Content-Type')).toBe('application/sdp')
-        expect(invite.body).toContain('RTP/AVP 0 8 111 101 110')
+        expect(invite.body).toContain('RTP/AVP 9 0 8 111 101 110')
 
         transport.respond(invite, 100, 'Trying')
         transport.respond(invite, 180, 'Ringing')

@@ -191,7 +191,8 @@ export function registerNativeSipIpc(options: Options): void {
             hold: (held, by) => emit({ kind: 'hold', held, by }),
             transfer: (code, reason, final) => emit({ kind: 'transfer', code, reason, final }),
             dtmf: (tone) => emit({ kind: 'dtmf', tone }),
-            audio: (pcm) => send(sender, engineId, { type: 'audio', callId, pcm })
+            // Para a interface vai o áudio a 16 kHz, que é a taxa do alto-falante.
+            audio: (_pcm, wide) => send(sender, engineId, { type: 'audio', callId, pcm: wide })
         }
     }
 
@@ -216,7 +217,7 @@ export function registerNativeSipIpc(options: Options): void {
                 hold: (held, by) => callEvents(event.sender, engineId, callId).hold(held, by),
                 transfer: (...args) => callEvents(event.sender, engineId, callId).transfer(...args),
                 dtmf: (tone) => callEvents(event.sender, engineId, callId).dtmf(tone),
-                audio: (pcm) => callEvents(event.sender, engineId, callId).audio(pcm)
+                audio: (pcm, wide) => callEvents(event.sender, engineId, callId).audio(pcm, wide)
             },
             headers ?? []
         )
@@ -444,10 +445,11 @@ export function registerNativeSipIpc(options: Options): void {
         loads.get(engineId)?.()
     })
 
-    // 50 blocos por segundo por chamada: sem resposta e sem log, só confere o tamanho.
+    // 50 blocos por segundo por chamada, a 16 kHz: sem resposta e sem log, só confere o tamanho.
     on(IPC.sipAudio, (_e, engineId: unknown, callId: unknown, pcm: unknown) => {
-        if (!isEngineId(engineId) || !isCallId(callId) || !(pcm instanceof Int16Array) || pcm.length > 1920) return
-        calls.get(callKey(engineId, callId))?.sendPcm(pcm)
+        if (!isEngineId(engineId) || !isCallId(callId) || !(pcm instanceof Int16Array)) return
+        if (pcm.length === 0 || pcm.length > 3840 || pcm.length % 2) return
+        calls.get(callKey(engineId, callId))?.sendMic(pcm)
     })
 
     handle(IPC.sipHealth, async (_e, engineId: string): Promise<NativeSipHealth> => {

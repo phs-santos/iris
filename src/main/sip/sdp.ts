@@ -1,4 +1,4 @@
-// SDP (RFC 4566) do motor próprio: só áudio, com G.711, Opus e telephone-event. Monta a nossa descrição e lê
+// SDP (RFC 4566) do motor próprio: só áudio, com G.722, G.711, Opus e telephone-event. Monta a nossa descrição e lê
 // a do outro lado: para onde mandar o RTP, com qual codec e em que sentido.
 
 import type { AudioCodec } from './codec'
@@ -47,7 +47,7 @@ export function buildSdp(media: LocalMedia): string {
     const family = media.address.includes(':') ? 'IP6' : 'IP4'
     const opus = media.codecs.includes('opus')
     const payloadOf = (codec: AudioCodec): number =>
-        codec === 'PCMU' ? 0 : codec === 'PCMA' ? 8 : (media.opusPayload ?? OPUS_PAYLOAD)
+        codec === 'PCMU' ? 0 : codec === 'PCMA' ? 8 : codec === 'G722' ? 9 : (media.opusPayload ?? OPUS_PAYLOAD)
     // Numa oferta vão os dois telephone-event; numa resposta, só o que o outro lado ofereceu.
     const dtmf8 = media.dtmfPayload
     const dtmf48 = opus ? media.dtmf48Payload : undefined
@@ -107,16 +107,19 @@ export function parseSdp(text: string): RemoteMedia {
     let dtmf8: number | undefined
     let dtmf48: number | undefined
     for (const format of formats.map(Number)) {
-        // Os payloads 0 e 8 são fixos e podem vir sem rtpmap.
-        const name = names.get(format) ?? (format === 0 ? 'PCMU/8000' : format === 8 ? 'PCMA/8000' : '')
+        // Os payloads 0, 8 e 9 são fixos e podem vir sem rtpmap. O G.722 se anuncia a 8000, mesmo sendo de 16 kHz.
+        const name =
+            names.get(format) ??
+            (format === 0 ? 'PCMU/8000' : format === 8 ? 'PCMA/8000' : format === 9 ? 'G722/8000' : '')
         // Vale a ordem de preferência de quem mandou o SDP.
         if (!codec && (name === 'PCMU/8000' || name === 'PCMA/8000'))
             codec = { name: name.slice(0, 4) as AudioCodec, payload: format }
+        if (!codec && name === 'G722/8000') codec = { name: 'G722', payload: format }
         if (!codec && name === 'OPUS/48000') codec = { name: 'opus', payload: format }
         if (name === 'TELEPHONE-EVENT/8000') dtmf8 ??= format
         if (name === 'TELEPHONE-EVENT/48000') dtmf48 ??= format
     }
-    if (!codec) throw new SdpError('Nenhum codec em comum: a Íris fala G.711 (PCMU e PCMA) e Opus')
+    if (!codec) throw new SdpError('Nenhum codec em comum: a Íris fala G.722, G.711 (PCMU e PCMA) e Opus')
     // Com Opus, o DTMF usa o telephone-event do mesmo relógio (48000), se o outro lado ofereceu.
     const dtmfRate = codec.name === 'opus' && dtmf48 !== undefined ? 48000 : 8000
     const dtmfPayload = dtmfRate === 48000 ? dtmf48 : dtmf8

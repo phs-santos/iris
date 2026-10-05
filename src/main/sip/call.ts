@@ -19,6 +19,7 @@ import type { AudioCodec } from './codec'
 import { newSrtpKey } from './srtp'
 import { levelDb, SILENCE_DB } from '@shared/audio'
 import { FRAME_SAMPLES } from './rtp'
+import { Downsampler, Upsampler } from './resample'
 
 const token = (bytes = 6): string => randomBytes(bytes).toString('hex')
 const DTMF_PAYLOAD = 101
@@ -40,7 +41,8 @@ export interface CallEvents {
     /** Andamento de uma transferência pedida por esta conta (NOTIFY do REFER). */
     transfer(code: number, reason: string, final: boolean): void
     dtmf(tone: string): void
-    audio(pcm: Int16Array): void
+    /** 20 ms recebidos: a 8000 Hz e, para o alto-falante, a 16000 Hz. */
+    audio(pcm: Int16Array, wide: Int16Array): void
 }
 
 /** O que a chamada usa do user-agent: transporte, transações e a identidade da conta. */
@@ -91,7 +93,8 @@ export class SipCall {
     private rtp: RtpSession
     private rtpPort = 0
     /** G.711 primeiro: o Opus só entra quando é o que o outro lado tem (RF-47). */
-    private codecs: AudioCodec[] = ['PCMU', 'PCMA', 'opus']
+    // O G.722 vem primeiro: quando o PBX aceita, a chamada sai em banda larga.
+    private codecs: AudioCodec[] = ['G722', 'PCMU', 'PCMA', 'opus']
     /** Depois de negociar, os números de payload do outro lado, para a resposta usar os mesmos. */
     private negotiated?: { opusPayload?: number; dtmfPayload?: number; dtmf48Payload?: number }
     private sdpVersion = 1
@@ -112,6 +115,8 @@ export class SipCall {
     private canceled = false
     /** Volume dos últimos blocos recebidos, para os cenários saberem se há áudio (RF-41). */
     private levels: { at: number; db: number }[] = []
+    private mic = new Downsampler()
+    private speaker = new Upsampler()
     /** Áudio que está sendo tocado no lugar do microfone, e por onde ele vai. */
     private playing?: { timer: ReturnType<typeof setInterval>; done: () => void }
     /** Quem quer uma cópia do áudio que passa, nos dois sentidos (gravação, RF-36). */
@@ -129,11 +134,12 @@ export class SipCall {
         this.callId = callId ?? `${token(12)}@iris`
         this.state = direction === 'out' ? 'calling' : 'ringing'
         this.rtp = new RtpSession({
-            audio: (pcm) => {
+            audio: (pcm, wide) => {
                 this.levels.push({ at: Date.now(), db: levelDb(pcm) })
                 if (this.levels.length > 50) this.levels.shift()
                 this.tap?.('received', pcm)
-                this.events.audio(pcm)
+                // O alto-falante trabalha a 16 kHz: um codec de banda estreita é subido para lá.
+                this.events.audio(pcm, wide ?? this.speaker.process(pcm))
             },
             dtmf: (tone) => this.events.dtmf(tone)
         })
@@ -549,7 +555,18 @@ export class SipCall {
         if (response.status >= 300) this.events.transfer(response.status, response.reason, true)
     }
 
-    /** 20 ms do microfone. Enquanto um tom ou arquivo toca, o microfone é descartado. */
+    /**
+     * 20 ms do microfone, a 16000 Hz (320 amostras). O G.722 manda assim; para os outros codecs, e
+     * para a gravação e os cenários, vale a versão de 8 kHz.
+     */
+    sendMic(wide: Int16Array): void {
+        if (this.state === 'ended' || this.playing) return
+        const pcm = this.mic.process(wide)
+        this.tap?.('sent', pcm)
+        this.rtp.sendPcm(pcm, wide)
+    }
+
+    /** 20 ms de áudio a 8000 Hz. Enquanto um tom ou arquivo toca, o microfone é descartado. */
     sendPcm(pcm: Int16Array): void {
         if (this.state === 'ended' || this.playing) return
         this.tap?.('sent', pcm)

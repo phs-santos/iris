@@ -686,7 +686,7 @@ export class SipUserAgent {
             hold: (held, by) => sink.target?.hold(held, by),
             transfer: (...args) => sink.target?.transfer(...args),
             dtmf: (tone) => sink.target?.dtmf(tone),
-            audio: (pcm) => sink.target?.audio(pcm)
+            audio: (pcm, wide) => sink.target?.audio(pcm, wide)
         }
         const call = new SipCall(this.host(), relay, 'in', decodeURIComponent(user), from.display, callId)
         this.calls.set(callId, call)

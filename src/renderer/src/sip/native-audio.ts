@@ -1,11 +1,12 @@
 // Áudio de uma chamada do motor próprio (RF-39). O RTP fica no processo principal; aqui o microfone
 // vira blocos de 20 ms de PCM e o que chega da rede vai para um elemento <audio>, como nas chamadas
-// WebRTC, para a escolha de saída de áudio (RF-19) valer igual.
+// WebRTC, para a escolha de saída de áudio (RF-19) valer igual. Tudo a 16000 Hz, a taxa do G.722; para
+// os codecs de 8 kHz, o processo principal reduz e amplia.
 
 import workletUrl from './pcm-worklet.js?url&no-inline'
 import { audioOutput } from './audio'
 
-const RATE = 8000
+const RATE = 16000
 
 export class NativeAudio {
     private ctx?: AudioContext
@@ -16,7 +17,7 @@ export class NativeAudio {
     private element = document.createElement('audio')
     private closed = false
 
-    /** `onFrame` recebe 160 amostras de 16 bits a cada 20 ms. */
+    /** `onFrame` recebe 320 amostras de 16 bits a cada 20 ms. */
     constructor(private onFrame: (pcm: Int16Array) => void) {
         this.element.autoplay = true
         this.element.hidden = true
