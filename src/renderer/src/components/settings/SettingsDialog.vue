@@ -10,6 +10,7 @@ import AppearanceSection from './AppearanceSection.vue'
 import AudioSection from './AudioSection.vue'
 import ConnectionSection from './ConnectionSection.vue'
 import ServersSection from './ServersSection.vue'
+import NotificationsSection from './NotificationsSection.vue'
 import AiSection from './AiSection.vue'
 import SecuritySection from './SecuritySection.vue'
 import ImportExportSection from './ImportExportSection.vue'
@@ -29,6 +30,7 @@ const sections = computed(() =>
         { id: 'profile' as const, name: t('settingsDialog.perfil') },
         { id: 'appearance' as const, name: t('settingsDialog.aparencia') },
         { id: 'audio' as const, name: t('settingsDialog.audio') },
+        { id: 'notifications' as const, name: t('settingsDialog.notificacoes') },
         { id: 'servers' as const, name: t('settingsDialog.servidores') },
         { id: 'connection' as const, name: t('settingsDialog.conexao') },
         { id: 'ai' as const, name: t('settingsDialog.ajuda_da_ia') },
@@ -119,6 +121,7 @@ function onNavKey(event: KeyboardEvent): void {
                     <ProfileSection v-if="current === 'profile'" />
                     <AppearanceSection v-else-if="current === 'appearance'" />
                     <AudioSection v-else-if="current === 'audio'" />
+                    <NotificationsSection v-else-if="current === 'notifications'" />
                     <ServersSection v-else-if="current === 'servers'" />
                     <ConnectionSection v-else-if="current === 'connection'" />
                     <AiSection v-else-if="current === 'ai'" />

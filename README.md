@@ -40,6 +40,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-49 | Relatório JUnit (`.xml`) na linha de comando |
 | RF-41 | Áudio nos cenários: passos Tocar tom, Tocar arquivo WAV, Esperar áudio e Esperar silêncio. Pega chamada muda, que o código SIP não mostra. Tocar só em SIP puro e no simulado; medir, em qualquer conta |
 | RF-36 | Gravação da chamada em WAV estéreo (um lado em cada canal), por enquanto só em SIP puro |
+| Notificações | Chamada recebida (com Atender e Recusar no aviso, no macOS), chamada perdida, conta que caiu, correio de voz e monitor, cada um ligável em Configurações → Notificações, com botão de teste |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, salvar a partir do histórico, CSV, e o nome do contato nas chamadas e no histórico |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
 | RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |
@@ -152,6 +153,7 @@ npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
 npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
+npm run test:notificacoes  # notificações no simulado: chamada recebida, Atender pelo aviso, chamada perdida e a escolha em Configurações
 npm run test:contatos   # agenda de contatos e servidores cadastrados pela tela, no simulado (RF-50, RF-51)
 npm run test:monitor    # monitor: cenário que falha sozinho, aviso no log e webhook num servidor local (RF-43)
 npm run test:audio  # áudio nos cenários pela linha de comando: tom e WAV no eco, e um ramal mudo (RF-41)

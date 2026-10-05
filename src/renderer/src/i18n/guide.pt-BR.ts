@@ -1071,7 +1071,9 @@ export const GUIDE: GuideSection[] = [
                     'O **ícone na bandeja** (área de notificação) traz a janela de volta com um clique e tem o menu **Mostrar Íris** e **Sair**.',
                     'A **cor do ícone** diz o estado geral: cinza sem conta registrada, verde com contas registradas, amarelo com chamada tocando, azul em chamada e vermelho quando alguma conta está em erro. Parar o mouse em cima mostra os números.',
                     '**Sair** encerra o app de verdade: os ramais saem do ar e as chamadas caem.',
-                    'Uma **chamada recebida** gera uma notificação do sistema; clicar nela abre a janela. Na Bancada, ela também aparece numa faixa colorida no alto da coluna do meio, com **Atender** e **Recusar**.'
+                    'Uma **chamada recebida** gera uma notificação do sistema, com **Atender** e **Recusar** no próprio aviso (no macOS); clicar nela abre a janela. Na Bancada, ela também aparece numa faixa colorida no alto da coluna do meio.',
+                    'Também avisam: **chamada perdida**, **conta que caiu**, **correio de voz** novo e **cenário monitorado** que falhou ou voltou a passar. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
+                    'Não aparece nada? No macOS, confira em **Ajustes do Sistema → Notificações → Iris** se os avisos estão permitidos e se o **Não Perturbe** está desligado. Contas com auto-atender não avisam de chamada recebida.'
                 ]
             },
             {

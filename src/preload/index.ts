@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { LoadProgress } from '@shared/load'
+import type { NotificationAction } from '@shared/notifications'
 import { IPC, type IrisApi, type CertificateErrorEvent, type NativeSipEvent, type UpdateStatus } from '@shared/types'
 
 // A interface só alcança o sistema por estes canais fixos (RNF-08).
@@ -41,7 +42,15 @@ const api: IrisApi = {
         pickWav: () => ipcRenderer.invoke(IPC.audioPickWav),
         loadWav: (path) => ipcRenderer.invoke(IPC.audioLoadWav, path)
     },
-    notify: (title, body) => ipcRenderer.send(IPC.notify, title, body),
+    notify: (request) => ipcRenderer.send(IPC.notify, request),
+    closeNotification: (callId) => ipcRenderer.send(IPC.notifyClose, callId),
+    focusWindow: () => ipcRenderer.send(IPC.focusWindow),
+    onNotificationAction: (listener) => {
+        const handler = (_e: Electron.IpcRendererEvent, callId: string, action: NotificationAction): void =>
+            listener(callId, action)
+        ipcRenderer.on(IPC.notifyAction, handler)
+        return () => ipcRenderer.removeListener(IPC.notifyAction, handler)
+    },
     net: {
         diagnose: (request) => ipcRenderer.invoke(IPC.netDiagnose, request)
     },

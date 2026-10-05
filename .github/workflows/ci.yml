@@ -68,6 +68,8 @@ jobs:
               run: xvfb-run -a node tests/e2e/ai.mjs
             - name: Arquivos de dados estragados, gravação em fila e log interno (RNF-14, RNF-19)
               run: xvfb-run -a node tests/e2e/arquivos.mjs
+            - name: Notificações
+              run: xvfb-run -a node tests/e2e/notificacoes.mjs
             - name: Contatos e servidores cadastrados (RF-50, RF-51)
               run: xvfb-run -a node tests/e2e/contatos.mjs
             - name: Monitor com webhook num servidor local (RF-43)

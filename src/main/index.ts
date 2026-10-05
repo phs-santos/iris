@@ -28,6 +28,7 @@ import { isAppearance, isProfile } from '@shared/appearance'
 import { isReconnect } from '@shared/reconnect'
 import { parseWav, SAMPLE_RATE } from '@shared/audio'
 import { isWebhookPayload, isWebhookUrl, type WebhookPayload } from '@shared/monitor'
+import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
 import { HISTORY_LIMIT, isHistoryEntry, type HistoryEntry } from '@shared/history'
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
@@ -239,7 +240,15 @@ function registerIpc(): void {
     handle(IPC.secretsStatus, () => secretsStatus())
     handle(IPC.settingsLoad, () => loadSettings())
     // A interface manda só os campos que mudou; os outros (canal de atualização, IA) ela não alcança.
-    const patchKeys = ['trustedHosts', 'audioInputId', 'audioOutputId', 'profile', 'appearance', 'reconnect']
+    const patchKeys = [
+        'trustedHosts',
+        'audioInputId',
+        'audioOutputId',
+        'profile',
+        'appearance',
+        'reconnect',
+        'notifications'
+    ]
     const isDeviceId = (v: unknown): boolean => v === undefined || isString(v, 500)
     handle(IPC.settingsUpdate, async (_e, patch: SettingsPatch) => {
         check(
@@ -251,7 +260,8 @@ function registerIpc(): void {
                 isDeviceId(patch.audioOutputId) &&
                 isProfile(patch.profile) &&
                 isAppearance(patch.appearance) &&
-                isReconnect(patch.reconnect),
+                isReconnect(patch.reconnect) &&
+                isNotificationSettings(patch.notifications),
             'preferências'
         )
         const settings = await updateSettings(patch)
@@ -299,11 +309,50 @@ function registerIpc(): void {
         return parseWav(await fs.readFile(path)).subarray(0, SAMPLE_RATE * 120)
     })
 
-    on(IPC.notify, (_e, title: string, body: string) => {
-        if (!Notification.isSupported() || !isString(title, 200) || !isString(body, 1000)) return
-        const notification = new Notification({ title, body })
-        notification.on('click', showWindow)
+    // Notificações do sistema. A de chamada recebida tem Atender e Recusar (no macOS) e fica guardada
+    // pelo id da chamada, para sumir quando ela for atendida em outro lugar.
+    const ringing = new Map<string, Notification>()
+    const act = (callId: string, action: NotificationAction): void => {
+        ringing.get(callId)?.close()
+        ringing.delete(callId)
+        if (action !== 'reject') showWindow()
+        mainWindow?.webContents.send(IPC.notifyAction, callId, action)
+    }
+    on(IPC.notify, (_e, request: unknown) => {
+        if (!Notification.isSupported() || !isNotifyRequest(request)) return
+        const { kind, title, body, callId } = request
+        // Uma linha no log interno: quando alguém diz que não viu o aviso, dá para saber se ele saiu.
+        appLog('info', `Notificação ${kind}: ${title}${callId ? ` (${callId})` : ''}`)
+        const call = kind === 'incoming' && callId
+        const notification = new Notification({
+            title,
+            body,
+            urgency: call ? 'critical' : 'normal',
+            actions: call
+                ? [
+                      { type: 'button', text: 'Atender' },
+                      { type: 'button', text: 'Recusar' }
+                  ]
+                : []
+        })
+        if (call) {
+            ringing.get(callId)?.close()
+            ringing.set(callId, notification)
+            notification.on('action', (_event, index) => act(callId, index === 0 ? 'answer' : 'reject'))
+            notification.on('click', () => act(callId, 'open'))
+            notification.on('close', () => ringing.delete(callId))
+        } else notification.on('click', showWindow)
         notification.show()
+    })
+    on(IPC.notifyClose, (_e, callId: unknown) => {
+        if (!isString(callId, 200)) return
+        ringing.get(callId)?.close()
+        ringing.delete(callId)
+    })
+    // Chamada recebida traz a janela para a frente, se o usuário pediu (Configurações → Notificações).
+    on(IPC.focusWindow, () => {
+        showWindow()
+        mainWindow?.moveTop()
     })
 
     // Webhook do monitor (RF-43): só http e https, com o corpo conferido e prazo de 10 s. A interface

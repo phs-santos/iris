@@ -7,6 +7,7 @@ import { useCallsStore } from './calls'
 import { describeStatus, newAccount, normalizeImported, parseAccountsCsv, sampleAccounts } from '@renderer/lib/accounts'
 import { reconnectDelay, shouldReconnect } from '@shared/reconnect'
 import { usePreferencesStore } from './preferences'
+import { notify } from '@renderer/lib/notify'
 import { parseBlfList, type MwiInfo, type PresenceState } from '@shared/presence'
 
 interface Runtime {
@@ -174,6 +175,9 @@ export const useAccountsStore = defineStore('accounts', () => {
 
         engine.on('status', (status) => {
             if (runtime[id]?.engine !== engine) return
+            // A conta estava no ar e caiu: avisa uma vez (a reconexão continua tentando sozinha).
+            if (status.state === 'error' && runtime[id].status.state === 'registered')
+                notify('registration', `${account.name} caiu`, describeStatus(status))
             runtime[id].status = status
             log.add(id, status.state === 'error' ? 'error' : 'info', 'event', `Registro: ${describeStatus(status)}`)
             if (status.state === 'registered') clearRetry(id)
@@ -189,6 +193,8 @@ export const useAccountsStore = defineStore('accounts', () => {
             if (runtime[id]?.engine !== engine) return
             const before = runtime[id].mwi?.newMessages ?? 0
             runtime[id].mwi = info
+            if (info.newMessages > before)
+                notify('voicemail', `Correio de voz: ${account.name}`, `${info.newMessages} mensagem(ns) nova(s)`)
             if (info.newMessages !== before)
                 log.add(
                     id,

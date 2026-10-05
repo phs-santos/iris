@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { reactive } from 'vue'
 import { monitorTransition, type WebhookPayload } from '@shared/monitor'
 import { useLogStore } from './log'
+import { notify } from '@renderer/lib/notify'
 import { useScenariosStore } from './scenarios'
 
 export interface MonitorState {
@@ -68,7 +69,7 @@ export const useMonitorStore = defineStore('monitor', () => {
                 ? `Monitor: o cenário "${scenario.name}" falhou ${where}`
                 : `Monitor: o cenário "${scenario.name}" voltou a passar`
         log.add(null, event === 'failed' ? 'error' : 'info', 'event', text)
-        window.iris.notify(event === 'failed' ? `${scenario.name} falhou` : `${scenario.name} voltou a passar`, text)
+        notify('monitor', event === 'failed' ? `${scenario.name} falhou` : `${scenario.name} voltou a passar`, text)
         if (!webhook) return
         const payload: WebhookPayload = {
             app: 'Iris',

@@ -3,16 +3,27 @@ import { ref } from 'vue'
 import { accentTokens, INTERFACE_ZOOM, type Appearance, type InterfaceSize, type Profile } from '@shared/appearance'
 import { DEFAULT_RECONNECT } from '@shared/reconnect'
 import type { ReconnectSettings } from '@shared/types'
+import type { NotificationSettings } from '@shared/notifications'
 
 /** Seções da tela de Configurações. */
 export type SettingsSection =
-    'profile' | 'appearance' | 'audio' | 'servers' | 'connection' | 'ai' | 'security' | 'data' | 'update'
+    | 'profile'
+    | 'appearance'
+    | 'audio'
+    | 'notifications'
+    | 'servers'
+    | 'connection'
+    | 'ai'
+    | 'security'
+    | 'data'
+    | 'update'
 
 /** Perfil e aparência da tela de Configurações, aplicados na hora e salvos em settings.json. */
 export const usePreferencesStore = defineStore('preferences', () => {
     const profile = ref<Profile>({})
     const appearance = ref<Appearance>({})
     const reconnect = ref<ReconnectSettings>({ ...DEFAULT_RECONNECT })
+    const notifications = ref<NotificationSettings>({})
 
     function apply(): void {
         const root = document.documentElement
@@ -27,6 +38,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
         profile.value = settings.profile ?? {}
         appearance.value = settings.appearance ?? {}
         reconnect.value = settings.reconnect ?? { ...DEFAULT_RECONNECT }
+        notifications.value = settings.notifications ?? {}
         apply()
     }
 
@@ -58,5 +70,21 @@ export const usePreferencesStore = defineStore('preferences', () => {
         await window.iris.settings.update({ reconnect: { ...next } })
     }
 
-    return { profile, appearance, reconnect, load, setProfile, setAccent, setSize, setReconnect }
+    async function setNotifications(next: NotificationSettings): Promise<void> {
+        notifications.value = next
+        await window.iris.settings.update({ notifications: JSON.parse(JSON.stringify(next)) })
+    }
+
+    return {
+        profile,
+        appearance,
+        reconnect,
+        notifications,
+        setNotifications,
+        load,
+        setProfile,
+        setAccent,
+        setSize,
+        setReconnect
+    }
 })

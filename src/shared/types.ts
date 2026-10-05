@@ -10,6 +10,7 @@ import type { SipServer } from './servers'
 import type { MonitorSettings, WebhookPayload } from './monitor'
 import type { NetDiagRequest, NetDiagResult } from './net-diag'
 import type { LoadProgress, LoadReport, LoadSpec } from './load'
+import type { NotificationAction, NotificationSettings, NotifyRequest } from './notifications'
 import type { MwiInfo, PresenceState } from './presence'
 import type { AccountTransport, SipTransportKind } from './sip-target'
 
@@ -114,11 +115,16 @@ export interface Settings {
     appearance?: Appearance
     /** Sem o campo, vale o padrão de `@shared/reconnect`. */
     reconnect?: ReconnectSettings
+    /** Quais eventos viram notificação do sistema. */
+    notifications?: NotificationSettings
 }
 
 /** Campos que a interface pode mudar em `settings.json`; o canal de atualização e a IA têm canais próprios. */
 export type SettingsPatch = Partial<
-    Pick<Settings, 'trustedHosts' | 'audioInputId' | 'audioOutputId' | 'profile' | 'appearance' | 'reconnect'>
+    Pick<
+        Settings,
+        'trustedHosts' | 'audioInputId' | 'audioOutputId' | 'profile' | 'appearance' | 'reconnect' | 'notifications'
+    >
 >
 
 /** Reconexão das contas depois de uma queda (RNF-06). */
@@ -306,7 +312,13 @@ export interface IrisApi {
         pickWav(): Promise<string | null>
         loadWav(path: string): Promise<Int16Array>
     }
-    notify(title: string, body: string): void
+    notify(request: NotifyRequest): void
+    /** Tira a notificação de uma chamada que já foi atendida, recusada ou desistida. */
+    closeNotification(callId: string): void
+    /** Traz a janela para a frente. */
+    focusWindow(): void
+    /** Clique em Atender, Recusar ou na própria notificação de uma chamada. */
+    onNotificationAction(listener: (callId: string, action: NotificationAction) => void): () => void
     /** Diagnóstico de rede da Saúde (RF-46): DNS SRV, certificado TLS e STUN. */
     net: {
         diagnose(request: NetDiagRequest): Promise<NetDiagResult>
@@ -403,6 +415,9 @@ export const IPC = {
     audioPickWav: 'audio:pick-wav',
     audioLoadWav: 'audio:load-wav',
     notify: 'app:notify',
+    notifyClose: 'app:notify-close',
+    notifyAction: 'app:notify-action',
+    focusWindow: 'app:focus-window',
     monitorWebhook: 'monitor:webhook',
     netDiagnose: 'net:diagnose',
     tray: 'app:tray',

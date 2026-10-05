@@ -3,6 +3,28 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    notificationsSection: {
+        notificacoes: 'Notificações',
+        explicacao:
+            'Avisos do sistema para o que acontece com a Íris na bandeja ou atrás de outras janelas. Clicar no aviso traz a Íris para a frente.',
+        recebida: 'Chamada recebida',
+        recebida_dica: 'Com Atender e Recusar no próprio aviso (no macOS). Contas com auto-atender não avisam.',
+        perdida: 'Chamada perdida',
+        perdida_dica: 'Quem ligou desistiu antes de alguém atender.',
+        caiu: 'Conta caiu',
+        caiu_dica: 'Uma conta registrada perdeu o registro. A Íris continua tentando sozinha.',
+        correio: 'Correio de voz',
+        correio_dica: 'Mensagem nova na caixa postal, em contas de SIP puro.',
+        monitor: 'Monitor de cenários',
+        monitor_dica: 'Um cenário monitorado passou a falhar ou voltou a passar.',
+        trazer_janela: 'Chamada recebida traz a janela para a frente',
+        trazer_janela_dica: 'Mesmo com a Íris escondida na bandeja.',
+        testar: 'Testar notificação',
+        teste_titulo: 'Íris',
+        teste_texto: 'Se você está lendo isto, as notificações funcionam.',
+        nao_apareceu:
+            'Não apareceu? No macOS, veja em Ajustes do Sistema → Notificações → Iris se os avisos estão permitidos e se o modo Não Perturbe está desligado. No Windows, em Configurações → Sistema → Notificações.'
+    },
     contactsPane: {
         buscar: 'Buscar por nome, número ou empresa',
         novo: '+ Novo contato',
@@ -721,6 +743,7 @@ export const ptBR = {
         certificado_de_nao_e_mais: 'Certificado de {host} não é mais aceito'
     },
     settingsDialog: {
+        notificacoes: 'Notificações',
         servidores: 'Servidores',
         configuracoes: 'Configurações',
         fechar: 'Fechar',

@@ -142,9 +142,16 @@ const firstPaint = (): Promise<void> =>
     })
 
 let offCert: (() => void) | undefined
+let offNotification: (() => void) | undefined
 let offUpdate: (() => void) | undefined
 onMounted(async () => {
     window.addEventListener('keydown', onKey)
+    // Atender e Recusar na notificação de chamada recebida.
+    offNotification = window.iris.onNotificationAction((callId, action) => {
+        if (action === 'answer') void calls.answer(callId)
+        else if (action === 'reject') void calls.reject(callId)
+        else calls.selectedId = callId
+    })
     offCert = window.iris.onCertificateError((event) => {
         certError.value = event
         log.add(
@@ -200,6 +207,7 @@ onMounted(async () => {
 onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
     offCert?.()
+    offNotification?.()
     offUpdate?.()
 })
 </script>

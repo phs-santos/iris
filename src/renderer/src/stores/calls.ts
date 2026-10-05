@@ -7,6 +7,8 @@ import { useAccountsStore } from './accounts'
 import { useLogStore } from './log'
 import { useHistoryStore } from './history'
 import { useContactsStore } from './contacts'
+import { usePreferencesStore } from './preferences'
+import { notify } from '@renderer/lib/notify'
 
 export type CallState = 'dialing' | 'ringing' | 'early' | 'established' | 'ended'
 
@@ -107,6 +109,7 @@ export const useCallsStore = defineStore('calls', () => {
             c.state = 'established'
             c.establishedAt = Date.now()
             c.autoAnswerAt = undefined
+            window.iris.closeNotification?.(call.id)
             log.add(accountId, 'info', 'event', `Chamada ${label()} em andamento`)
         })
         call.on('ended', (end) => {
@@ -119,6 +122,12 @@ export const useCallsStore = defineStore('calls', () => {
             if (original?.consultId === c.id) original.consultId = undefined
             const consult = c.consultId ? view(c.consultId) : undefined
             if (consult?.consultFor === c.id) consult.consultFor = undefined
+            window.iris.closeNotification?.(call.id)
+            // Quem ligou desistiu antes de alguém atender: chamada perdida.
+            if (c.direction === 'in' && !c.establishedAt && end.by === 'remote' && !c.autoAnswerAt) {
+                const name = c.remoteName ? `${c.remoteName} (${c.remote})` : c.remote
+                notify('missed', `Chamada perdida em ${useAccountsStore().nameOf(accountId)}`, `De ${name}`)
+            }
             if (c.recording) log.add(accountId, 'info', 'event', `Gravação salva em ${c.recording}`)
             c.recording = undefined
             const wasEstablished = c.state === 'established'
@@ -238,7 +247,8 @@ export const useCallsStore = defineStore('calls', () => {
                 if (view(call.id)?.state === 'ringing') void answer(call.id)
             }, delay)
         } else {
-            window.iris.notify(`${account?.name ?? 'Conta'} está tocando`, `Chamada de ${who}`)
+            notify('incoming', `${account?.name ?? 'Conta'} está tocando`, `Chamada de ${who}`, c.id)
+            if (usePreferencesStore().notifications.focusOnRing) window.iris.focusWindow()
         }
     }
 
