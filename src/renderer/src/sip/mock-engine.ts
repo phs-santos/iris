@@ -1,6 +1,7 @@
 // Motor simulado (RF-32): imita um PBX sem rede. Contas simuladas do mesmo domínio
 // ligam umas para as outras; alguns números especiais simulam respostas do PBX.
 
+import { testPattern, type TestPattern } from './mock-video'
 import { parseBlfList, type PresenceState } from '@shared/presence'
 import type { SipManualRequest, SipManualResponse } from '@shared/types'
 import { levelDb, SAMPLE_RATE, SILENCE_DB } from '@shared/audio'
@@ -16,7 +17,9 @@ import type {
     LogLevel,
     LogKind,
     RegStatus,
-    SipEngine
+    SipEngine,
+    DialOptions,
+    VideoStreams
 } from './engine'
 
 /** Números especiais do PBX simulado, mostrados na ajuda do discador. */
@@ -57,6 +60,10 @@ const MOCK_VOICE_DB = -30
 class MockCall implements EngineCall {
     readonly earlyAudio = false
     readonly localRingback = false
+    /** Chamada de vídeo (RF-52): cada ponta que manda vídeo desenha uma imagem de teste. */
+    video = false
+    private pattern: TestPattern | null = null
+    private cameraOff = false
     muted = false
     held = false
     private heard?: { db: number; until: number }
@@ -128,12 +135,43 @@ class MockCall implements EngineCall {
         this.state = 'ended'
         publishPresence(this.engine.domain, this.engine.extension, 'idle')
         this.timers.forEach(clearTimeout)
+        this.pattern?.stop()
+        this.pattern = null
         this.emit('ended', end)
         this.emitter.clear()
     }
 
-    async answer(): Promise<void> {
+    /** Liga a imagem de teste desta ponta e avisa as duas telas. */
+    startVideo(label: string, color: string): void {
+        this.pattern ??= testPattern(label, color)
+        this.emit('video')
+        this.peer?.emit('video')
+    }
+
+    videoStreams(): VideoStreams {
+        return {
+            remote: this.video ? (this.peer?.outgoingVideo ?? this.ivrVideo?.stream ?? null) : null,
+            local: this.outgoingVideo
+        }
+    }
+
+    /** O que esta ponta manda: nada com a câmera desligada. */
+    get outgoingVideo(): MediaStream | null {
+        return this.cameraOff ? null : (this.pattern?.stream ?? null)
+    }
+
+    /** A URA também "aparece", para dar para ver vídeo com uma conta só. */
+    ivrVideo: TestPattern | null = null
+
+    setCamera(on: boolean): void {
+        this.cameraOff = !on
+        this.emit('video')
+        this.peer?.emit('video')
+    }
+
+    async answer(options: { video?: boolean } = {}): Promise<void> {
         if (this.direction !== 'in' || this.state !== 'ringing') return
+        if (options.video && this.video) this.startVideo(this.engine.label, this.engine.color)
         this.respond('out', '200 OK', ['Content-Type: application/sdp'])
         this.ack('in')
         this.establish()
@@ -304,10 +342,14 @@ class MockCall implements EngineCall {
 }
 
 export class MockEngine implements SipEngine {
+    readonly video = true
     private emitter = new Emitter<EngineEvents>()
     private status: RegStatus = { state: 'disconnected' }
     readonly domain: string
     readonly extension: string
+    /** Nome e cor da conta, para a imagem de teste do vídeo (RF-52). */
+    readonly label: string
+    readonly color: string
     /** Ramais que esta conta acompanha (BLF, RF-27). */
     readonly watching: string[]
     private calls = new Set<MockCall>()
@@ -320,6 +362,8 @@ export class MockEngine implements SipEngine {
     ) {
         this.domain = account.domain.toLowerCase()
         this.extension = account.extension
+        this.label = account.name
+        this.color = account.color
         this.watching = parseBlfList(account.blf)
         this.registerCallId = `reg-${nextId++}-${Math.random().toString(36).slice(2, 8)}@${this.domain}`
     }
@@ -418,9 +462,13 @@ export class MockEngine implements SipEngine {
         return call
     }
 
-    async dial(destination: string): Promise<EngineCall> {
+    async dial(destination: string, options: DialOptions = {}): Promise<EngineCall> {
         if (!this.registered) throw new Error('A conta precisa estar registrada para ligar')
         const call = this.track(new MockCall(this, 'out', destination))
+        if (options.video) {
+            call.video = true
+            call.startVideo(this.label, this.color)
+        }
         call.sip('out', `INVITE sip:${destination}@${this.domain} SIP/2.0`, 'INVITE', 1, [
             `From: <sip:${this.extension}@${this.domain}>`,
             `To: <sip:${destination}@${this.domain}>`,
@@ -478,7 +526,12 @@ export class MockEngine implements SipEngine {
                 call.respond('in', '200 OK', ['Content-Type: application/sdp'])
                 call.ack('out')
                 this.log('info', 'URA atendeu: "Digite 1 para suporte, 2 para vendas"')
+                if (call.video) {
+                    call.ivrVideo = testPattern('URA', '#7a5cff')
+                    call.later(60_000, () => call.ivrVideo?.stop())
+                }
                 call.establish()
+                call.emit('video')
             })
             return
         }
@@ -488,6 +541,7 @@ export class MockEngine implements SipEngine {
     receive(from: string, fromName: string, peer: MockCall): MockCall {
         const call = this.track(new MockCall(this, 'in', from, fromName))
         call.peer = peer
+        call.video = peer.video
         call.sip('in', `INVITE sip:${this.extension}@${this.domain} SIP/2.0`, 'INVITE', 1, [
             `From: <sip:${from}@${this.domain}>`,
             `To: <sip:${this.extension}@${this.domain}>`,

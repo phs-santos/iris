@@ -195,6 +195,30 @@ try {
     await page.getByText('0 chamadas').waitFor({ timeout: 15000 })
     step('desligar 1001 encerrou também 1003')
 
+    // Chamada de vídeo (RF-52) pelo Asterisk, com VP8: 1002 liga com vídeo, 1001 atende com vídeo, e cada
+    // lado vê a imagem do outro andando (a câmera é a falsa do Chromium).
+    const moving = async (card, selector, what) => {
+        const handle = await card.locator(selector).elementHandle({ timeout: 15000 })
+        await page.waitForFunction((el) => el.videoWidth > 0 && el.currentTime > 0, handle, { timeout: 20000 })
+        const before = await handle.evaluate((el) => el.currentTime)
+        await page.waitForFunction(([el, t]) => el.currentTime > t + 0.3, [handle, before], { timeout: 10000 })
+        step(what)
+    }
+    await page.locator('.acc', { hasText: 'PBX 1002' }).locator('.row').click()
+    await page.getByLabel('Número').fill('1001')
+    await page.getByRole('button', { name: 'Ligar com vídeo' }).click()
+    await page
+        .getByRole('region', { name: /Chamada recebida de/ })
+        .getByRole('button', { name: 'Atender com vídeo' })
+        .click({ timeout: 20000 })
+    const videoCaller = page.locator('.call', { hasText: /1002\s*→\s*1001/ })
+    const videoCallee = page.locator('.call', { hasText: /1001\s*←\s*1002/ })
+    await moving(videoCaller, 'video.remote', 'vídeo pelo Asterisk: quem ligou vê o outro lado')
+    await moving(videoCallee, 'video.remote', 'e quem atendeu também')
+    await moving(videoCallee, 'video.local', 'com a própria câmera na miniatura')
+    await videoCaller.getByRole('button', { name: 'Desligar', exact: true }).click()
+    await page.getByText('0 chamadas').waitFor({ timeout: 15000 })
+
     // Mensagens de texto (RF-54) em WebRTC: o MESSAGE de 1001 chega a 1002 pelo Asterisk e a resposta volta.
     await page.locator('.acc', { hasText: 'PBX 1001' }).locator('.row').click()
     await page.getByRole('tab', { name: 'Mensagens' }).click()

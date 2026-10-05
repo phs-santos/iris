@@ -3,6 +3,14 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    callVideo: {
+        imagem_de: 'Imagem de {name}',
+        sua_camera: 'A sua câmera',
+        sem_imagem: 'O outro lado não está mandando imagem',
+        ligar_camera: 'Ligar a câmera',
+        desligar_camera: 'Desligar a câmera',
+        so_recebendo: 'Você atendeu sem câmera: só o outro lado aparece.'
+    },
     messagesPane: {
         ramal: 'Ramal',
         nova_conversa_com: 'Nova conversa com o ramal',
@@ -327,6 +335,7 @@ export const ptBR = {
         cenarios: 'Cenários',
         rodando: 'rodando',
         atender: 'Atender',
+        atender_com_video: 'Atender com vídeo',
         recusar: 'Recusar',
         chamadas: 'Chamadas',
         ativas: '{length} ativas',
@@ -530,6 +539,8 @@ export const ptBR = {
         em_espera_remoto: 'em espera (remoto)',
         em_chamada: 'em chamada',
         early_media: 'early media',
+        com_video: 'Com vídeo',
+        video: '· vídeo',
         falhou: 'falhou',
         encerrada: 'encerrada',
         tocando: 'tocando',
@@ -545,6 +556,8 @@ export const ptBR = {
         numero_ou_ramal: 'Número ou ramal',
         numero: 'Número',
         ligar: 'Ligar',
+        video: 'Vídeo',
+        ligar_com_video: 'Ligar com vídeo',
         registre_para_ligar: 'Registre {name} para ligar.',
         teclado: 'teclado',
         teclado_rotulo: 'Teclado numérico',
@@ -836,6 +849,8 @@ export const ptBR = {
         nivel_do_microfone: 'Nível do microfone',
         fale_alguma_coisa_a_barra: 'Fale alguma coisa: a barra deve se mexer.',
         alto_falante: 'Alto-falante',
+        camera: 'Câmera',
+        camera_dica: 'Para as chamadas de vídeo, em contas WebRTC. Vale a partir da próxima chamada.',
         tocar_som_de_teste: 'Tocar som de teste',
         volume_do_toque: 'Volume do toque: {n}%',
         volume_do_toque_rotulo: 'Volume do toque',

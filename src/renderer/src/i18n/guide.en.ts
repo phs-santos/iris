@@ -376,6 +376,20 @@ export const GUIDE_EN: GuideSection[] = [
                 type: 'p',
                 text: 'Each call is a card. A call between two of your extensions shows as two cards: the caller (→ arrow) and the callee (← arrow). Click a card to select it; the keyboard shortcuts act on the selected card.'
             },
+            { type: 'h', text: 'Video calls' },
+            {
+                type: 'p',
+                text: 'On **WebRTC** accounts (and on the simulated PBX), the **Video** button, next to Call, places the call with your camera. The callee sees **Answer** (audio only, receiving the picture of the caller) and **Answer with video** (sends the camera too). The card shows the picture of the other side and yours as a thumbnail, and the **Turn camera off** button pauses the picture without dropping the call. The camera is chosen in **Settings › Audio**. Auto-answer never turns the camera on.'
+            },
+            {
+                type: 'list',
+                items: [
+                    'The PBX has to accept a video codec on the extension. On Asterisk, add `vp8` (or `h264`) to the `allow` of both extensions.',
+                    '**Plain SIP** accounts do not do video yet: the button does not show for them.',
+                    'On macOS and Windows, the system asks for camera permission on the first video call.',
+                    'Phone mode, recording and scenarios do not have video yet.'
+                ]
+            },
             { type: 'h', text: 'What you hear before they answer' },
             {
                 type: 'p',

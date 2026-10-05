@@ -52,6 +52,7 @@ mac:
     category: public.app-category.developer-tools
     extendInfo:
         NSMicrophoneUsageDescription: A Íris usa o microfone nas chamadas de teste.
+        NSCameraUsageDescription: A Íris usa a câmera nas chamadas de vídeo.
         # Aviso do tipo alerta: sem isto o macOS mostra a notificação de chamada sem Atender e Recusar.
         NSUserNotificationAlertStyle: alert
 linux:

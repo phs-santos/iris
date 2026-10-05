@@ -152,7 +152,7 @@ São 37 requisitos em cinco grupos: 15 essenciais, 16 importantes e 6 desejávei
 | RF-27 | Presença e BLF de ramais escolhidos e aviso de correio de voz (MWI), em SIP puro | Desejável | 1.6 | O ramal aparece como ocupado enquanto está em chamada |
 | RF-50 | Agenda de contatos: nome, número, empresa, observação e conta preferida; busca, favoritos, ligar com um clique, salvar a partir do histórico e importar e exportar em CSV. O nome do contato aparece na chamada recebida, nos cartões e no histórico | Importante | 1.6 | Um contato salvo é discado pela agenda, e quando ele liga a chamada recebida mostra o nome |
 | RF-51 | Cadastro de servidores (PBX): domínio, transporte, endereço, STUN/TURN, SRTP e preset, reaproveitados pelas contas. Editar o servidor atualiza todas as contas ligadas a ele e registra de novo as que estavam no ar | Importante | 1.6 | Trocar o endereço de um servidor muda as três contas que o usam, sem editar uma por uma |
-| RF-52 | Chamada de vídeo. Planejado, sem data | Desejável | Depois | Vídeo nos dois sentidos entre dois ramais WebRTC do mesmo PBX |
+| RF-52 | Chamada de vídeo. Primeira entrega feita na 1.8: contas WebRTC e simulado (ligar com vídeo, atender com ou sem vídeo, imagem do outro lado e miniatura própria, câmera ligável durante a chamada, escolha da câmera). Faltam: SIP puro, modo Telefone, estatísticas de vídeo, o passo "esperar vídeo" dos cenários e a gravação | Desejável | 1.8 | Vídeo nos dois sentidos entre dois ramais WebRTC do mesmo PBX |
 
 ### Depois do 1.7 (pedidos pelo usuário em 04/10/2026)
 
@@ -292,7 +292,7 @@ A janela principal tem três colunas fixas: contas à esquerda, discador e chama
 3. **Teste de URA:** discar o número da URA, ouvir, enviar a sequência `1,w2,4321#` e conferir os dígitos no log.
 4. **Transferência:** em chamada, clicar em Transferir, escolher cega ou assistida, acompanhar 100, 180 e 200 no cartão.
 
-## Chamada de vídeo (RF-52, planejado)
+## Chamada de vídeo (RF-52: WebRTC feito, SIP puro planejado)
 
 O vídeo entra por dois caminhos, com custo muito diferente.
 

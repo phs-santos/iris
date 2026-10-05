@@ -253,12 +253,12 @@ function createTray(): void {
 function setupSecurity(): void {
     const ses = session.defaultSession
 
-    // Só microfone, saída de áudio e notificações são liberados para a interface.
+    // Só microfone, câmera (chamada de vídeo, RF-52), saída de áudio e notificações são liberados para a interface.
     const allowed = new Set(['media', 'speaker-selection', 'notifications'])
     ses.setPermissionRequestHandler((_wc, permission, callback, details) => {
         if (permission === 'media') {
             const types = (details as Electron.MediaAccessPermissionRequest).mediaTypes ?? []
-            return callback(types.every((t) => t === 'audio'))
+            return callback(types.every((t) => t === 'audio' || t === 'video'))
         }
         callback(allowed.has(permission))
     })
@@ -336,6 +336,7 @@ function registerIpc(): void {
         'trustedHosts',
         'audioInputId',
         'audioOutputId',
+        'videoInputId',
         'ringVolume',
         'mediaKey',
         'profile',
@@ -354,6 +355,7 @@ function registerIpc(): void {
                     (isList(patch.trustedHosts, 200) && patch.trustedHosts.every((h) => isString(h, 255)))) &&
                 isDeviceId(patch.audioInputId) &&
                 isDeviceId(patch.audioOutputId) &&
+                isDeviceId(patch.videoInputId) &&
                 isRingVolume(patch.ringVolume) &&
                 (patch.mediaKey === undefined || typeof patch.mediaKey === 'boolean') &&
                 isProfile(patch.profile) &&

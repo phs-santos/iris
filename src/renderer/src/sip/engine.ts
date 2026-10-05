@@ -56,6 +56,14 @@ export type CallEvents = {
     unhold: [by: 'local' | 'remote']
     dtmf: [tone: string]
     transfer: [code: number, reason: string, final: boolean]
+    /** As imagens da chamada mudaram: chegou o vídeo do outro lado, ou a câmera ligou ou desligou (RF-52). */
+    video: []
+}
+
+/** As imagens de uma chamada de vídeo; null enquanto não há (RF-52). */
+export interface VideoStreams {
+    remote: MediaStream | null
+    local: MediaStream | null
 }
 
 export interface EngineCall {
@@ -67,8 +75,11 @@ export interface EngineCall {
     readonly earlyAudio: boolean
     /** O app toca o toque de chamada para esta chamada; o simulado não tem som. */
     readonly localRingback: boolean
+    /** A chamada tem vídeo: quem ligou pediu, ou a que chega está oferecendo (RF-52). */
+    readonly video: boolean
     on<K extends keyof CallEvents>(event: K, listener: (...args: CallEvents[K]) => void): () => void
-    answer(): Promise<void>
+    /** Com `video`, atende mandando também a câmera; sem, só recebe a imagem do outro lado. */
+    answer(options?: { video?: boolean }): Promise<void>
     reject(): Promise<void>
     hangup(): Promise<void>
     setMuted(muted: boolean): void
@@ -83,6 +94,10 @@ export interface EngineCall {
     /** Troca o microfone da chamada em andamento. "" volta para o padrão do sistema. */
     setInputDevice(deviceId: string): Promise<void>
     quality(): Promise<CallQuality | null>
+    /** As imagens da chamada. Só nos motores com vídeo. */
+    videoStreams?(): VideoStreams
+    /** Liga ou desliga a câmera sem refazer a chamada. */
+    setCamera?(on: boolean): void
     /** Volume do áudio recebido nos últimos instantes, em dBFS, ou null se o motor não mede (RF-41). */
     audioLevel(): Promise<number | null>
     /** Toca um áudio (PCM de 16 bits a 8000 Hz) no lugar do microfone. Só nos motores que conseguem. */
@@ -104,9 +119,13 @@ export type EngineEvents = {
 
 export interface DialOptions {
     headers?: string[]
+    /** Chamada de vídeo (RF-52): manda a câmera junto com o áudio. */
+    video?: boolean
 }
 
 export interface SipEngine {
+    /** Este motor faz chamada de vídeo (RF-52): o WebRTC e o simulado; o SIP puro ainda não. */
+    readonly video: boolean
     on<K extends keyof EngineEvents>(event: K, listener: (...args: EngineEvents[K]) => void): () => void
     connect(): Promise<void>
     disconnect(): Promise<void>

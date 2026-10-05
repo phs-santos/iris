@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import type { CallQuality, EngineCall } from '@renderer/sip/engine'
+import type { CallQuality, EngineCall, VideoStreams } from '@renderer/sip/engine'
 import { ringbackTone, ringer } from '@renderer/sip/audio'
 import { ringbackOf, type Ringback } from '@shared/ringback'
 import { parseDtmfSequence, runDtmfSequence } from '@renderer/lib/dtmf'
@@ -48,6 +48,13 @@ export interface CallView {
     consultId?: string
     /** Nesta chamada de consulta: a chamada original, que está em espera. */
     consultFor?: string
+    /** A chamada tem vídeo: pedido por quem ligou, ou oferecido por quem liga para cá (RF-52). */
+    video: boolean
+    /** Esta ponta manda a câmera; `cameraOff` é a câmera pausada sem refazer a chamada. */
+    sendsVideo: boolean
+    cameraOff: boolean
+    /** Sobe a cada mudança nas imagens, para a tela buscar os fluxos de novo. */
+    videoRev: number
     /** O motor desta chamada grava em arquivo (RF-36). */
     canRecord: boolean
     /** Arquivo da gravação em andamento. */
@@ -107,6 +114,10 @@ export const useCallsStore = defineStore('calls', () => {
             failed: false,
             dtmfRunning: false,
             dtmfReceived: '',
+            video: call.video,
+            sendsVideo: call.direction === 'out' && call.video,
+            cameraOff: false,
+            videoRev: 0,
             canRecord: typeof call.setRecording === 'function'
         })
         selectedId.value = call.id
@@ -202,6 +213,10 @@ export const useCallsStore = defineStore('calls', () => {
                 by === 'remote' ? `${call.remote} retomou a chamada` : 'Chamada retomada'
             )
         })
+        call.on('video', () => {
+            const c = v()
+            if (c) c.videoRev++
+        })
         call.on('dtmf', (tone) => {
             const c = v()
             if (c) c.dtmfReceived = (c.dtmfReceived + tone).slice(-24)
@@ -232,7 +247,12 @@ export const useCallsStore = defineStore('calls', () => {
     }
 
     /** Liga e devolve o id da chamada criada. */
-    async function dial(accountId: string, destination: string, headers?: string[]): Promise<string | undefined> {
+    async function dial(
+        accountId: string,
+        destination: string,
+        headers?: string[],
+        video = false
+    ): Promise<string | undefined> {
         const accounts = useAccountsStore()
         const log = useLogStore()
         const engine = accounts.engineOf(accountId)
@@ -244,7 +264,8 @@ export const useCallsStore = defineStore('calls', () => {
         }
         log.add(accountId, 'info', 'event', `Ligando para ${dest}`)
         try {
-            const call = await engine.dial(dest, { headers })
+            if (video && !engine.video) throw new Error('Esta conta não faz chamada de vídeo: use uma conta WebRTC')
+            const call = await engine.dial(dest, { headers, video })
             return track(accountId, call, 'dialing').id
         } catch (error) {
             log.add(accountId, 'error', 'event', `Não foi possível ligar para ${dest}: ${(error as Error).message}`)
@@ -284,7 +305,23 @@ export const useCallsStore = defineStore('calls', () => {
         }
     }
 
-    const answer = (id: string): Promise<void> => run(id, (call) => call.answer(), 'Atender')
+    /** Com `video`, atende mandando a câmera; sem, só recebe a imagem de quem ligou (RF-52). */
+    async function answer(id: string, video = false): Promise<void> {
+        const c = view(id)
+        if (c) c.sendsVideo = video && c.video
+        await run(id, (call) => call.answer({ video }), 'Atender')
+    }
+
+    const videoStreams = (id: string): VideoStreams =>
+        engineCalls.get(id)?.videoStreams?.() ?? { remote: null, local: null }
+
+    function toggleCamera(id: string): void {
+        const c = view(id)
+        const call = engineCalls.get(id)
+        if (!c || !call?.setCamera || !c.sendsVideo) return
+        c.cameraOff = !c.cameraOff
+        call.setCamera(!c.cameraOff)
+    }
     const reject = (id: string): Promise<void> => run(id, (call) => call.reject(), 'Recusar')
     const hangup = (id: string): Promise<void> => run(id, (call) => call.hangup(), 'Desligar')
 
@@ -471,6 +508,8 @@ export const useCallsStore = defineStore('calls', () => {
         dial,
         addIncoming,
         answer,
+        videoStreams,
+        toggleCamera,
         reject,
         hangup,
         toggleMute,

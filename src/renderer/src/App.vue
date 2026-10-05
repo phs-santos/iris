@@ -404,6 +404,9 @@ onUnmounted(() => {
                         <span class="mono">{{ call.remote }} → {{ accounts.nameOf(call.accountId) }}</span>
                     </span>
                     <button class="btn go" @click="calls.answer(call.id)">{{ $t('app.atender') }}</button>
+                    <button v-if="call.video" class="btn go" @click="calls.answer(call.id, true)">
+                        {{ $t('app.atender_com_video') }}
+                    </button>
                     <button class="btn stop" @click="calls.reject(call.id)">{{ $t('app.recusar') }}</button>
                 </div>
                 <template v-if="centerTab === 'phone'">

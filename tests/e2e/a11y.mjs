@@ -133,6 +133,12 @@ try {
     await page.getByRole('log').getByText('oi', { exact: true }).waitFor()
     await scan('mensagens, com conversa')
     await page.getByRole('tab', { name: 'Telefone' }).click()
+    await page.getByLabel('Número', { exact: true }).fill('1002')
+    await page.getByRole('button', { name: 'Ligar com vídeo' }).click()
+    await page.locator('.call', { hasText: '→' }).locator('video.local').waitFor({ timeout: 8000 })
+    await scan('chamada de vídeo')
+    await page.locator('.call', { hasText: '→' }).getByRole('button', { name: 'Desligar', exact: true }).click()
+    await page.waitForFunction(() => document.querySelectorAll('.call').length === 0, null, { timeout: 15000 })
 
     await page.getByRole('button', { name: 'Explicar com IA' }).last().click()
     await page.getByLabel('Chave da OpenRouter').waitFor()

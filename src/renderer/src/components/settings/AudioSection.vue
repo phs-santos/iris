@@ -131,6 +131,19 @@ onUnmounted(stopMeter)
         </div>
 
         <label class="field">
+            <span class="label">{{ $t('audioSection.camera') }}</span>
+            <select
+                class="input"
+                :value="devices.cameraId"
+                @change="devices.setCamera(($event.target as HTMLSelectElement).value)"
+            >
+                <option value="">{{ $t('audioSection.padrao_do_sistema') }}</option>
+                <option v-for="d in devices.cameras" :key="d.id" :value="d.id">{{ d.label }}</option>
+            </select>
+        </label>
+        <p class="set-hint">{{ $t('audioSection.camera_dica') }}</p>
+
+        <label class="field">
             <span class="label">{{ $t('audioSection.volume_do_toque', { n: devices.ringVolume }) }}</span>
             <span class="ring">
                 <input

@@ -51,6 +51,30 @@ describe('MockEngine', () => {
         await expect(make('1003').sendMessage('1001', 'x')).rejects.toThrow('Registre a conta')
     })
 
+    it('vídeo (RF-52): a chamada de vídeo chega oferecendo vídeo, e a comum não', async () => {
+        const a = make('1001')
+        const b = make('1002')
+        await registered(a)
+        await registered(b)
+        const incoming: EngineCall[] = []
+        b.on('incoming', (call) => incoming.push(call))
+
+        const video = await a.dial('1002', { video: true })
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
+        expect(a.video).toBe(true)
+        expect(video.video).toBe(true)
+        expect(incoming[0]!.video).toBe(true)
+        // Sem tela (teste de unidade) não há imagem de teste, mas a chamada segue.
+        await incoming[0]!.answer({ video: true })
+        expect(incoming[0]!.videoStreams!()).toEqual({ remote: null, local: null })
+        await video.hangup()
+
+        const plain = await a.dial('1002')
+        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
+        expect(plain.video).toBe(false)
+        expect(incoming[1]!.video).toBe(false)
+    })
+
     it('liga entre duas contas do mesmo domínio e encerra dos dois lados', async () => {
         const a = make('1001')
         const b = make('1002')

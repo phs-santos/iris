@@ -117,6 +117,8 @@ export interface Settings {
     trustedHosts: string[]
     audioInputId?: string
     audioOutputId?: string
+    /** Câmera das chamadas de vídeo (RF-52). Sem o campo, a padrão do sistema. */
+    videoInputId?: string
     /** Volume do toque de chamada, de 0 a 100 (RF-55). Sem o campo, 50. */
     ringVolume?: number
     /** A tecla Tocar/Pausar (o botão do fone) atende e desliga enquanto há chamada (RF-55). */
@@ -145,6 +147,7 @@ export type SettingsPatch = Partial<
         | 'trustedHosts'
         | 'audioInputId'
         | 'audioOutputId'
+        | 'videoInputId'
         | 'ringVolume'
         | 'mediaKey'
         | 'profile'

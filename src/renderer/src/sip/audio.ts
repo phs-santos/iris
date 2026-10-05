@@ -38,6 +38,8 @@ export const audioOutput = new AudioOutput()
  */
 class AudioInput {
     deviceId = ''
+    /** Câmera escolhida para as chamadas de vídeo (RF-52). */
+    cameraId = ''
     private installed = false
 
     install(): void {
@@ -46,9 +48,15 @@ class AudioInput {
         this.installed = true
         const original = media.getUserMedia.bind(media)
         media.getUserMedia = async (constraints?: MediaStreamConstraints) => {
-            if (!this.deviceId || constraints?.audio !== true) return original(constraints)
+            const audio = this.deviceId && constraints?.audio === true
+            const video = this.cameraId && constraints?.video === true
+            if (!audio && !video) return original(constraints)
             try {
-                return await original({ ...constraints, audio: { deviceId: { exact: this.deviceId } } })
+                return await original({
+                    ...constraints,
+                    ...(audio ? { audio: { deviceId: { exact: this.deviceId } } } : {}),
+                    ...(video ? { video: { deviceId: { exact: this.cameraId } } } : {})
+                })
             } catch (error) {
                 const name = (error as Error).name
                 if (name !== 'OverconstrainedError' && name !== 'NotFoundError') throw error

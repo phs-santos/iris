@@ -33,6 +33,7 @@ class NativeSipCall implements EngineCall {
     // O RTP do 183 já é tocado: o áudio abre junto com a discagem.
     readonly earlyAudio = true
     readonly localRingback = true
+    readonly video = false
 
     constructor(
         readonly engineId: string,
@@ -146,6 +147,7 @@ class NativeSipCall implements EngineCall {
  * com G.711, DTMF, espera e transferência; o áudio cifrado (SRTP) ainda não existe.
  */
 export class NativeSipEngine implements SipEngine {
+    readonly video = false
     private emitter = new Emitter<EngineEvents>()
     private readonly id: string
     private off?: () => void

@@ -11,7 +11,8 @@ import {
     type EngineEvents,
     type HealthReport,
     type LogLevel,
-    type SipEngine
+    type SipEngine,
+    type VideoStreams
 } from './engine'
 import { audioOutput } from './audio'
 import { SILENCE_DB } from '@shared/audio'
@@ -64,7 +65,13 @@ class EasySipCall implements EngineCall {
     readonly id = `c${nextId++}`
     private emitter = new Emitter<CallEvents>()
     private session?: ISipSession
-    private audio = document.createElement('audio')
+    // Um elemento de vídeo toca também as chamadas só de áudio; a imagem em si é mostrada pelo cartão.
+    private audio = document.createElement('video')
+    /** A própria câmera, para a miniatura (RF-52). */
+    private preview = document.createElement('video')
+    /** Esta ponta está mandando a câmera. */
+    private sending = false
+    readonly video: boolean
     private endedLocally = false
     private failure?: { code?: number; reason?: string }
     private finished = false
@@ -77,8 +84,13 @@ class EasySipCall implements EngineCall {
         readonly remoteName: string | undefined,
         private invitation?: SipInvitation,
         /** A conta pediu para ouvir o áudio do PBX antes do atendimento (RF-20). */
-        readonly earlyAudio = false
+        readonly earlyAudio = false,
+        video = false
     ) {
+        // Na chamada recebida, vale o que o outro lado ofereceu.
+        this.video = invitation ? SipClient.isVideoCall(invitation) : video
+        this.sending = !invitation && video
+        this.preview.muted = true
         this.audio.autoplay = true
         this.audio.hidden = true
         document.body.appendChild(this.audio)
@@ -113,8 +125,27 @@ class EasySipCall implements EngineCall {
         void this.audio.play().catch(() => undefined)
     }
 
-    get remoteElement(): HTMLAudioElement {
+    get remoteElement(): HTMLVideoElement {
         return this.audio
+    }
+
+    get localElement(): HTMLVideoElement | undefined {
+        return this.sending ? this.preview : undefined
+    }
+
+    videoStreams(): VideoStreams {
+        const stream = (element: HTMLVideoElement): MediaStream | null =>
+            element.srcObject instanceof MediaStream && element.srcObject.getVideoTracks().length
+                ? element.srcObject
+                : null
+        return { remote: this.video ? stream(this.audio) : null, local: this.sending ? stream(this.preview) : null }
+    }
+
+    setCamera(on: boolean): void {
+        if (!this.sending) return
+        if (on) this.client.unmuteVideo()
+        else this.client.muteVideo()
+        this.emitter.emit('video')
     }
 
     bind(session: ISipSession): void {
@@ -124,7 +155,12 @@ class EasySipCall implements EngineCall {
             if (this.earlyAudio && event.hasEarlyMedia) this.attachEarlyAudio(session)
             this.emitter.emit('progress', event.statusCode, event.reasonPhrase ?? '', Boolean(event.hasEarlyMedia))
         })
-        session.on?.('established', () => this.emitter.emit('established'))
+        session.on?.('established', () => {
+            this.emitter.emit('established')
+            // As faixas de vídeo entram no fluxo logo depois do atendimento.
+            setTimeout(() => this.emitter.emit('video'), 300)
+            setTimeout(() => this.emitter.emit('video'), 1500)
+        })
         session.on?.('failed', (event) => {
             this.failure = { code: event.statusCode, reason: event.reasonPhrase }
         })
@@ -160,13 +196,19 @@ class EasySipCall implements EngineCall {
         void this.meter?.ctx.close().catch(() => undefined)
         this.audio.srcObject = null
         this.audio.remove()
+        this.preview.srcObject = null
         this.emitter.emit('ended', end)
         this.emitter.clear()
     }
 
-    async answer(): Promise<void> {
+    async answer(options: { video?: boolean } = {}): Promise<void> {
         if (!this.invitation) throw new Error('Só chamadas recebidas podem ser atendidas')
-        const session = await this.client.accept(this.invitation, { remoteElement: this.audio })
+        this.sending = Boolean(options.video && this.video)
+        const session = await this.client.accept(this.invitation, {
+            remoteElement: this.audio,
+            localElement: this.sending ? this.preview : undefined,
+            video: this.sending
+        })
         this.bind(session)
         // O SIP.js já está em "established" quando accept() resolve.
         this.emitter.emit('established')
@@ -263,6 +305,7 @@ const levelOf = (level: string): LogLevel =>
     level === 'error' ? 'error' : level === 'warn' ? 'warn' : level === 'debug' || level === 'log' ? 'debug' : 'info'
 
 export class EasySipEngine implements SipEngine {
+    readonly video = true
     private emitter = new Emitter<EngineEvents>()
     private client: SipClient
     private readonly earlyMedia: boolean
@@ -375,10 +418,13 @@ export class EasySipEngine implements SipEngine {
     }
 
     async dial(destination: string, options: DialOptions = {}): Promise<EngineCall> {
-        const call = new EasySipCall(this.client, 'out', destination, undefined, undefined, this.earlyMedia)
+        const video = Boolean(options.video)
+        const call = new EasySipCall(this.client, 'out', destination, undefined, undefined, this.earlyMedia, video)
         // `earlyMedia` chega ao SIP.js pelo patch de patches/: a biblioteca não tem a opção.
         const session = await this.client.dial(destination, {
             remoteElement: call.remoteElement,
+            localElement: call.localElement,
+            video,
             extraHeaders: options.headers,
             ...({ earlyMedia: this.earlyMedia } as object)
         })

@@ -401,6 +401,20 @@ export const GUIDE: GuideSection[] = [
                 type: 'p',
                 text: 'Cada chamada é um cartão. Uma ligação entre dois ramais seus aparece como dois cartões: o de quem ligou (seta →) e o de quem recebeu (seta ←). Clique num cartão para selecioná-lo; os atalhos de teclado agem sobre o cartão selecionado.'
             },
+            { type: 'h', text: 'Chamada de vídeo' },
+            {
+                type: 'p',
+                text: 'Em contas **WebRTC** (e no PBX simulado), o botão **Vídeo**, ao lado de Ligar, faz a chamada com a câmera. Quem recebe vê **Atender** (só o áudio, recebendo a imagem de quem ligou) e **Atender com vídeo** (manda a câmera também). No cartão aparecem a imagem do outro lado e a sua numa miniatura, e o botão **Desligar a câmera** pausa a imagem sem derrubar a chamada. A câmera é escolhida em **Configurações › Áudio**. O auto-atender nunca liga a câmera.'
+            },
+            {
+                type: 'list',
+                items: [
+                    'O PBX precisa aceitar um codec de vídeo no ramal. No Asterisk, inclua `vp8` (ou `h264`) no `allow` dos dois ramais.',
+                    'Contas de **SIP puro** ainda não fazem vídeo: o botão não aparece para elas.',
+                    'No macOS e no Windows, o sistema pede permissão de câmera na primeira chamada de vídeo.',
+                    'O modo Telefone, a gravação e os cenários ainda não têm vídeo.'
+                ]
+            },
             { type: 'h', text: 'O que você ouve antes de atenderem' },
             {
                 type: 'p',

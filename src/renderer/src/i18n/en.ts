@@ -6,6 +6,14 @@ import type { ptBR } from './pt-BR'
 type Messages = typeof ptBR
 
 export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = {
+    callVideo: {
+        imagem_de: 'Picture of {name}',
+        sua_camera: 'Your camera',
+        sem_imagem: 'The other side is not sending a picture',
+        ligar_camera: 'Turn camera on',
+        desligar_camera: 'Turn camera off',
+        so_recebendo: 'You answered without a camera: only the other side shows.'
+    },
     messagesPane: {
         ramal: 'Extension',
         nova_conversa_com: 'New conversation with extension',
@@ -329,6 +337,7 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         cenarios: 'Scenarios',
         rodando: 'running',
         atender: 'Answer',
+        atender_com_video: 'Answer with video',
         recusar: 'Decline',
         chamadas: 'Calls',
         ativas: '{length} active',
@@ -531,6 +540,8 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         em_espera_remoto: 'on hold (remote)',
         em_chamada: 'in call',
         early_media: 'early media',
+        com_video: 'With video',
+        video: '· video',
         falhou: 'failed',
         encerrada: 'ended',
         tocando: 'ringing',
@@ -546,6 +557,8 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         numero_ou_ramal: 'Number or extension',
         numero: 'Number',
         ligar: 'Call',
+        video: 'Video',
+        ligar_com_video: 'Video call',
         registre_para_ligar: 'Register {name} to call.',
         teclado: 'keypad',
         teclado_rotulo: 'Numeric keypad',
@@ -836,6 +849,8 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         nivel_do_microfone: 'Microphone level',
         fale_alguma_coisa_a_barra: 'Say something: the bar should move.',
         alto_falante: 'Speaker',
+        camera: 'Camera',
+        camera_dica: 'For video calls, on WebRTC accounts. Applies from the next call on.',
         tocar_som_de_teste: 'Play test sound',
         volume_do_toque: 'Ringtone volume: {n}%',
         volume_do_toque_rotulo: 'Ringtone volume',
