@@ -5,7 +5,7 @@ import workletUrl from '@renderer/sip/pcm-worklet.js?url&no-inline'
 
 /**
  * Áudio do modo SDR (abertura e recado da caixa postal): gravar com o microfone, ouvir, escolher um
- * WAV do disco ou tirar. O que é gravado vira um WAV de 8 kHz na pasta sdr dos dados da Íris.
+ * WAV do disco ou tirar. O que é gravado vira um WAV de 8 kHz na pasta Downloads.
  */
 const props = defineProps<{ path?: string; name: string; label: string }>()
 const emit = defineEmits<{ change: [path: string | undefined] }>()

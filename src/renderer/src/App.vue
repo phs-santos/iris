@@ -38,6 +38,7 @@ import logoMarkLight from './assets/logo-mark-light.svg'
 import { accountHost } from './lib/accounts'
 import { secretTap } from '@shared/modes'
 import SdrView from './components/sdr/SdrView.vue'
+import { useSdrStore } from './stores/sdr'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
@@ -305,6 +306,8 @@ onMounted(async () => {
     await history.load()
     await useContactsStore().load()
     await messages.load()
+    // A fila do SDR é lida sempre, mesmo com o modo desligado: senão a primeira gravação apagaria a salva.
+    await useSdrStore().load()
     await useServersStore().load()
     await accounts.refreshProblems()
     offLink = window.iris.links.onArrived(() => void takeLink())

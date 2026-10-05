@@ -319,7 +319,34 @@ function registerIpc(): void {
         check(isList(entries, HISTORY_LIMIT) && entries.every(isHistoryEntry), 'histórico de chamadas')
         return saveHistory(entries)
     })
-    handle(IPC.sdrLoad, () => loadSdr())
+    // As gravações do SDR (abertura e recado) ficam em Downloads, onde a pessoa acha (pedido do usuário
+    // em 05/10/2026). As de antes, na pasta sdr dos dados, são movidas para lá ao abrir a fila.
+    // IRIS_DOWNLOADS troca a pasta nos testes, para não encher o Downloads de quem roda; o app empacotado ignora.
+    const sdrAudioDir = (): string => (!app.isPackaged && process.env['IRIS_DOWNLOADS']) || app.getPath('downloads')
+    handle(IPC.sdrLoad, async () => {
+        const data = await loadSdr()
+        const old = join(app.getPath('userData'), 'sdr')
+        const moved = new Map<string, string>()
+        for (const name of await fs.readdir(old).catch(() => [] as string[])) {
+            if (!name.endsWith('.wav')) continue
+            const target = join(sdrAudioDir(), `iris-${name}`)
+            try {
+                await fs.rename(join(old, name), target)
+            } catch {
+                // Outro disco: copia e apaga.
+                await fs.copyFile(join(old, name), target)
+                await fs.rm(join(old, name), { force: true })
+            }
+            moved.set(join(old, name), target)
+        }
+        if (!moved.size) return data
+        const relink = (path?: string): string | undefined => (path && moved.get(path)) ?? path
+        data.settings.openings = data.settings.openings.map((o) => ({ ...o, audio: relink(o.audio) }))
+        data.settings.voicemail = { ...data.settings.voicemail, audio: relink(data.settings.voicemail.audio) }
+        await saveSdr(data)
+        appLog('info', `Gravações do SDR movidas para ${sdrAudioDir()}: ${moved.size}`)
+        return data
+    })
     handle(IPC.sdrSave, (_e, data: SdrData) => {
         check(isSdrData(data), 'fila do modo SDR')
         return saveSdr(data)
@@ -334,9 +361,9 @@ function registerIpc(): void {
                 pcm.length <= 8000 * 120,
             'gravação da abertura'
         )
-        const dir = join(app.getPath('userData'), 'sdr')
+        const dir = sdrAudioDir()
         await fs.mkdir(dir, { recursive: true })
-        const path = join(dir, `${name}.wav`)
+        const path = join(dir, `iris-${name}.wav`)
         const body = Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength)
         await fs.writeFile(path, Buffer.concat([Buffer.from(wavHeader(body.length, 1)), body]))
         return path

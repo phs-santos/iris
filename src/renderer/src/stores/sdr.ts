@@ -92,11 +92,16 @@ export const useSdrStore = defineStore('sdr', () => {
         lead.value && opening.value ? fillScript(opening.value.script, lead.value, sdrName.value) : ''
     )
 
+    /** Só grava depois de ler o arquivo: antes disso a fila em memória é a vazia, e apagaria a salva. */
+    let loaded = false
+
     async function load(): Promise<void> {
         data.value = await window.iris.sdr.load()
+        loaded = true
     }
 
     function persist(): void {
+        if (!loaded) return
         void window.iris.sdr
             ?.save(JSON.parse(JSON.stringify(data.value)))
             .catch((error: Error) =>
@@ -296,6 +301,8 @@ export const useSdrStore = defineStore('sdr', () => {
             const kind = detector.push(STEP_MS, view?.level ?? SILENCE_DB)
             if (!kind) return
             clearInterval(probe)
+            const who = kind === 'machine' ? 'caixa postal' : kind === 'human' ? 'pessoa' : 'pessoa calada'
+            useLogStore().add(c.accountId, 'info', 'event', `SDR: atendeu ${who} (${detector.summary})`)
             if (kind === 'machine') void voicemail(callId)
             else void greet(callId)
         }, STEP_MS)
@@ -308,9 +315,16 @@ export const useSdrStore = defineStore('sdr', () => {
         const calls = useCallsStore()
         const audio = opening.value?.audio
         if (!settings.value.playOpening || !audio || !calls.canPlay(callId)) {
+            const why = !settings.value.playOpening
+                ? '"tocar ao atender" desligado'
+                : !audio
+                  ? 'sem gravação'
+                  : 'a conta não toca áudio (WebRTC)'
+            useLogStore().add(c.accountId, 'info', 'event', `SDR: abertura não tocada: ${why}`)
             c.phase = 'talking'
             return
         }
+        useLogStore().add(c.accountId, 'info', 'event', `SDR: tocando a abertura ${audio.split(/[\\/]/).pop()}`)
         c.phase = 'opening'
         try {
             await calls.playAudio(callId, await window.iris.audio.loadWav(audio))

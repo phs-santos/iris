@@ -392,44 +392,77 @@ export function dayStats(attempts: SdrAttempt[], now: number): DayStats {
 
 export type AnswerKind = 'human' | 'machine' | 'silent'
 
+export interface AnswerDetectorOptions {
+    /** Abaixo disto é sempre silêncio, em dBFS. */
+    floorDb: number
+    /** Voz é o que fica pelo menos isto acima do ruído da linha, em dB. */
+    aboveNoiseDb: number
+    /** Fala seguida (sem pausa) por mais que isso é caixa postal. */
+    machineMs: number
+    /** Pausa depois de falar que encerra o "Alô?". */
+    pauseMs: number
+    /** Uma queda curta, entre palavras, que não conta como pausa. */
+    gapMs: number
+    /** Sem ouvir nada por este tempo: alguém atendeu e ficou quieto. */
+    silentMs: number
+}
+
+const DETECTOR_DEFAULTS: AnswerDetectorOptions = {
+    floorDb: -55,
+    aboveNoiseDb: 12,
+    machineMs: 4000,
+    pauseMs: 700,
+    gapMs: 350,
+    silentMs: 3000
+}
+
 /**
  * Decide, pelo volume do que chega logo depois do atendimento, se do outro lado há uma pessoa ou uma
  * caixa postal. Uma pessoa diz "Alô?" (fala curta) e para, esperando resposta; a caixa postal fala
  * sem parar por vários segundos. Silêncio no começo é tratado como pessoa que não falou nada.
- * Recebe uma medida a cada ~250 ms; devolve a decisão uma vez, ou undefined enquanto não sabe.
+ *
+ * Voz e silêncio são medidos contra o ruído da própria linha (o volume mais baixo ouvido até ali):
+ * numa ligação de verdade o fundo passa fácil de -45 dBFS, e um limite fixo via fala contínua onde
+ * havia uma pessoa esperando. Recebe uma medida a cada ~250 ms; devolve a decisão uma vez.
  */
 export class AnswerDetector {
+    private noise = Number.POSITIVE_INFINITY
     private speechMs = 0
-    private silenceMs = 0
+    private quietMs = 0
     private heard = false
     private elapsed = 0
     private decided = false
+    private readonly options: AnswerDetectorOptions
 
-    constructor(
-        private readonly options = {
-            /** Volume que conta como voz, em dBFS. */
-            speechDb: -45,
-            /** Fala sem pausa por mais que isso é caixa postal. */
-            machineMs: 3500,
-            /** Pausa depois de falar que encerra o "Alô?". */
-            pauseMs: 600,
-            /** Sem ouvir nada por este tempo: alguém atendeu e ficou quieto. */
-            silentMs: 2500
-        }
-    ) {}
+    constructor(options: Partial<AnswerDetectorOptions> = {}) {
+        this.options = { ...DETECTOR_DEFAULTS, ...options }
+    }
+
+    /** Por que decidiu, para o log: quanto falou, quanto ficou quieto e o ruído medido. */
+    get summary(): string {
+        const noise = Number.isFinite(this.noise) ? `${Math.round(this.noise)} dBFS` : '?'
+        return `fala ${(this.speechMs / 1000).toFixed(1)} s, pausa ${(this.quietMs / 1000).toFixed(1)} s, ruído ${noise}`
+    }
 
     push(stepMs: number, db: number): AnswerKind | undefined {
         if (this.decided) return undefined
+        const o = this.options
         this.elapsed += stepMs
-        if (db > this.options.speechDb) {
+        this.noise = Math.min(this.noise, Math.max(db, -96))
+        // Quem começa falando (a caixa postal) não tem ruído medido ainda: até lá, vale um fundo de -45 dBFS.
+        const voice = db > o.floorDb && db >= Math.min(this.noise, -45) + o.aboveNoiseDb
+        if (voice) {
             this.heard = true
+            // Uma queda curta entre palavras não interrompe a fala da caixa postal.
+            if (this.quietMs < o.gapMs) this.speechMs += this.quietMs
+            else this.speechMs = 0
             this.speechMs += stepMs
-            this.silenceMs = 0
-            if (this.speechMs >= this.options.machineMs) return this.decide('machine')
+            this.quietMs = 0
+            if (this.speechMs >= o.machineMs) return this.decide('machine')
         } else {
-            this.silenceMs += stepMs
-            if (this.heard && this.silenceMs >= this.options.pauseMs) return this.decide('human')
-            if (!this.heard && this.elapsed >= this.options.silentMs) return this.decide('silent')
+            this.quietMs += stepMs
+            if (this.heard && this.quietMs >= o.pauseMs) return this.decide('human')
+            if (!this.heard && this.elapsed >= o.silentMs) return this.decide('silent')
         }
         return undefined
     }
@@ -447,9 +480,12 @@ export class AnswerDetector {
 export class BeepWaiter {
     private silenceMs = 0
     private done = false
+    private noise = Number.POSITIVE_INFINITY
     push(stepMs: number, db: number): boolean {
         if (this.done) return false
-        this.silenceMs = db > -45 ? 0 : this.silenceMs + stepMs
+        this.noise = Math.min(this.noise, Math.max(db, -96))
+        const voice = db > -55 && db >= Math.min(this.noise, -45) + 12
+        this.silenceMs = voice ? 0 : this.silenceMs + stepMs
         if (this.silenceMs >= 1000) this.done = true
         return this.done
     }

@@ -334,7 +334,7 @@ export interface IrisApi {
     sdr: {
         load(): Promise<SdrData>
         save(data: SdrData): Promise<void>
-        /** Grava o PCM (16 bits, 8000 Hz) como WAV na pasta sdr dos dados e devolve o caminho. */
+        /** Grava o PCM (16 bits, 8000 Hz) como WAV na pasta Downloads e devolve o caminho. */
         saveWav(name: string, pcm: Int16Array): Promise<string>
         /** POST do resultado; devolve o código HTTP da resposta. */
         webhook(url: string, payload: SdrWebhookPayload): Promise<number>

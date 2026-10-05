@@ -2,7 +2,7 @@
 // pessoa que atende, uma caixa postal, um ocupado e um número que não existe.
 // Uso: npm run build && node tests/e2e/sdr.mjs
 import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -30,6 +30,37 @@ const wav = (name, seconds) => {
 }
 const openingWav = wav('abertura.wav', 2)
 const messageWav = wav('recado.wav', 1)
+// Uma gravação antiga, na pasta sdr dos dados: ao abrir a fila, ela vai para Downloads.
+const downloads = join(userData, 'downloads')
+mkdirSync(join(userData, 'sdr'), { recursive: true })
+mkdirSync(downloads)
+copyFileSync(messageWav, join(userData, 'sdr', 'abertura-antiga.wav'))
+writeFileSync(
+    join(userData, 'sdr.json'),
+    JSON.stringify({
+        schemaVersion: 1,
+        settings: {
+            openings: [
+                {
+                    id: 'a',
+                    segment: '',
+                    script: 'Oi, {primeiro_nome}, tudo bem? Aqui é {sdr}. Estou falando com você porque a {empresa}…',
+                    audio: join(userData, 'sdr', 'abertura-antiga.wav')
+                }
+            ],
+            playOpening: false,
+            voicemail: { detect: true, action: 'hangup' },
+            hours: { start: '09:00', end: '18:00', days: [1, 2, 3, 4, 5] },
+            maxAttempts: 3,
+            retryMinutes: 60,
+            advanceSeconds: 5,
+            dailyGoal: 300,
+            record: false
+        },
+        leads: [],
+        attempts: []
+    })
+)
 const csv = join(userData, 'fila.csv')
 writeFileSync(
     csv,
@@ -40,11 +71,19 @@ const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 const app = await electron.launch({
     args,
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+    env: {
+        ...process.env,
+        IRIS_USER_DATA: userData,
+        IRIS_FAKE_MEDIA: '1',
+        IRIS_MODES: 'all',
+        IRIS_DOWNLOADS: downloads
+    }
 })
 const page = await app.firstWindow()
 const pageErrors = []
 page.on('pageerror', (error) => pageErrors.push(String(error)))
+/** O app aberto de novo no fim do teste, para fechar mesmo se algo falhar. */
+let again
 const step = (msg) => console.log(`✓ ${msg}`)
 /** O próximo diálogo de abrir arquivo do sistema devolve este caminho. */
 const nextOpen = (path) =>
@@ -59,6 +98,12 @@ try {
     await page.getByRole('button', { name: 'Fechar os primeiros passos' }).click()
     await page.getByRole('tab', { name: 'SDR' }).click()
     await page.getByText('A fila está vazia').waitFor()
+    const migrated = join(downloads, 'iris-abertura-antiga.wav')
+    if (!existsSync(migrated) || existsSync(join(userData, 'sdr', 'abertura-antiga.wav')))
+        throw new Error('a gravação antiga não foi para Downloads')
+    if (JSON.parse(readFileSync(join(userData, 'sdr.json'), 'utf8')).settings.openings[0].audio !== migrated)
+        throw new Error('a abertura não aponta para o arquivo movido')
+    step('gravação antiga movida para Downloads, e a abertura aponta para ela')
 
     await nextOpen(csv)
     await page.getByRole('button', { name: 'Importar planilha' }).click()
@@ -212,12 +257,39 @@ try {
     }
     step('o resumo da IA recusa arquivo fora da pasta das gravações')
 
+    // Fechar e abrir de novo: as opções e a fila continuam (antes, a fila começava vazia e apagava a salva).
+    await app.close()
+    again = await electron.launch({
+        args,
+        env: {
+            ...process.env,
+            IRIS_USER_DATA: userData,
+            IRIS_FAKE_MEDIA: '1',
+            IRIS_MODES: 'all',
+            IRIS_DOWNLOADS: downloads
+        }
+    })
+    const page2 = await again.firstWindow()
+    await page2.locator('.dot.registered').nth(1).waitFor()
+    await page2.getByRole('tab', { name: 'SDR' }).click()
+    await page2.getByRole('button', { name: 'Abertura gravada: toca ao atender' }).waitFor()
+    await page2.getByRole('region', { name: 'Fila' }).getByText('Caixa Postal', { exact: true }).waitFor()
+    await page2.getByRole('button', { name: 'Adicionar números' }).click()
+    await page2.getByLabel(/Uma pessoa por linha/).fill('Nova 1005')
+    await page2.getByRole('button', { name: 'Adicionar à fila' }).click()
+    await page2.waitForTimeout(300)
+    const after = JSON.parse(readFileSync(join(userData, 'sdr.json'), 'utf8'))
+    if (!after.settings.playOpening || !after.settings.openings[0].audio || after.leads.length !== 6)
+        throw new Error('reabrir o app perdeu as opções ou a fila')
+    step('reabrir o app mantém as opções e a fila, e acrescentar não apaga nada')
+
     if (pageErrors.length) throw new Error(`erros na página: ${pageErrors.join(' | ')}`)
     console.log('SDR OK')
 } catch (error) {
     console.error(`✗ ${error.message}`)
     process.exitCode = 1
 } finally {
-    await app.close()
+    await app.close().catch(() => {})
+    await again?.close().catch(() => {})
     rmSync(userData, { recursive: true, force: true })
 }

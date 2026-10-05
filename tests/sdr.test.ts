@@ -191,6 +191,25 @@ describe('modo SDR: gente ou caixa postal', () => {
     it('"Alô?" e pausa é gente', () => expect(run([...quiet(500), ...voice(750), ...quiet(1000)])).toBe('human'))
     it('fala longa sem pausa é caixa postal', () => expect(run(voice(5000))).toBe('machine'))
     it('ninguém fala nada: atendeu em silêncio', () => expect(run(quiet(3000))).toBe('silent'))
+    it('linha com ruído de fundo: "Alô?" e pausa continua sendo gente', () => {
+        // Fundo a -38 dBFS (mais alto que o antigo limite fixo de -45) e voz a -18.
+        const noisy = (ms: number): number[] => Array.from({ length: ms / 250 }, (_, i) => -38 + (i % 2))
+        const hello = Array(4).fill(-18)
+        expect(run([...noisy(500), ...hello, ...noisy(1000)])).toBe('human')
+    })
+
+    it('saudação longa com quedas curtas entre as palavras é caixa postal', () => {
+        const greeting = Array.from({ length: 24 }, (_, i) => (i % 5 === 4 ? -60 : -20))
+        expect(run([-60, ...greeting])).toBe('machine')
+    })
+
+    it('fala, pausa curta e mais fala: duas frases de gente não somam como caixa postal', () => {
+        const detector = new AnswerDetector()
+        const levels = [-60, ...voice(1500), ...quiet(500), ...voice(2750)]
+        expect(levels.map((db) => detector.push(250, db)).find(Boolean)).toBeUndefined()
+        expect(detector.summary).toMatch(/^fala 2\.8 s, pausa 0\.0 s, ruído -90 dBFS$/)
+    })
+
     it('decide uma vez só', () => {
         const detector = new AnswerDetector()
         voice(4000).forEach((db) => detector.push(250, db))
