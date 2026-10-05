@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { useDialog } from '@renderer/lib/dialog'
-import { GUIDE } from '@renderer/i18n/guide.pt-BR'
+import { currentLocale } from '@renderer/i18n'
+import { GUIDE as GUIDE_PT } from '@renderer/i18n/guide.pt-BR'
+import { GUIDE_EN } from '@renderer/i18n/guide.en'
+
+/** O guia no idioma da interface (RF-56). */
+const GUIDE = currentLocale() === 'en' ? GUIDE_EN : GUIDE_PT
 
 /** Guia de uso (entrega do M4): índice à esquerda, conteúdo à direita, busca por texto. */
 const emit = defineEmits<{ close: [] }>()

@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { t } from '@renderer/i18n'
 import { computed } from 'vue'
-import { accentTokens, PALETTES, type InterfaceSize, type Theme } from '@shared/appearance'
+import {
+    accentTokens,
+    DEFAULT_LANGUAGE,
+    PALETTES,
+    type InterfaceSize,
+    type Language,
+    type Theme
+} from '@shared/appearance'
 import { usePreferencesStore } from '@renderer/stores/preferences'
 
 const prefs = usePreferencesStore()
@@ -86,6 +93,20 @@ const theme = computed(() => prefs.appearance.theme ?? 'dark')
                     </button>
                 </div>
             </div>
+            <label class="set-row">
+                <span class="what">
+                    <b>{{ $t('appearanceSection.idioma') }}</b>
+                    <small>{{ $t('appearanceSection.idioma_dica') }}</small>
+                </span>
+                <select
+                    class="input"
+                    :value="prefs.appearance.language ?? DEFAULT_LANGUAGE"
+                    @change="prefs.setLanguage(($event.target as HTMLSelectElement).value as Language)"
+                >
+                    <option value="pt-BR">{{ $t('appearanceSection.idioma_pt') }}</option>
+                    <option value="en">{{ $t('appearanceSection.idioma_en') }}</option>
+                </select>
+            </label>
             <label class="set-row">
                 <span class="what">
                     <b>{{ $t('appearanceSection.compacta') }}</b>

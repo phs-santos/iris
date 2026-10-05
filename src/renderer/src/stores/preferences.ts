@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import {
     accentTokens,
+    DEFAULT_LANGUAGE,
+    type Language,
     INTERFACE_ZOOM,
     type Appearance,
     type InterfaceSize,
@@ -13,6 +15,7 @@ import type { ReconnectSettings } from '@shared/types'
 import type { NotificationSettings } from '@shared/notifications'
 import type { LinkSettings } from '@shared/links'
 import type { ShortcutSettings } from '@shared/shortcuts'
+import { setLocale } from '@renderer/i18n'
 
 /** Seções da tela de Configurações. */
 export type SettingsSection =
@@ -54,6 +57,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
         theme.value = resolvedTheme()
         root.dataset.theme = theme.value
         root.dataset.density = appearance.value.compact ? 'compact' : 'normal'
+        setLocale(appearance.value.language ?? DEFAULT_LANGUAGE)
         const tokens = accentTokens(appearance.value.accent)
         root.style.setProperty('--accent', tokens.accent)
         root.style.setProperty('--accent-strong', tokens.strong)
@@ -90,6 +94,12 @@ export const usePreferencesStore = defineStore('preferences', () => {
 
     async function setTheme(theme: Theme): Promise<void> {
         appearance.value = { ...appearance.value, theme }
+        apply()
+        await persist()
+    }
+
+    async function setLanguage(language: Language): Promise<void> {
+        appearance.value = { ...appearance.value, language: language === DEFAULT_LANGUAGE ? undefined : language }
         apply()
         await persist()
     }
@@ -152,6 +162,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
         setSize,
         setTheme,
         setCompact,
+        setLanguage,
         setReconnect
     }
 })

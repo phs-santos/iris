@@ -162,7 +162,7 @@ São 37 requisitos em cinco grupos: 15 essenciais, 16 importantes e 6 desejávei
 | RF-34 | Atalhos globais para atender, desligar e mudo (já na lista acima), escolhidos em Configurações. Sem atalho definido, nada é registrado no sistema | Desejável | 1.8 | O atalho funciona com outro app em foco |
 | RF-54 | Mensagens de texto por SIP MESSAGE (RFC 3428) entre ramais: conversa por contato, com aviso de mensagem recebida. Em SIP puro, WebRTC e no simulado | Desejável | 1.8 | Duas contas do mesmo PBX trocam mensagens nos dois sentidos |
 | RF-55 | Toques: escolha do toque de chamada entre os que vêm com o app, por conta, com volume; e os botões do fone (atender, desligar e mudo) pelas teclas de mídia | Desejável | 1.8 | Duas contas com toques diferentes soam diferente ao receber chamada |
-| RF-56 | Interface em inglês, além do português, com a escolha em Configurações → Aparência e o idioma do sistema como padrão | Importante | 1.8 | Com inglês escolhido, nenhuma tela mostra texto em português |
+| RF-56 | Interface em inglês, além do português, com a escolha em Configurações → Aparência. O português continua sendo o padrão. Primeira entrega: todas as telas e o guia. Ficam em português, para uma segunda entrega: as linhas do log de eventos, o resultado das chamadas, as notificações do sistema, o menu da bandeja e a linha de comando | Importante | 1.8 | Com inglês escolhido, nenhum componente da tela nem o guia mostra texto em português |
 
 ## Requisitos não funcionais
 

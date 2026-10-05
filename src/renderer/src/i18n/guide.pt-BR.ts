@@ -741,7 +741,7 @@ export const GUIDE: GuideSection[] = [
                     ],
                     [
                         'Aparência',
-                        'O tema (escuro, claro ou o do sistema), a cor de destaque (seis paletas prontas ou a sua própria cor), listas compactas e o tamanho da interface'
+                        'O tema (escuro, claro ou o do sistema), a cor de destaque (seis paletas prontas ou a sua própria cor), o idioma (português ou inglês), listas compactas e o tamanho da interface'
                     ],
                     ['Áudio', 'Microfone e alto-falante. Veja "Áudio"'],
                     [
@@ -1129,7 +1129,7 @@ export const GUIDE: GuideSection[] = [
                     'A **cor do ícone** diz o estado geral: cinza sem conta registrada, verde com contas registradas, amarelo com chamada tocando, azul em chamada e vermelho quando alguma conta está em erro. Parar o mouse em cima mostra os números.',
                     '**Sair** encerra o app de verdade: os ramais saem do ar e as chamadas caem.',
                     'Uma **chamada recebida** gera uma notificação do sistema, com **Atender** e **Recusar** no próprio aviso (no macOS); clicar nela abre a janela. Na Bancada, ela também aparece numa faixa colorida no alto da coluna do meio.',
-                    'Também avisam: **chamada perdida**, **conta que caiu**, **correio de voz** novo e **cenário monitorado** que falhou ou voltou a passar. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
+                    'Também avisam: **chamada perdida**, **conta que caiu**, **correio de voz** novo, **mensagem de texto** e **cenário monitorado** que falhou ou voltou a passar. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
                     'Não aparece nada? No macOS, confira em **Ajustes do Sistema → Notificações → Iris** se os avisos estão permitidos e se o **Não Perturbe** está desligado. Contas com auto-atender não avisam de chamada recebida.'
                 ]
             },
@@ -1290,14 +1290,14 @@ export const GUIDE: GuideSection[] = [
                         'Registre a conta ou escolha outra em Discar de'
                     ],
                     [
-                        'Aparece "0 contas" e um aviso amarelo ao abrir',
-                        'O sistema está pedindo a senha para liberar as senhas antigas (só na primeira abertura depois de atualizar da 1.0.5 ou anterior)',
-                        'Responda ao pedido do sistema; no macOS, escolha Permitir Sempre'
+                        'O macOS pede a senha das Chaves ao abrir',
+                        'Versão anterior à 1.6.1, que ainda usava o cofre de senhas do sistema',
+                        'Atualize a Íris. Desde a 1.6.1 ela não usa as Chaves'
                     ],
                     [
                         'A central só tem SIP por UDP ou TCP',
-                        'Sem WebSocket, a Íris não conecta',
-                        'Ponha um gateway WebRTC na frente (Kamailio ou Asterisk como ponte)'
+                        'A conta foi criada com o transporte WebSocket',
+                        'Edite a conta e escolha o transporte SIP por UDP, TCP ou TLS'
                     ]
                 ]
             },

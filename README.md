@@ -46,6 +46,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-34 | Atalhos globais para atender, desligar e mudo, definidos em Configurações → Atalhos e links |
 | RF-55 | Toque de chamada por conta (clássico, digital, suave, sino ou nenhum), volume do toque em Configurações → Áudio e o botão do fone (tecla Tocar/Pausar) para atender e desligar |
 | RF-54 | Mensagens de texto por SIP MESSAGE entre ramais, em WebRTC, SIP puro e no simulado: conversas por conta, não lidas, aviso e "não entregue" com a resposta do PBX |
+| RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, as notificações do sistema e a linha de comando continuam em português |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, salvar a partir do histórico, CSV, e o nome do contato nas chamadas e no histórico |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
 | RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |
@@ -159,6 +160,7 @@ npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e 
 npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
 npm run test:atalhos       # links tel: e sip:, atalhos globais, botão do fone e toque por conta, no simulado
+npm run test:idioma        # interface e guia em inglês: troca na hora, grava e volta ao português
 npm run test:mensagens     # mensagens de texto no simulado (com o Asterisk, entram no test:sip e no test:pbx)
 npm run test:notificacoes  # notificações no simulado: chamada recebida, Atender pelo aviso, chamada perdida e a escolha em Configurações
 npm run test:contatos   # agenda de contatos e servidores cadastrados pela tela, no simulado (RF-50, RF-51)

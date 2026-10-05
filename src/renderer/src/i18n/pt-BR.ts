@@ -802,7 +802,12 @@ export const ptBR = {
         aumenta_ou_diminui_tudo_junto: 'Aumenta ou diminui tudo junto: texto, botões e painéis.',
         pequena: 'Pequena',
         normal: 'Normal',
-        grande: 'Grande'
+        grande: 'Grande',
+        idioma: 'Idioma',
+        idioma_dica:
+            'As telas mudam na hora. O log de eventos, o resultado das chamadas e as notificações do sistema continuam em português.',
+        idioma_pt: 'Português (Brasil)',
+        idioma_en: 'English'
     },
     audioSection: {
         audio: 'Áudio',

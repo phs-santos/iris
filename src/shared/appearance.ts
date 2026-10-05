@@ -13,6 +13,12 @@ export interface Profile {
 export type InterfaceSize = 'small' | 'medium' | 'large'
 
 /** Escuro (o padrão), claro, ou o mesmo do sistema operacional. */
+/** Idioma da interface (RF-56). Sem escolha, vale o português. */
+export type Language = 'pt-BR' | 'en'
+export const LANGUAGES: Language[] = ['pt-BR', 'en']
+export const DEFAULT_LANGUAGE: Language = 'pt-BR'
+export const isLanguage = (v: unknown): v is Language => LANGUAGES.includes(v as Language)
+
 export type Theme = 'dark' | 'light' | 'system'
 export const isTheme = (v: unknown): v is Theme => v === 'dark' || v === 'light' || v === 'system'
 
@@ -23,6 +29,7 @@ export interface Appearance {
     theme?: Theme
     /** Linhas mais baixas nas listas, para caber mais contas e chamadas. */
     compact?: boolean
+    language?: Language
 }
 
 export interface Palette {
@@ -120,6 +127,7 @@ export function isAppearance(value: unknown): value is Appearance {
         (a.accent === undefined || isHexColor(a.accent)) &&
         (a.size === undefined || isInterfaceSize(a.size)) &&
         (a.theme === undefined || isTheme(a.theme)) &&
-        (a.compact === undefined || typeof a.compact === 'boolean')
+        (a.compact === undefined || typeof a.compact === 'boolean') &&
+        (a.language === undefined || isLanguage(a.language))
     )
 }

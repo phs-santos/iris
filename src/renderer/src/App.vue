@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { t } from '@renderer/i18n'
+import { currentLocale, t } from '@renderer/i18n'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Account, CertificateErrorEvent, UpdateChannel, UpdateInfo, WindowMode } from '@shared/types'
 import { useAccountsStore } from './stores/accounts'
@@ -105,6 +105,11 @@ watch(
     (counts) => window.iris.setTray(counts),
     { deep: true }
 )
+
+// Trocar o idioma refaz as telas; as Configurações voltam abertas onde a pessoa estava.
+watch(currentLocale, () => {
+    if (settingsAt.value) settingsAt.value = 'appearance'
+})
 
 function newAccount(): void {
     editing.value = accounts.newAccount({ displayName: prefs.profile.name ?? '' })
@@ -275,7 +280,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="shell">
+    <!-- A chave refaz as telas quando o idioma muda: há textos lidos uma vez só, na criação (RF-56). -->
+    <div :key="currentLocale()" class="shell">
         <header v-if="mode === 'bench'" class="topbar">
             <span class="brand"
                 ><img class="brand-mark" :src="prefs.theme === 'light' ? logoMarkLight : logoMarkDark" alt="" />{{
