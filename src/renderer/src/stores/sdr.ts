@@ -23,6 +23,7 @@ import {
 import { SILENCE_DB } from '@shared/audio'
 import { isWebhookUrl } from '@shared/monitor'
 import { useAccountsStore } from './accounts'
+import { describeStatus } from '@renderer/lib/accounts'
 import { useCallsStore } from './calls'
 import { useLogStore } from './log'
 import { usePreferencesStore } from './preferences'
@@ -175,10 +176,13 @@ export const useSdrStore = defineStore('sdr', () => {
     async function next(specific?: string): Promise<void> {
         clearTimers()
         if (current.value) return
-        const accounts = useAccountsStore()
         const from = accountId()
-        if (!from || accounts.statusOf(from).state !== 'registered') {
+        if (!from) {
             notice.value = t('sdr.aviso_registre')
+            running.value = false
+            return
+        }
+        if (!(await ensureRegistered(from))) {
             running.value = false
             return
         }
@@ -204,6 +208,33 @@ export const useSdrStore = defineStore('sdr', () => {
         }
         notice.value = ''
         await dial(found.lead, from)
+    }
+
+    /**
+     * A conta da fila precisa estar no ar. Desconectada, a fila registra sozinha e espera até 10 s;
+     * se não der, a tela diz o motivo (senha, PBX fora…).
+     */
+    async function ensureRegistered(id: string): Promise<boolean> {
+        const accounts = useAccountsStore()
+        if (accounts.statusOf(id).state === 'registered') return true
+        notice.value = t('sdr.registrando', { name: accounts.nameOf(id) })
+        const state = accounts.statusOf(id).state
+        if (state === 'disconnected' || state === 'error') void accounts.register(id)
+        for (let i = 0; i < 40; i++) {
+            await new Promise((done) => setTimeout(done, 250))
+            const status = accounts.statusOf(id)
+            if (status.state === 'registered') {
+                notice.value = ''
+                return true
+            }
+            // Recusa definitiva (senha, ramal): não adianta esperar os 10 s.
+            if (status.state === 'error' && status.code && i > 3) break
+        }
+        notice.value = t('sdr.aviso_nao_registrou', {
+            name: accounts.nameOf(id),
+            motivo: describeStatus(accounts.statusOf(id))
+        })
+        return false
     }
 
     async function dial(target: Lead, from: string): Promise<void> {

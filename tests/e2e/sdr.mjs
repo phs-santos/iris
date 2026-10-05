@@ -87,14 +87,21 @@ try {
     const other = days[(new Date().getDay() + 1) % 7]
     for (const day of days) await hoursForm.getByLabel(day, { exact: true }).setChecked(day === other)
     await hoursForm.getByRole('button', { name: 'Salvar' }).click()
+    // A conta da fila desconectada: o clique em Ligar registra e liga.
+    const support = page.locator('.acc', { hasText: 'Suporte 1001' })
+    await support.locator('.row').click()
+    await support.getByRole('button', { name: 'Desregistrar' }).click()
+    await support.locator('.dot.disconnected').waitFor()
+    await page.getByRole('tab', { name: 'SDR' }).click()
     await page.getByRole('region', { name: 'Fila' }).getByRole('button', { name: 'Ligar para Ramal' }).click()
+    await support.locator('.dot.registered').waitFor({ timeout: 10000 })
     await phase('chamando').waitFor({ timeout: 8000 })
     await page.getByRole('region', { name: 'Chamada atual' }).getByRole('button', { name: 'Desligar' }).click()
     await page
         .getByRole('region', { name: 'Fila' })
         .getByText(/8000 · Não atendeu/)
         .waitFor()
-    step('fora do horário da fila, Ligar numa pessoa liga assim mesmo (ramal 8000)')
+    step('Ligar com a conta desconectada registra e liga, mesmo fora do horário da fila (ramal 8000)')
 
     // Opções: conta, abertura gravada, recado da caixa postal e horário o dia todo (o teste roda a qualquer hora).
     await page.getByRole('button', { name: 'Opções' }).click()
