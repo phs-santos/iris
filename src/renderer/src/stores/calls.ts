@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import type { CallQuality, EngineCall } from '@renderer/sip/engine'
-import { ringer } from '@renderer/sip/audio'
+import { ringbackTone, ringer } from '@renderer/sip/audio'
+import { ringbackOf, type Ringback } from '@shared/ringback'
 import { parseDtmfSequence, runDtmfSequence } from '@renderer/lib/dtmf'
 import { useAccountsStore } from './accounts'
 import { useLogStore } from './log'
@@ -36,6 +37,8 @@ export interface CallView {
     /** Último retorno da transferência, para quem precisa do código (cenários). */
     transferResult?: { code: number; reason: string; final: boolean }
     quality?: CallQuality | null
+    /** O que quem ligou ouve antes do atendimento: o toque do app ou o áudio do PBX (RF-20). */
+    ringback?: Ringback
     /** Volume do áudio que chega, em dBFS, para o medidor do cartão; null quando o motor não mede. */
     level?: number | null
     dtmfRunning: boolean
@@ -76,6 +79,12 @@ export const useCallsStore = defineStore('calls', () => {
         (tone) => (tone ? ringer.start(tone) : ringer.stop())
     )
 
+    // Toque de quem liga (RF-20): toca enquanto alguma chamada feita espera sem áudio do PBX.
+    watch(
+        () => calls.value.some((c) => c.ringback === 'local'),
+        (ring) => (ring ? ringbackTone.start() : ringbackTone.stop())
+    )
+
     const view = (id: string): CallView | undefined => calls.value.find((c) => c.id === id)
 
     function track(accountId: string, call: EngineCall, state: CallState): CallView {
@@ -110,12 +119,14 @@ export const useCallsStore = defineStore('calls', () => {
             c.progress = `${code} ${reason}`.trim()
             if (code >= 180 && c.state === 'dialing') c.state = early ? 'early' : 'ringing'
             if (early) c.state = 'early'
+            c.ringback = ringbackOf(c, call)
             log.add(accountId, 'info', 'event', `Chamada ${label()}: ${c.progress}${early ? ' (early media)' : ''}`)
         })
         call.on('established', () => {
             const c = v()
             if (!c || c.state === 'established') return
             c.state = 'established'
+            c.ringback = undefined
             c.establishedAt = Date.now()
             c.autoAnswerAt = undefined
             window.iris.closeNotification?.(call.id)
@@ -141,6 +152,7 @@ export const useCallsStore = defineStore('calls', () => {
             c.recording = undefined
             const wasEstablished = c.state === 'established'
             c.state = 'ended'
+            c.ringback = undefined
             c.endedAt = Date.now()
             c.failed = !wasEstablished && end.by !== 'local' && Boolean(end.code && end.code >= 400)
             const code = [end.code, end.reason].filter(Boolean).join(' ')
@@ -430,7 +442,8 @@ export const useCallsStore = defineStore('calls', () => {
     // Volume do que chega, para o medidor do cartão: rápido o bastante para acompanhar a fala.
     setInterval(async () => {
         for (const c of calls.value) {
-            if (c.state !== 'established') continue
+            // Também antes do atendimento, quando o que toca é o áudio do PBX (RF-20).
+            if (c.state !== 'established' && c.ringback !== 'pbx') continue
             const level = await engineCalls
                 .get(c.id)
                 ?.audioLevel()

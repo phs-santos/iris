@@ -13,3 +13,14 @@ index 48d7aa9..3aaa30c 100644
              delegate: userAgentDelegate,
              logLevel: debug ? "log" : "error",
              logConnector: debug
+@@ -718,7 +720,9 @@ export class SipJSProvider {
+         if (!target)
+             throw new Error("Invalid destination URI");
+         const inviter = new Inviter(this.userAgent, target, {
+-            extraHeaders: extraHeaders || []
++            extraHeaders: extraHeaders || [],
++            // Íris (RF-20): aplica o SDP do 183 para tocar o áudio do PBX antes do atendimento.
++            earlyMedia: Boolean(options.earlyMedia)
+         });
+         const sipSession = new SipJSSession(inviter);
+         if (remoteElement)

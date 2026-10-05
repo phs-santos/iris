@@ -133,3 +133,53 @@ class Ringer {
 }
 
 export const ringer = new Ringer()
+
+/**
+ * Toque de chamada de quem liga (RF-20): 425 Hz, 1 s de som e 4 s de pausa, como nas redes do Brasil.
+ * Toca só quando o PBX não manda o próprio áudio, e sai pela mesma saída das chamadas.
+ */
+class RingbackTone {
+    private ctx?: AudioContext
+    private timer?: ReturnType<typeof setInterval>
+    private deviceId = ''
+
+    get playing(): boolean {
+        return this.timer !== undefined
+    }
+
+    setDevice(deviceId: string): void {
+        this.deviceId = deviceId
+        const ctx = this.ctx as (AudioContext & { setSinkId?: (id: string) => Promise<void> }) | undefined
+        void ctx?.setSinkId?.(deviceId).catch(() => undefined)
+    }
+
+    private beep(): void {
+        if (!this.ctx) {
+            this.ctx = new AudioContext()
+            this.setDevice(this.deviceId)
+        }
+        const ctx = this.ctx
+        if (ctx.state === 'suspended') ctx.resume().catch(() => undefined)
+        const gain = ctx.createGain()
+        gain.gain.value = 0.06
+        gain.connect(ctx.destination)
+        const osc = ctx.createOscillator()
+        osc.frequency.value = 425
+        osc.connect(gain)
+        osc.start()
+        osc.stop(ctx.currentTime + 1)
+    }
+
+    start(): void {
+        if (this.timer) return
+        this.beep()
+        this.timer = setInterval(() => this.beep(), 5000)
+    }
+
+    stop(): void {
+        if (this.timer) clearInterval(this.timer)
+        this.timer = undefined
+    }
+}
+
+export const ringbackTone = new RingbackTone()

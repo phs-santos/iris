@@ -26,14 +26,15 @@ const established = computed(() => c.value.state === 'established')
 
 const stateInfo = computed(() => {
     const s = c.value
-    if (s.state === 'ended') return { text: s.failed ? 'falhou' : 'encerrada', cls: s.failed ? 'bad' : 'neutral' }
+    if (s.state === 'ended')
+        return { text: s.failed ? t('callCard.falhou') : t('callCard.encerrada'), cls: s.failed ? 'bad' : 'neutral' }
     if (s.held || s.heldByRemote)
         return { text: s.held ? t('callCard.em_espera') : t('callCard.em_espera_remoto'), cls: 'hold' }
     if (s.state === 'established') return { text: t('callCard.em_chamada'), cls: 'ok' }
     if (s.state === 'early') return { text: t('callCard.early_media'), cls: 'warn' }
-    if (s.direction === 'in') return { text: 'tocando', cls: 'warn' }
-    if (s.state === 'ringing') return { text: 'chamando', cls: 'warn' }
-    return { text: 'discando', cls: 'neutral' }
+    if (s.direction === 'in') return { text: t('callCard.tocando'), cls: 'warn' }
+    if (s.state === 'ringing') return { text: t('callCard.chamando'), cls: 'warn' }
+    return { text: t('callCard.discando'), cls: 'neutral' }
 })
 
 /** Iniciais de quem está do outro lado (nome da agenda ou do PBX); sem nome, os dois últimos dígitos. */
@@ -125,6 +126,11 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
         <div class="meta mono">
             <span>{{ account?.name }}</span>
             <span v-if="call.progress && call.state !== 'established' && live">· {{ call.progress }}</span>
+            <span v-if="call.ringback === 'pbx'">{{ $t('callCard.ouvindo_pbx') }}</span>
+            <span v-else-if="call.ringback === 'local' && call.state === 'early'">{{
+                $t('callCard.early_nao_ouvido')
+            }}</span>
+            <span v-else-if="call.ringback === 'local'">{{ $t('callCard.toque_local') }}</span>
             <span v-if="call.muted">{{ $t('callCard.mudo') }}</span>
             <span v-if="call.transfer">{{ $t('callCard.transferencia', { transfer: call.transfer }) }}</span>
             <span v-if="consulting">{{ $t('callCard.consultando', { remote: consulting.remote }) }}</span>
@@ -255,7 +261,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
             </p>
         </div>
 
-        <div v-if="established && (meter || call.quality)" class="signal">
+        <div v-if="(established || call.ringback === 'pbx') && (meter || call.quality)" class="signal">
             <span
                 v-if="meter"
                 class="meter"

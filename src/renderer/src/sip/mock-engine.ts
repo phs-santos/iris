@@ -55,6 +55,8 @@ let nextId = 1
 const MOCK_VOICE_DB = -30
 
 class MockCall implements EngineCall {
+    readonly earlyAudio = false
+    readonly localRingback = false
     muted = false
     held = false
     private heard?: { db: number; until: number }

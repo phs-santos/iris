@@ -375,6 +375,16 @@ export const GUIDE_EN: GuideSection[] = [
             {
                 type: 'p',
                 text: 'Each call is a card. A call between two of your extensions shows as two cards: the caller (→ arrow) and the callee (← arrow). Click a card to select it; the keyboard shortcuts act on the selected card.'
+            },
+            { type: 'h', text: 'What you hear before they answer' },
+            {
+                type: 'p',
+                text: 'While the other side has not answered, the card says where the sound comes from. **local ringback** is the tone Íris itself plays when the PBX only replies `180 Ringing`. **hearing audio from the PBX** shows with the **early media** state: the PBX replied `183` and is sending its own sound (the carrier ringback, a "number not in service" announcement), and the meter on the card shows that audio arriving. On plain SIP accounts this always applies. On WebRTC accounts you have to turn on **Hear audio from the PBX before answering (early media)** in the account; without the option, the card says the PBX sent audio but the ringback is the local one.'
+            },
+            {
+                type: 'note',
+                kind: 'atenção',
+                text: 'On WebRTC, leave the early media option off if the PBX forks the call to several destinations (a proxy such as Kamailio ringing several devices): when whoever answers is not the one that sent the audio, the library drops the call. With Asterisk and FreeSWITCH this does not happen.'
             }
         ]
     },

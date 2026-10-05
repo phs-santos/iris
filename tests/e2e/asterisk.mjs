@@ -74,6 +74,51 @@ try {
     await page.locator('.call', { hasText: '486 Busy Here' }).waitFor({ timeout: 20000 })
     step('486 aparece no cartão da chamada')
 
+    // Early media em WebRTC (RF-20). Sem a opção na conta, o 183 com áudio fica com o toque local.
+    await page.getByLabel('Número').fill('602')
+    await page.getByRole('button', { name: 'Ligar', exact: true }).click()
+    let early = page.locator('.call', { hasText: /1001\s*→\s*602/ })
+    await early.getByText('o PBX mandou áudio (183), mas esta conta toca o toque local').waitFor({ timeout: 15000 })
+    await early.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 15000 })
+    await early.getByRole('button', { name: 'Desligar' }).click()
+    await page.getByText('0 chamadas').waitFor({ timeout: 15000 })
+    step('early media sem a opção: o cartão avisa que o toque é local, e a chamada completa')
+
+    // Com a opção, o áudio do PBX toca antes do atendimento e a chamada completa do mesmo jeito. O ramal
+    // 1021 fala G.711: este Asterisk não converte o tom para Opus, e com 1001 o early media viria mudo.
+    await page.getByRole('button', { name: '+ Nova' }).click()
+    const g711 = page.locator('form.dialog')
+    await g711.getByRole('textbox', { name: 'Nome' }).fill('PBX 1021')
+    await g711.getByRole('textbox', { name: 'Ramal' }).fill('1021')
+    await g711.getByRole('textbox', { name: 'Domínio SIP' }).fill(DOMAIN)
+    await g711.getByLabel('Senha').fill('1234')
+    await g711.getByRole('textbox', { name: 'WebSocket (WSS)' }).fill(WSS)
+    await g711.getByLabel('Ouvir o áudio do PBX antes de atender (early media)').check()
+    await g711.getByRole('button', { name: 'Salvar e registrar' }).click()
+    const pbx1021 = page.locator('.acc', { hasText: 'PBX 1021' })
+    await pbx1021.locator('.dot.registered').waitFor({ timeout: 15000 })
+    await pbx1021.locator('.row').click()
+    await page.getByLabel('Número').fill('602')
+    await page.getByRole('button', { name: 'Ligar', exact: true }).click()
+    early = page.locator('.call', { hasText: /1021\s*→\s*602/ })
+    await early.getByText('ouvindo o áudio do PBX').waitFor({ timeout: 15000 })
+    await page.waitForFunction(
+        () =>
+            [...document.querySelectorAll('.call')].some(
+                (card) =>
+                    /early media/.test(card.textContent) &&
+                    Number(card.querySelector('[role=meter]')?.getAttribute('aria-valuenow')) > -40
+            ),
+        null,
+        { timeout: 8000 }
+    )
+    await early.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 15000 })
+    await early.locator('.quality').waitFor({ timeout: 15000 })
+    await early.getByRole('button', { name: 'Desligar' }).click()
+    await page.getByText('0 chamadas').waitFor({ timeout: 15000 })
+    step('early media com a opção: o medidor mostra o áudio do PBX antes do atendimento, e a chamada completa')
+    await page.locator('.acc', { hasText: 'PBX 1001' }).locator('.row').click()
+
     await page.getByLabel('Número').fill('8000')
     await page.getByRole('button', { name: 'Ligar', exact: true }).click()
     const ivr = page.locator('.call', { hasText: /1001\s*→\s*8000/ })

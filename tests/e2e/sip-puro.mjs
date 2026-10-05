@@ -206,6 +206,39 @@ try {
         .waitFor({ timeout: 15000 })
     step('DTMF por RTP: a URA recebeu 4321 e desligou')
 
+    // Early media (RF-20): o 602 manda 183 com um tom antes de atender; o 603 só toca (180).
+    await dial('Puro UDP', '602')
+    const early = call(/2001\s*→\s*602/)
+    await early.locator('.pill', { hasText: 'early media' }).waitFor({ timeout: 15000 })
+    await early.getByText('ouvindo o áudio do PBX').waitFor()
+    // O medidor do cartão mostra o tom do PBX chegando, antes de a chamada ser atendida.
+    await page.waitForFunction(
+        () =>
+            [...document.querySelectorAll('.call')].some(
+                (card) =>
+                    /early media/.test(card.textContent) &&
+                    Number(card.querySelector('[role=meter]')?.getAttribute('aria-valuenow')) > -40
+            ),
+        null,
+        { timeout: 8000 }
+    )
+    await early.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 15000 })
+    if (await early.getByText('ouvindo o áudio do PBX').count())
+        throw new Error('o aviso de early media ficou depois de atender')
+    await early.getByRole('button', { name: 'Desligar' }).click()
+    await early.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
+    step('early media: o cartão diz que o som é do PBX e o medidor mostra o áudio antes do atendimento')
+
+    await dial('Puro UDP', '603')
+    const onlyRinging = call(/2001\s*→\s*603/)
+    await onlyRinging.getByText('toque local').waitFor({ timeout: 15000 })
+    await onlyRinging.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 15000 })
+    if (await onlyRinging.getByText('toque local').count())
+        throw new Error('o aviso de toque local ficou depois de atender')
+    await onlyRinging.getByRole('button', { name: 'Desligar' }).click()
+    await onlyRinging.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
+    step('só 180: o cartão diz que o toque é local, até atender')
+
     // Entre duas contas de SIP puro: UDP liga, TCP atende sozinha.
     await dial('Puro UDP', '2002')
     const caller = call(/2001\s*→\s*2002/)

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { audioInput, audioOutput, ringer } from '@renderer/sip/audio'
+import { audioInput, audioOutput, ringbackTone, ringer } from '@renderer/sip/audio'
 import { useCallsStore } from './calls'
 import { useLogStore } from './log'
 import { DEFAULT_RING_VOLUME } from '@shared/ringtones'
@@ -58,6 +58,7 @@ export const useDevicesStore = defineStore('devices', () => {
         audioInput.deviceId = inputId.value
         await audioOutput.setDevice(outputId.value)
         ringer.setDevice(outputId.value)
+        ringbackTone.setDevice(outputId.value)
         ringVolume.value = settings.ringVolume ?? DEFAULT_RING_VOLUME
         ringer.volume = ringVolume.value
         await refresh()
@@ -86,6 +87,7 @@ export const useDevicesStore = defineStore('devices', () => {
         outputId.value = id
         await audioOutput.setDevice(id)
         ringer.setDevice(id)
+        ringbackTone.setDevice(id)
         await save()
         useLogStore().add(null, 'info', 'event', `Saída de áudio: ${labelOf(outputs.value, id)}`)
     }

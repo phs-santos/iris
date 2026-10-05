@@ -373,6 +373,9 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         atraso_do_auto_atender_em: 'Auto-answer delay in milliseconds',
         ms: 'ms',
         mostrar_sip_bruto_no_log: 'Show raw SIP in the log',
+        early_media: 'Hear audio from the PBX before answering (early media)',
+        early_media_dica:
+            'With a 183 and audio, plays what the PBX sends (carrier ringback, announcement) instead of the local ringback. Leave it off if the PBX forks the call to several destinations: in that case the library drops the call.',
         toque: 'Ringtone for incoming calls',
         ouvir: 'Listen',
         toque_classico: 'Classic',
@@ -524,7 +527,15 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         em_espera: 'on hold',
         em_espera_remoto: 'on hold (remote)',
         em_chamada: 'in call',
-        early_media: 'early media'
+        early_media: 'early media',
+        falhou: 'failed',
+        encerrada: 'ended',
+        tocando: 'ringing',
+        chamando: 'calling',
+        discando: 'dialing',
+        ouvindo_pbx: '· hearing audio from the PBX',
+        toque_local: '· local ringback',
+        early_nao_ouvido: '· the PBX sent audio (183), but this account plays the local ringback'
     },
     dialerPane: {
         discar_de: 'Dial from',
@@ -561,6 +572,8 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         stun_endereco: 'STUN: the network goes out as {address}:{port}',
         stun_erro: "STUN: the account's server did not reply ({error})",
         stun_sem_servidor: 'STUN: no server on the account, the public address was not measured',
+        conectado: 'connected',
+        desconectado: 'disconnected',
         saude: 'Health · {name}',
         fechar: 'Close',
         verificando: 'Checking…',
@@ -805,7 +818,7 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         grande: 'Large',
         idioma: 'Language',
         idioma_dica:
-            'The screens change right away. The event log, call results and system notifications are still written in Portuguese.',
+            'The screens change right away. The event log, call results, the names of scenario steps and system notifications are still written in Portuguese.',
         idioma_pt: 'Português (Brasil)',
         idioma_en: 'English'
     },

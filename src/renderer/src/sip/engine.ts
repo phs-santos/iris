@@ -63,6 +63,10 @@ export interface EngineCall {
     readonly direction: 'in' | 'out'
     readonly remote: string
     readonly remoteName?: string
+    /** O motor toca o áudio que o PBX manda antes de atender (early media, RF-20). */
+    readonly earlyAudio: boolean
+    /** O app toca o toque de chamada para esta chamada; o simulado não tem som. */
+    readonly localRingback: boolean
     on<K extends keyof CallEvents>(event: K, listener: (...args: CallEvents[K]) => void): () => void
     answer(): Promise<void>
     reject(): Promise<void>

@@ -371,6 +371,9 @@ export const ptBR = {
         atraso_do_auto_atender_em: 'Atraso do auto-atender em milissegundos',
         ms: 'ms',
         mostrar_sip_bruto_no_log: 'Mostrar SIP bruto no log',
+        early_media: 'Ouvir o áudio do PBX antes de atender (early media)',
+        early_media_dica:
+            'Com 183 e áudio, toca o que o PBX manda (toque da operadora, mensagem) em vez do toque local. Deixe desligado se o PBX bifurca a chamada para vários destinos: nesse caso a biblioteca derruba a chamada.',
         toque: 'Toque das chamadas recebidas',
         ouvir: 'Ouvir',
         toque_classico: 'Clássico',
@@ -523,7 +526,15 @@ export const ptBR = {
         em_espera: 'em espera',
         em_espera_remoto: 'em espera (remoto)',
         em_chamada: 'em chamada',
-        early_media: 'early media'
+        early_media: 'early media',
+        falhou: 'falhou',
+        encerrada: 'encerrada',
+        tocando: 'tocando',
+        chamando: 'chamando',
+        discando: 'discando',
+        ouvindo_pbx: '· ouvindo o áudio do PBX',
+        toque_local: '· toque local',
+        early_nao_ouvido: '· o PBX mandou áudio (183), mas esta conta toca o toque local'
     },
     dialerPane: {
         discar_de: 'Discar de',
@@ -560,6 +571,8 @@ export const ptBR = {
         stun_endereco: 'STUN: a rede sai para fora como {address}:{port}',
         stun_erro: 'STUN: o servidor da conta não respondeu ({error})',
         stun_sem_servidor: 'STUN: sem servidor na conta, o endereço público não foi medido',
+        conectado: 'conectado',
+        desconectado: 'desconectado',
         saude: 'Saúde · {name}',
         fechar: 'Fechar',
         verificando: 'Verificando…',
@@ -805,7 +818,7 @@ export const ptBR = {
         grande: 'Grande',
         idioma: 'Idioma',
         idioma_dica:
-            'As telas mudam na hora. O log de eventos, o resultado das chamadas e as notificações do sistema continuam em português.',
+            'As telas mudam na hora. O log de eventos, o resultado das chamadas, os nomes dos passos dos cenários e as notificações do sistema continuam em português.',
         idioma_pt: 'Português (Brasil)',
         idioma_en: 'English'
     },

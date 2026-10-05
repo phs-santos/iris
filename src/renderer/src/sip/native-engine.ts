@@ -30,6 +30,9 @@ class NativeSipCall implements EngineCall {
     private emitter = new Emitter<CallEvents>()
     private audio: NativeAudio
     private finished = false
+    // O RTP do 183 já é tocado: o áudio abre junto com a discagem.
+    readonly earlyAudio = true
+    readonly localRingback = true
 
     constructor(
         readonly engineId: string,

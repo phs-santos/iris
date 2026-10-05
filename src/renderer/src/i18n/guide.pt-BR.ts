@@ -400,6 +400,16 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'p',
                 text: 'Cada chamada é um cartão. Uma ligação entre dois ramais seus aparece como dois cartões: o de quem ligou (seta →) e o de quem recebeu (seta ←). Clique num cartão para selecioná-lo; os atalhos de teclado agem sobre o cartão selecionado.'
+            },
+            { type: 'h', text: 'O que você ouve antes de atenderem' },
+            {
+                type: 'p',
+                text: 'Enquanto o outro lado não atende, o cartão diz de onde vem o som. **toque local** é o toque que a própria Íris toca quando o PBX responde só `180 Ringing`. **ouvindo o áudio do PBX** aparece com o estado **early media**: o PBX respondeu `183` e está mandando o próprio som (o toque da operadora, uma mensagem de "número inexistente"), e o medidor do cartão mostra esse áudio chegando. Em contas de SIP puro isso vale sempre. Em contas WebRTC é preciso ligar **Ouvir o áudio do PBX antes de atender (early media)** na conta; sem a opção, o cartão avisa que o PBX mandou áudio mas o toque é o local.'
+            },
+            {
+                type: 'note',
+                kind: 'atenção',
+                text: 'Em WebRTC, deixe a opção de early media desligada se o PBX bifurca a chamada para vários destinos (um proxy como o Kamailio tocando em vários aparelhos): quando quem atende não é quem mandou o áudio, a biblioteca derruba a chamada. Com Asterisk e FreeSWITCH isso não acontece.'
             }
         ]
     },

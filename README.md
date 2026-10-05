@@ -46,7 +46,8 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-34 | Atalhos globais para atender, desligar e mudo, definidos em Configurações → Atalhos e links |
 | RF-55 | Toque de chamada por conta (clássico, digital, suave, sino ou nenhum), volume do toque em Configurações → Áudio e o botão do fone (tecla Tocar/Pausar) para atender e desligar |
 | RF-54 | Mensagens de texto por SIP MESSAGE entre ramais, em WebRTC, SIP puro e no simulado: conversas por conta, não lidas, aviso e "não entregue" com a resposta do PBX |
-| RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, as notificações do sistema e a linha de comando continuam em português |
+| RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, os passos dos cenários, as notificações do sistema e a linha de comando continuam em português |
+| RF-20 | Early media: o cartão diz se o som antes do atendimento é o toque local ou o áudio do PBX (183), e toca esse áudio. Em SIP puro sempre; em WebRTC por opção da conta |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, salvar a partir do histórico, CSV, e o nome do contato nas chamadas e no histórico |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
 | RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |
@@ -138,7 +139,7 @@ No Docker Desktop (macOS e Windows) a rede do host não fica exposta, então o `
 
 Cadastre contas com domínio `127.0.0.1`, WebSocket `wss://127.0.0.1:8089/ws`, ramais `1001` a `1020` e senha `1234`. Na primeira conexão o app recusa o certificado e oferece **Confiar neste host**.
 
-Números do plano de discagem: `1001`–`1020` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `601` (atende e fica mudo), `486` (ocupado).
+Números do plano de discagem: `1001`–`1020` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `601` (atende e fica mudo), `602` (183 com um tom por 5 s antes de atender), `603` (só toca por 5 s antes de atender), `486` (ocupado).
 
 Para SIP puro (RF-39), o mesmo Asterisk atende em UDP e TCP na porta `5060` e em TLS na `5061`, com os ramais `2001` a `2005` (senha `1234`); o `2005` exige SRTP. Na conta, escolha o transporte e use o domínio `127.0.0.1`. O ramal `2006` é de SIP puro só com Opus. O ramal `1021` é WebRTC só com G.711, para ligar entre SIP puro e WebRTC: esta imagem do Asterisk não converte Opus, e os ramais `1001` a `1020` preferem Opus. Depois de mudar um arquivo de `docker/asterisk`, recrie o contêiner (`docker compose … up -d --force-recreate`): no Docker Desktop, o contêiner pode continuar vendo o arquivo antigo.
 

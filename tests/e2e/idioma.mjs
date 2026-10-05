@@ -81,6 +81,7 @@ try {
     await outgoing.getByRole('button', { name: 'Mute', exact: true }).click()
     await outgoing.getByRole('button', { name: 'Unmute' }).waitFor()
     await outgoing.getByRole('button', { name: 'Hang up' }).click()
+    await outgoing.locator('.pill', { hasText: 'ended' }).waitFor()
     await page.waitForFunction(() => document.querySelectorAll('.call').length === 0, null, { timeout: 15000 })
     step('cartão de chamada com estado e botões em inglês')
 

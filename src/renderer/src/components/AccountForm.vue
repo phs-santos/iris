@@ -302,6 +302,10 @@ async function save(register: boolean): Promise<void> {
                         <input v-model="form.srtp" type="checkbox" :disabled="Boolean(linked)" />
                         {{ $t('accountForm.audio_cifrado') }}
                     </label>
+                    <label v-if="!native && !form.simulated" class="check" :title="$t('accountForm.early_media_dica')">
+                        <input v-model="form.earlyMedia" type="checkbox" />
+                        {{ $t('accountForm.early_media') }}
+                    </label>
                     <label class="check">
                         <input v-model="form.rawSipLog" type="checkbox" />
                         {{ $t('accountForm.mostrar_sip_bruto_no_log') }}

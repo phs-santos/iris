@@ -75,7 +75,9 @@ class EasySipCall implements EngineCall {
         readonly direction: 'in' | 'out',
         readonly remote: string,
         readonly remoteName: string | undefined,
-        private invitation?: SipInvitation
+        private invitation?: SipInvitation,
+        /** A conta pediu para ouvir o áudio do PBX antes do atendimento (RF-20). */
+        readonly earlyAudio = false
     ) {
         this.audio.autoplay = true
         this.audio.hidden = true
@@ -96,6 +98,21 @@ class EasySipCall implements EngineCall {
         return this.emitter.on(event, listener)
     }
 
+    readonly localRingback = true
+
+    /**
+     * A biblioteca só liga o áudio ao elemento quando a chamada é atendida. Com early media, o fluxo do
+     * outro lado já existe antes disso: é o mesmo objeto, e as faixas entram nele quando o 183 é aplicado.
+     */
+    private attachEarlyAudio(session: ISipSession): void {
+        const raw = (session as { session?: { sessionDescriptionHandler?: { remoteMediaStream?: MediaStream } } })
+            .session
+        const stream = raw?.sessionDescriptionHandler?.remoteMediaStream
+        if (!stream || this.audio.srcObject === stream) return
+        this.audio.srcObject = stream
+        void this.audio.play().catch(() => undefined)
+    }
+
     get remoteElement(): HTMLAudioElement {
         return this.audio
     }
@@ -104,6 +121,7 @@ class EasySipCall implements EngineCall {
         this.session = session
         session.on?.('progress', (event) => {
             if (!event) return
+            if (this.earlyAudio && event.hasEarlyMedia) this.attachEarlyAudio(session)
             this.emitter.emit('progress', event.statusCode, event.reasonPhrase ?? '', Boolean(event.hasEarlyMedia))
         })
         session.on?.('established', () => this.emitter.emit('established'))
@@ -247,8 +265,10 @@ const levelOf = (level: string): LogLevel =>
 export class EasySipEngine implements SipEngine {
     private emitter = new Emitter<EngineEvents>()
     private client: SipClient
+    private readonly earlyMedia: boolean
 
     constructor(account: Account, password: string, reconnect: ReconnectSettings = DEFAULT_RECONNECT) {
+        this.earlyMedia = Boolean(account.earlyMedia)
         const iceServers = account.iceServers
             .split(',')
             .map((url) => url.trim())
@@ -270,7 +290,8 @@ export class EasySipEngine implements SipEngine {
             {
                 preset: account.preset,
                 provider: account.provider,
-                sounds: { ringtone: SILENT_WAV },
+                // O toque de quem recebe e o de quem liga são do app, um só para todas as contas.
+                sounds: { ringtone: SILENT_WAV, ringback: SILENT_WAV },
                 // Depois de uma queda, a biblioteca reconecta sozinha com espera crescente (RNF-06) e mantém
                 // as chamadas. A primeira conexão que falha é refeita pela store de contas.
                 autoReconnect: true,
@@ -354,10 +375,12 @@ export class EasySipEngine implements SipEngine {
     }
 
     async dial(destination: string, options: DialOptions = {}): Promise<EngineCall> {
-        const call = new EasySipCall(this.client, 'out', destination, undefined)
+        const call = new EasySipCall(this.client, 'out', destination, undefined, undefined, this.earlyMedia)
+        // `earlyMedia` chega ao SIP.js pelo patch de patches/: a biblioteca não tem a opção.
         const session = await this.client.dial(destination, {
             remoteElement: call.remoteElement,
-            extraHeaders: options.headers
+            extraHeaders: options.headers,
+            ...({ earlyMedia: this.earlyMedia } as object)
         })
         call.bind(session)
         return call

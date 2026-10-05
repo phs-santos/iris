@@ -97,7 +97,7 @@ async function run(): Promise<void> {
     if (health) {
         list.push({
             ok: health.websocketConnected,
-            text: `${link} ${health.websocketConnected ? 'conectado' : 'desconectado'}`
+            text: `${link} ${health.websocketConnected ? t('healthDialog.conectado') : t('healthDialog.desconectado')}`
         })
         list.push({
             ok: health.latencyMs !== undefined,
