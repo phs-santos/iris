@@ -29,6 +29,12 @@ const testResult = ref<{ ok: boolean; text: string } | null>(null)
 const saving = ref(false)
 const quickDialsText = ref(form.quickDials.map((q) => `${q.number} ${q.label}`).join('\n'))
 
+/** Áudio tocado para quem ligou, logo depois de atender (RF-57). */
+async function pickAnswerAudio(): Promise<void> {
+    const path = await window.iris.audio.pickWav()
+    if (path) form.answerAudio = path
+}
+
 /** Toque desta conta (RF-55). O clássico não é gravado: é o que vale sem o campo. */
 const ringtone = computed<RingtoneId>({
     get: () => form.ringtone ?? DEFAULT_RINGTONE,
@@ -388,6 +394,39 @@ async function save(register: boolean): Promise<void> {
                             ></button>
                         </div>
                     </label>
+                    <div class="field wide">
+                        <span class="label" id="answer-audio-label">{{ $t('accountForm.audio_ao_atender') }}</span>
+                        <span class="ring-row">
+                            <input
+                                :value="form.answerAudio ? form.answerAudio.split(/[\\/]/).pop() : ''"
+                                class="input mono"
+                                readonly
+                                aria-labelledby="answer-audio-label"
+                                :placeholder="$t('accountForm.audio_ao_atender_nenhum')"
+                            />
+                            <button
+                                type="button"
+                                class="btn small"
+                                :disabled="!(native || form.simulated)"
+                                @click="pickAnswerAudio"
+                            >
+                                {{ $t('accountForm.escolher_wav') }}
+                            </button>
+                            <button
+                                v-if="form.answerAudio"
+                                type="button"
+                                class="btn small ghost"
+                                @click="delete form.answerAudio"
+                            >
+                                {{ $t('accountForm.tirar_audio') }}
+                            </button>
+                        </span>
+                        <small class="note">{{
+                            native || form.simulated
+                                ? $t('accountForm.audio_ao_atender_dica')
+                                : $t('accountForm.audio_ao_atender_webrtc')
+                        }}</small>
+                    </div>
                     <label v-if="native || form.simulated" class="field wide">
                         <span class="label">{{ $t('accountForm.blf_ramais') }}</span>
                         <input v-model="form.blf" class="input mono" :placeholder="$t('accountForm.blf_exemplo')" />

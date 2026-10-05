@@ -396,6 +396,10 @@ export const GUIDE: GuideSection[] = [
                 type: 'p',
                 text: 'Quando um ramal registrado toca, a Íris toca o som de chamada, mostra uma notificação do sistema e cria um cartão com **Atender** e **Recusar**. **Ctrl/Cmd + Enter** atende a chamada que está tocando. Com auto-atender ligado, o botão mostra a contagem ("auto em 2 s").'
             },
+            {
+                type: 'p',
+                text: 'Em contas de **SIP puro** e simuladas, a conta pode tocar um arquivo WAV para quem ligou assim que a chamada é atendida, como uma mensagem de boas-vindas ou um aviso de gravação: em Editar → Avançado → **Ao atender, tocar para quem ligou**, escolha o arquivo. Ele toca no lugar do microfone e, quando acaba, o microfone volta. Vale também com o auto-atender. Use WAV de PCM de 16 bits, de até 2 minutos.'
+            },
             { type: 'h', text: 'Várias chamadas ao mesmo tempo' },
             {
                 type: 'p',

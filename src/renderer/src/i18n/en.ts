@@ -387,6 +387,14 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         early_media_dica:
             'With a 183 and audio, plays what the PBX sends (carrier ringback, announcement) instead of the local ringback. Leave it off if the PBX forks the call to several destinations: in that case the library drops the call.',
         toque: 'Ringtone for incoming calls',
+        audio_ao_atender: 'On answering, play to the caller',
+        audio_ao_atender_nenhum: 'no audio',
+        escolher_wav: 'Choose WAV…',
+        tirar_audio: 'Remove',
+        audio_ao_atender_dica:
+            'The file plays right after answering, in place of the microphone; when it ends, the microphone comes back. Also applies to auto-answer.',
+        audio_ao_atender_webrtc:
+            'Only on plain SIP and simulated accounts: on WebRTC Íris does not replace what the microphone sends.',
         ouvir: 'Listen',
         toque_classico: 'Classic',
         toque_digital: 'Digital',
@@ -559,6 +567,7 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         ligar: 'Call',
         video: 'Video',
         ligar_com_video: 'Video call',
+        video_so_webrtc: 'Video calls only on WebRTC accounts (WebSocket transport). This account is plain SIP.',
         registre_para_ligar: 'Register {name} to call.',
         teclado: 'keypad',
         teclado_rotulo: 'Numeric keypad',

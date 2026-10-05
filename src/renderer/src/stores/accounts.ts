@@ -210,7 +210,13 @@ export const useAccountsStore = defineStore('accounts', () => {
             id,
             'info',
             'event',
-            `Registrando ${account.extension}@${account.domain} via ${account.simulated ? 'PBX simulado' : account.wssUrl}`
+            `Registrando ${account.extension}@${account.domain} via ${
+                account.simulated
+                    ? 'PBX simulado'
+                    : account.transport && account.transport !== 'ws'
+                      ? `SIP por ${account.transport.toUpperCase()} (${account.sipServer || account.domain})`
+                      : account.wssUrl
+            }`
         )
         await engine.connect()
     }

@@ -53,6 +53,11 @@ export interface Account {
      * padrão: com ele, o SIP.js derruba a chamada se o PBX bifurcar o INVITE. Em SIP puro vale sempre.
      */
     earlyMedia?: boolean
+    /**
+     * Arquivo WAV tocado para quem ligou assim que a chamada é atendida, no lugar do microfone (RF-57).
+     * Só em SIP puro e no simulado.
+     */
+    answerAudio?: string
     /** Toque das chamadas recebidas nesta conta (RF-55). Sem o campo, vale o clássico. */
     ringtone?: RingtoneId
     /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */

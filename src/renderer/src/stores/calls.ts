@@ -142,6 +142,7 @@ export const useCallsStore = defineStore('calls', () => {
             c.autoAnswerAt = undefined
             window.iris.closeNotification?.(call.id)
             log.add(accountId, 'info', 'event', `Chamada ${label()} em andamento`)
+            if (call.direction === 'in') void playAnswerAudio(accountId, call.id)
         })
         call.on('ended', (end) => {
             const c = v()
@@ -361,6 +362,27 @@ export const useCallsStore = defineStore('calls', () => {
     /** Volume do áudio recebido, para os cenários (RF-41). */
     const audioLevel = (id: string): Promise<number | null> =>
         engineCalls.get(id)?.audioLevel() ?? Promise.resolve(null)
+
+    /** Áudio de atendimento (RF-57): o WAV da conta toca para quem ligou, logo depois de atender. */
+    async function playAnswerAudio(accountId: string, id: string): Promise<void> {
+        const path = useAccountsStore().byId(accountId)?.answerAudio
+        const call = engineCalls.get(id)
+        if (!path || !call || !window.iris.audio) return
+        const log = useLogStore()
+        if (!call.playAudio) {
+            log.add(accountId, 'warn', 'event', 'Áudio de atendimento não tocado: só funciona em SIP puro')
+            return
+        }
+        try {
+            const pcm = await window.iris.audio.loadWav(path)
+            const name = path.split(/[\\/]/).pop()
+            log.add(accountId, 'info', 'event', `Áudio de atendimento: tocando ${name} para quem ligou`)
+            await call.playAudio(pcm)
+        } catch (error) {
+            const message = (error as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+            log.add(accountId, 'warn', 'event', `Áudio de atendimento não tocado: ${message}`)
+        }
+    }
 
     /** Toca um áudio na chamada, no lugar do microfone (RF-41). Lança erro se o motor não consegue. */
     async function playAudio(id: string, pcm: Int16Array): Promise<void> {

@@ -49,6 +49,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, os passos dos cenários, as notificações do sistema e a linha de comando continuam em português |
 | RF-20 | Early media: o cartão diz se o som antes do atendimento é o toque local ou o áudio do PBX (183), e toca esse áudio. Em SIP puro sempre; em WebRTC por opção da conta |
 | RF-52 | Chamada de vídeo em contas WebRTC e no simulado: botão Vídeo no discador, Atender com vídeo, a imagem do outro lado e a própria câmera no cartão, câmera ligável durante a chamada e escolhida em Configurações. SIP puro, modo Telefone, gravação e cenários ainda sem vídeo |
+| RF-57 | Áudio de atendimento: um WAV da conta toca para quem ligou logo depois de atender (SIP puro e simulado) |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, salvar a partir do histórico, CSV, e o nome do contato nas chamadas e no histórico |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
 | RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |

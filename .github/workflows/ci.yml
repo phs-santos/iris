@@ -95,6 +95,9 @@ jobs:
             - name: Chamada de vídeo no simulado (RF-52)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/video.mjs
+            - name: Áudio de atendimento (RF-57)
+              if: ${{ !cancelled() }}
+              run: xvfb-run -a node tests/e2e/atendimento.mjs
             - name: Monitor com webhook num servidor local (RF-43)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/monitor.mjs

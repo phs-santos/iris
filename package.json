@@ -40,6 +40,7 @@
         "test:mensagens": "electron-vite build && node tests/e2e/mensagens.mjs",
         "test:idioma": "electron-vite build && node tests/e2e/idioma.mjs",
         "test:video": "electron-vite build && node tests/e2e/video.mjs",
+        "test:atendimento": "electron-vite build && node tests/e2e/atendimento.mjs",
         "test:monitor": "electron-vite build && node tests/e2e/monitor.mjs",
         "test:audio": "electron-vite build && node tests/e2e/audio.mjs",
         "test:sip": "electron-vite build && node tests/e2e/sip-puro.mjs",

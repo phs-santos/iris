@@ -371,6 +371,10 @@ export const GUIDE_EN: GuideSection[] = [
                 type: 'p',
                 text: 'When a registered extension rings, Íris plays the ringtone, shows a system notification and creates a card with **Answer** and **Decline**. **Ctrl/Cmd + Enter** answers the call that is ringing. With auto-answer on, the button shows the countdown ("auto in 2 s").'
             },
+            {
+                type: 'p',
+                text: 'On **plain SIP** and simulated accounts, the account can play a WAV file to the caller as soon as the call is answered, such as a welcome message or a recording notice: under Edit → Advanced → **On answering, play to the caller**, pick the file. It plays in place of the microphone and, when it ends, the microphone comes back. It also applies to auto-answer. Use a 16-bit PCM WAV, up to 2 minutes long.'
+            },
             { type: 'h', text: 'Several calls at the same time' },
             {
                 type: 'p',

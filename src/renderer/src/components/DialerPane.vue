@@ -136,11 +136,11 @@ defineExpose({
                 <PhoneIcon name="phone" class="dial-icon" />{{ $t('dialerPane.ligar') }}
             </button>
             <button
-                v-if="canVideo"
+                v-if="from"
                 class="btn big video-call"
                 type="button"
-                :disabled="!registered || !destination.trim()"
-                :title="$t('dialerPane.ligar_com_video')"
+                :disabled="!canVideo || !registered || !destination.trim()"
+                :title="canVideo ? $t('dialerPane.ligar_com_video') : $t('dialerPane.video_so_webrtc')"
                 :aria-label="$t('dialerPane.ligar_com_video')"
                 @click="dial(destination, true)"
             >

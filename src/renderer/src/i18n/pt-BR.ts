@@ -385,6 +385,14 @@ export const ptBR = {
         early_media_dica:
             'Com 183 e áudio, toca o que o PBX manda (toque da operadora, mensagem) em vez do toque local. Deixe desligado se o PBX bifurca a chamada para vários destinos: nesse caso a biblioteca derruba a chamada.',
         toque: 'Toque das chamadas recebidas',
+        audio_ao_atender: 'Ao atender, tocar para quem ligou',
+        audio_ao_atender_nenhum: 'nenhum áudio',
+        escolher_wav: 'Escolher WAV…',
+        tirar_audio: 'Tirar',
+        audio_ao_atender_dica:
+            'O arquivo toca logo depois de atender, no lugar do microfone; quando acaba, o microfone volta. Vale também para o auto-atender.',
+        audio_ao_atender_webrtc:
+            'Só em contas de SIP puro e simuladas: em WebRTC a Íris não troca o que o microfone manda.',
         ouvir: 'Ouvir',
         toque_classico: 'Clássico',
         toque_digital: 'Digital',
@@ -558,6 +566,7 @@ export const ptBR = {
         ligar: 'Ligar',
         video: 'Vídeo',
         ligar_com_video: 'Ligar com vídeo',
+        video_so_webrtc: 'Chamada de vídeo só em contas WebRTC (transporte WebSocket). Esta conta é de SIP puro.',
         registre_para_ligar: 'Registre {name} para ligar.',
         teclado: 'teclado',
         teclado_rotulo: 'Teclado numérico',
