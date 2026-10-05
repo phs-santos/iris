@@ -428,7 +428,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
     font-size: 11px;
     font-weight: 700;
     color: #fff;
-    background: color-mix(in srgb, var(--account, var(--accent)) 70%, #000);
+    background: color-mix(in srgb, var(--account, var(--accent)) 55%, #000);
 }
 .signal {
     display: flex;
