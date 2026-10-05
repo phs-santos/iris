@@ -11,7 +11,8 @@ import WavPicker from './WavPicker.vue'
 /** Opções da campanha do modo SDR: conta, aberturas, caixa postal, horário, tentativas e CRM. */
 const emit = defineEmits<{ close: [] }>()
 const dialogEl = ref<HTMLElement | null>(null)
-useDialog(dialogEl, () => emit('close'))
+// Fechar pelo X, pelo Esc ou clicando fora salva (se estiver tudo certo); só Cancelar descarta.
+useDialog(dialogEl, () => save())
 const sdr = useSdrStore()
 const accounts = useAccountsStore()
 
@@ -47,6 +48,12 @@ function removeOpening(opening: Opening): void {
     form.value.openings = form.value.openings.filter((o) => o !== opening)
 }
 
+/** Gravar ou escolher a abertura liga o "tocar ao atender": sem isso, a gravação não tocaria. */
+function setOpeningAudio(opening: Opening, path: string | undefined): void {
+    opening.audio = path
+    if (path) form.value.playOpening = true
+}
+
 function save(): void {
     const f = form.value
     error.value = ''
@@ -61,7 +68,7 @@ function save(): void {
 </script>
 
 <template>
-    <div class="overlay" @click.self="emit('close')">
+    <div class="overlay" @click.self="save">
         <form
             ref="dialogEl"
             class="dialog sdr-settings"
@@ -73,12 +80,7 @@ function save(): void {
         >
             <header>
                 <h2 id="sdr-settings-title">{{ $t('sdrSettings.titulo') }}</h2>
-                <button
-                    type="button"
-                    class="btn small ghost"
-                    :aria-label="$t('sdrSettings.fechar')"
-                    @click="emit('close')"
-                >
+                <button type="button" class="btn small ghost" :aria-label="$t('sdrSettings.fechar')" @click="save">
                     ✕
                 </button>
             </header>
@@ -124,7 +126,7 @@ function save(): void {
                         :path="o.audio"
                         name="abertura"
                         :label="$t('sdrSettings.gravacao_da', { n: i + 1 })"
-                        @change="(p) => (o.audio = p)"
+                        @change="(p) => setOpeningAudio(o, p)"
                     />
                 </div>
                 <button type="button" class="btn small" @click="addOpening">

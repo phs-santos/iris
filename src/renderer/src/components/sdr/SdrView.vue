@@ -9,6 +9,7 @@ import { formatDuration } from '@shared/history'
 import type { OutcomeId } from '@shared/sdr'
 import SdrSettings from './SdrSettings.vue'
 import PhoneIcon from '../PhoneIcon.vue'
+import { isNativeAccount } from '@renderer/sip'
 
 /**
  * Modo SDR: a fila do dia, a pessoa da vez com o roteiro, a abertura gravada, o resultado com um
@@ -42,6 +43,15 @@ function addPasted(): void {
 const call = computed(() => calls.calls.find((c) => c.id === sdr.current?.callId))
 const account = computed(() => accounts.byId(sdr.current?.accountId ?? sdr.settings.accountId ?? accounts.selectedId))
 const stats = computed(() => sdr.stats)
+/** Se a abertura gravada vai tocar, e por que não, para ninguém descobrir só na chamada. */
+const openingState = computed(() => {
+    const recorded = sdr.settings.openings.some((o) => o.audio)
+    if (!recorded) return { ok: false, text: t('sdr.abertura_sem_gravacao') }
+    if (!sdr.settings.playOpening) return { ok: false, text: t('sdr.abertura_desligada') }
+    const a = account.value
+    if (a && !a.simulated && !isNativeAccount(a)) return { ok: false, text: t('sdr.abertura_webrtc') }
+    return { ok: true, text: t('sdr.abertura_ok') }
+})
 const goal = computed(() => sdr.settings.dailyGoal)
 const progress = computed(() => (goal.value ? Math.min(100, Math.round((stats.value.dialed / goal.value) * 100)) : 0))
 const list = computed(() => sdr.data.leads.filter((l) => l.status === listFilter.value).slice(0, 200))
@@ -136,6 +146,9 @@ onUnmounted(() => {
             </button>
             <button v-else class="btn" @click="sdr.pause()">{{ $t('sdr.pausar') }}</button>
             <span class="who mono">{{ account ? `${account.name} · ${account.extension}` : $t('sdr.sem_conta') }}</span>
+            <button class="opening-state" :class="{ ok: openingState.ok }" @click="showSettings = true">
+                {{ openingState.text }}
+            </button>
             <span class="spacer"></span>
             <button class="btn small" :class="{ on: pasting }" @click="pasting = !pasting">
                 {{ $t('sdr.adicionar_numeros') }}
@@ -401,6 +414,19 @@ onUnmounted(() => {
 }
 .spacer {
     flex: 1;
+}
+.opening-state {
+    border: 1px dashed var(--line);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--bad-text);
+    padding: 2px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.opening-state.ok {
+    border-style: solid;
+    color: var(--muted);
 }
 .paste {
     display: flex;

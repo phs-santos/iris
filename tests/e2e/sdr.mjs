@@ -107,13 +107,14 @@ try {
     await page.getByRole('button', { name: 'Opções' }).click()
     const form = page.getByRole('dialog', { name: 'Opções do modo SDR' })
     await form.getByLabel('Ligar pela conta').selectOption({ label: 'Suporte 1001 · 1001@demo.local' })
-    await form.getByLabel(/Tocar a gravação quando a pessoa atender/).check()
     await nextOpen(openingWav)
     await form
         .getByRole('group', { name: 'Gravação da abertura 1' })
         .getByRole('button', { name: 'Escolher WAV…' })
         .click()
     await form.getByText('abertura.wav').waitFor()
+    if (!(await form.getByLabel(/Tocar a gravação quando a pessoa atender/).isChecked()))
+        throw new Error('escolher a gravação deveria ligar o tocar ao atender')
     await form.getByLabel('Deixar o recado gravado e desligar').check()
     await nextOpen(messageWav)
     await form
@@ -127,9 +128,11 @@ try {
         await form.getByLabel(day, { exact: true }).check()
     await form.getByLabel(/Próxima ligação em/).fill('1')
     await form.getByLabel('Meta de ligações por dia').fill('10')
-    await form.getByRole('button', { name: 'Salvar' }).click()
+    // Fechar pelo X também salva.
+    await form.getByRole('button', { name: 'Fechar', exact: true }).click()
     await form.waitFor({ state: 'detached' })
-    step('opções salvas: conta, abertura gravada, recado, horário e meta')
+    await page.getByRole('button', { name: 'Abertura gravada: toca ao atender' }).waitFor()
+    step('opções salvas ao fechar: escolher a gravação ligou o tocar ao atender, e o painel mostra')
 
     // 1) Ana atende (Vendas 1002 atende sozinha e diz "Alô?"): a abertura toca, depois a conversa.
     await page.getByRole('button', { name: 'Começar a fila' }).click()
