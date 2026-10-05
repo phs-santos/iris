@@ -48,7 +48,8 @@ try {
         .locator('form.dialog')
         .waitFor({ state: 'detached', timeout: 2000 })
         .catch(() => problems.push('[formulário de conta] Esc não fecha'))
-    if (await page.locator('form.dialog').count()) await page.getByRole('button', { name: 'Fechar' }).click()
+    if (await page.locator('form.dialog').count())
+        await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
 
     await page.getByRole('button', { name: 'Fluxo SIP' }).click()
     await page

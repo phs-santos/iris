@@ -118,7 +118,7 @@ try {
     await page.getByRole('tab', { name: 'Importar e exportar' }).click()
     await page.getByRole('button', { name: 'Escolher arquivo' }).click()
     await page.getByText('10 contas importadas').waitFor()
-    await page.getByRole('button', { name: 'Fechar' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
     const registerAll = async () => {
         await page.getByRole('button', { name: 'Todas', exact: true }).click()
         await page.getByRole('menuitem', { name: 'Registrar todas', exact: true }).click()

@@ -58,7 +58,7 @@ try {
         await page.getByRole('tab', { name: 'Importar e exportar' }).click()
         await page.getByRole('button', { name: 'Escolher arquivo' }).click()
         await page.getByText('1 contas importadas').waitFor()
-        await page.getByRole('button', { name: 'Fechar' }).click()
+        await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
         await page.locator('.acc', { hasText: origin }).locator('.row').click()
         await page.getByRole('button', { name: 'Registrar', exact: true }).click()
         const trust = page.getByRole('button', { name: 'Confiar neste host' })

@@ -75,7 +75,7 @@ try {
     await page.getByRole('tab', { name: 'Importar e exportar' }).click()
     await page.getByRole('button', { name: 'Escolher arquivo' }).click()
     await page.getByText(`${ACCOUNTS} contas importadas`).waitFor()
-    await page.getByRole('button', { name: 'Fechar' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
     step(`${ACCOUNTS} contas importadas`)
 
     // Mede o atraso do laço de eventos da interface durante todo o teste.
