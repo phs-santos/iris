@@ -370,6 +370,10 @@ export const ptBR = {
         cole_a_chave_da_openrouter: 'Cole a chave da OpenRouter.'
     },
     callCard: {
+        audio_chegando: 'Áudio chegando',
+        audio_chegando_db: 'Áudio chegando: {db} dBFS',
+        sem_audio: 'sem áudio chegando',
+        sinal: 'Qualidade: {n} de 4 barras',
         gravar: 'Gravar',
         parar_gravacao: 'Parar gravação',
         gravar_dica: 'Grava os dois lados num arquivo WAV, na pasta gravacoes dos dados da Íris',

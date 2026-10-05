@@ -33,6 +33,8 @@ export interface CallView {
     /** Último retorno da transferência, para quem precisa do código (cenários). */
     transferResult?: { code: number; reason: string; final: boolean }
     quality?: CallQuality | null
+    /** Volume do áudio que chega, em dBFS, para o medidor do cartão; null quando o motor não mede. */
+    level?: number | null
     dtmfRunning: boolean
     dtmfReceived: string
     autoAnswerAt?: number
@@ -397,6 +399,19 @@ export const useCallsStore = defineStore('calls', () => {
                 await run(c.id, (call) => call.setInputDevice(deviceId), 'Troca de microfone')
         }
     }
+
+    // Volume do que chega, para o medidor do cartão: rápido o bastante para acompanhar a fala.
+    setInterval(async () => {
+        for (const c of calls.value) {
+            if (c.state !== 'established') continue
+            const level = await engineCalls
+                .get(c.id)
+                ?.audioLevel()
+                .catch(() => null)
+            const current = view(c.id)
+            if (current && level !== undefined) current.level = level
+        }
+    }, 250)
 
     // Qualidade das chamadas em andamento, a cada 2 s (RF-26).
     setInterval(async () => {

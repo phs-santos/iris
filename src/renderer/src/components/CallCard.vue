@@ -35,6 +35,30 @@ const stateInfo = computed(() => {
     return { text: 'discando', cls: 'neutral' }
 })
 
+/** Iniciais de quem está do outro lado (nome da agenda ou do PBX); sem nome, os dois últimos dígitos. */
+const initials = computed(() => {
+    const words = (c.value.remoteName ?? '').split(/\s+/).filter((w) => /\p{L}/u.test(w))
+    if (words.length)
+        return words
+            .slice(0, 2)
+            .map((w) => w[0]!.toUpperCase())
+            .join('')
+    return c.value.remote.replace(/\D/g, '').slice(-2) || '?'
+})
+
+/** Barras de sinal, de 1 a 4, a partir da nota de qualidade; os números ficam na dica. */
+const bars = computed(() => {
+    const level = c.value.quality?.level
+    return level === 'excellent' ? 4 : level === 'good' ? 3 : level === 'warning' ? 2 : level === 'bad' ? 1 : 0
+})
+
+/** Medidor do áudio que chega: de -60 dBFS (vazio) a 0 (cheio). */
+const meter = computed(() => {
+    const level = c.value.level
+    if (level === null || level === undefined) return null
+    return { db: level, percent: Math.round(Math.max(0, Math.min(1, (level + 60) / 60)) * 100) }
+})
+
 const timer = computed(() => {
     const s = c.value
     const end = s.endedAt ?? now.value
@@ -86,7 +110,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
         @click="calls.selectedId = call.id"
     >
         <div class="top">
-            <span class="swatch" :style="{ background: account?.color }"></span>
+            <span class="avatar" :style="{ '--account': account?.color }" aria-hidden="true">{{ initials }}</span>
             <span class="who">
                 <b>{{ account?.extension ?? '?' }}</b>
                 <span class="arrow">{{ call.direction === 'out' ? '→' : '←' }}</span>
@@ -226,6 +250,43 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
             </p>
         </div>
 
+        <div v-if="established && (meter || call.quality)" class="signal">
+            <span
+                v-if="meter"
+                class="meter"
+                role="meter"
+                aria-valuemin="-60"
+                aria-valuemax="0"
+                :aria-valuenow="meter.db"
+                :aria-label="$t('callCard.audio_chegando')"
+                :title="$t('callCard.audio_chegando_db', { db: meter.db })"
+            >
+                <span
+                    class="meter-fill"
+                    :class="{ silent: meter.percent < 17 }"
+                    :style="{ width: `${meter.percent}%` }"
+                ></span>
+            </span>
+            <span v-if="meter && meter.percent < 17" class="silence">{{ $t('callCard.sem_audio') }}</span>
+            <span
+                v-if="call.quality"
+                class="bars"
+                :class="call.quality.level"
+                role="img"
+                :aria-label="$t('callCard.sinal', { n: bars })"
+                :title="
+                    $t('callCard.qualidade_jitter_ms_perda_rtt', {
+                        score: call.quality.score,
+                        jitterMs: call.quality.jitterMs,
+                        p: call.quality.packetLossPercent.toFixed(1),
+                        rttMs: call.quality.rttMs,
+                        p2: call.quality.codec || 'codec ?'
+                    })
+                "
+            >
+                <i v-for="n in 4" :key="n" :class="{ on: n <= bars }" :style="{ height: `${n * 3 + 2}px` }"></i>
+            </span>
+        </div>
         <div v-if="established && call.quality" class="quality mono tabular">
             {{
                 $t('callCard.qualidade_jitter_ms_perda_rtt', {
@@ -356,5 +417,70 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
 .quality {
     font-size: 11px;
     color: var(--muted);
+}
+.avatar {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: color-mix(in srgb, var(--account, var(--accent)) 70%, #000);
+}
+.signal {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 8px;
+}
+.meter {
+    flex: 1;
+    max-width: 260px;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--raise);
+    overflow: hidden;
+}
+.meter-fill {
+    display: block;
+    height: 100%;
+    background: var(--ok);
+    transition: width 0.2s;
+}
+.meter-fill.silent {
+    background: var(--warn);
+}
+.silence {
+    font-size: 11px;
+    color: var(--warn);
+}
+.bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 14px;
+}
+.bars i {
+    width: 4px;
+    border-radius: 1px;
+    background: var(--line);
+}
+.bars.excellent i.on,
+.bars.good i.on {
+    background: var(--ok);
+}
+.bars.warning i.on {
+    background: var(--warn);
+}
+.bars.bad i.on {
+    background: var(--bad);
+}
+@media (prefers-reduced-motion: reduce) {
+    .meter-fill {
+        transition: none;
+    }
 }
 </style>
