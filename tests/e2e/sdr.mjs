@@ -74,6 +74,28 @@ try {
     await page.getByRole('region', { name: 'Fila' }).getByRole('button', { name: 'Tirar Bia Rocha da fila' }).click()
     step('números colados no painel entram na fila, sem repetir quem já estava')
 
+    // Fora do horário (a fila ainda está com 09:00 às 18:00 de segunda a sexta), Ligar numa pessoa liga
+    // assim mesmo: o horário vale para a fila andando sozinha.
+    await page.getByRole('button', { name: 'Adicionar números' }).click()
+    await page.getByLabel(/Uma pessoa por linha/).fill('Ramal 8000')
+    await page.getByRole('button', { name: 'Adicionar à fila' }).click()
+    // Só um dia da semana, que não é hoje: a fila estaria fora do horário.
+    await page.getByRole('button', { name: 'Opções' }).click()
+    const hoursForm = page.getByRole('dialog', { name: 'Opções do modo SDR' })
+    await hoursForm.getByLabel('Ligar pela conta').selectOption({ label: 'Suporte 1001 · 1001@demo.local' })
+    const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    const other = days[(new Date().getDay() + 1) % 7]
+    for (const day of days) await hoursForm.getByLabel(day, { exact: true }).setChecked(day === other)
+    await hoursForm.getByRole('button', { name: 'Salvar' }).click()
+    await page.getByRole('region', { name: 'Fila' }).getByRole('button', { name: 'Ligar para Ramal' }).click()
+    await phase('chamando').waitFor({ timeout: 8000 })
+    await page.getByRole('region', { name: 'Chamada atual' }).getByRole('button', { name: 'Desligar' }).click()
+    await page
+        .getByRole('region', { name: 'Fila' })
+        .getByText(/8000 · Não atendeu/)
+        .waitFor()
+    step('fora do horário da fila, Ligar numa pessoa liga assim mesmo (ramal 8000)')
+
     // Opções: conta, abertura gravada, recado da caixa postal e horário o dia todo (o teste roda a qualquer hora).
     await page.getByRole('button', { name: 'Opções' }).click()
     const form = page.getByRole('dialog', { name: 'Opções do modo SDR' })
@@ -94,7 +116,8 @@ try {
     await form.getByText('recado.wav').waitFor()
     await form.getByRole('textbox', { name: 'De', exact: true }).fill('00:00')
     await form.getByRole('textbox', { name: 'Até', exact: true }).fill('23:59')
-    for (const day of ['Dom', 'Sáb']) await form.getByLabel(day, { exact: true }).check()
+    for (const day of ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'])
+        await form.getByLabel(day, { exact: true }).check()
     await form.getByLabel(/Próxima ligação em/).fill('1')
     await form.getByLabel('Meta de ligações por dia').fill('10')
     await form.getByRole('button', { name: 'Salvar' }).click()
@@ -143,7 +166,7 @@ try {
     step('sdr.json: reunião e número errado saíram da fila; caixa postal e ocupado voltam depois')
 
     const panel = page.getByRole('region', { name: 'Painel do dia' })
-    await panel.getByText('4 de 10 ligações hoje').waitFor()
+    await panel.getByText('5 de 10 ligações hoje').waitFor()
     const value = async (label) =>
         (await panel.locator('div', { hasText: label }).locator('dd').first().textContent()).trim()
     if (
@@ -152,7 +175,7 @@ try {
         (await value('Caixas postais')) !== '1'
     )
         throw new Error('painel com os números errados')
-    step('painel: 4 de 10, 1 atendida, 1 conversão, 1 caixa postal')
+    step('painel: 5 de 10, 1 atendida, 1 conversão, 1 caixa postal')
 
     const out = join(userData, 'resultado.csv')
     await app.evaluate(({ dialog }, p) => {

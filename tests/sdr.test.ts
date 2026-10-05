@@ -72,10 +72,22 @@ describe('modo SDR: lista colada no painel', () => {
             ['', '1002', undefined],
             ['Ana Lima', '1130000001', undefined],
             ['Beto', '1130000002', undefined],
-            ['Caio', '+551130000003', 'Acme']
+            ['Caio', '+551130000003', 'Acme'],
+            ['', '12', undefined]
         ])
-        expect(skipped).toBe(2)
+        expect(skipped).toBe(1)
         expect(repeated).toBe(1)
+    })
+
+    it('aceita ramais e códigos do PBX', () => {
+        const { leads } = parseLeadsText('2425\nVini 2426\n*97\n12\n8000#', id)
+        expect(leads.map((l) => [l.name, l.number])).toEqual([
+            ['', '2425'],
+            ['Vini', '2426'],
+            ['', '*97'],
+            ['', '12'],
+            ['', '8000#']
+        ])
     })
 })
 

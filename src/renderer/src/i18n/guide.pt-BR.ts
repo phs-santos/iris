@@ -764,7 +764,7 @@ export const GUIDE: GuideSection[] = [
                     '**Adicionar números**: cole a lista direto no painel, uma pessoa por linha: só o número, "nome número" ou "nome; número; empresa". Ou **Importar planilha**: um CSV com as colunas `nome;numero;empresa;segmento`. As outras colunas viram variáveis do roteiro: uma coluna `cargo` vira `{cargo}`. Números repetidos não entram de novo.',
                     'Em **Opções**, escolha a conta, escreva o roteiro e grave a abertura (ou escolha um WAV). Dá para ter uma abertura por segmento.',
                     'Ainda em Opções, defina o horário e os dias em que a fila pode ligar, quantas tentativas cada pessoa recebe e a meta do dia.',
-                    'Clique em **Começar a fila**.'
+                    'Clique em **Começar a fila**. Para ligar para uma pessoa só, use **Ligar** ao lado dela na lista: esse clique liga mesmo fora do horário da fila. Ramais (como `2425`) e códigos do PBX (como `*97`) também entram.'
                 ]
             },
             { type: 'h', text: 'Durante a chamada' },

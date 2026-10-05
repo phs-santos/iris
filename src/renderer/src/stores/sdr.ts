@@ -182,7 +182,8 @@ export const useSdrStore = defineStore('sdr', () => {
             running.value = false
             return
         }
-        if (!withinHours(settings.value.hours, new Date())) {
+        // O horário vale para a fila andando sozinha; o clique em Ligar numa pessoa é escolha de quem usa.
+        if (!specific && !withinHours(settings.value.hours, new Date())) {
             notice.value = t('sdr.aviso_fora_do_horario', {
                 start: settings.value.hours.start,
                 end: settings.value.hours.end

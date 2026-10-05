@@ -742,7 +742,7 @@ export const GUIDE_EN: GuideSection[] = [
                     '**Add numbers**: paste the list right into the panel, one person per line: just the number, "name number" or "name; number; company". Or **Import spreadsheet**: a CSV with the columns `nome;numero;empresa;segmento` (name, number, company, segment). Other columns become script variables: a `cargo` column becomes `{cargo}`. Repeated numbers are not added again.',
                     'In **Options**, pick the account, write the script and record the opening (or choose a WAV). You can have one opening per segment.',
                     'Still in Options, set the hours and days when the queue may call, how many attempts each person gets and the daily goal.',
-                    'Click **Start the queue**.'
+                    'Click **Start the queue**. To call just one person, use **Call** next to them in the list: that click calls even outside the queue hours. Extensions (such as `2425`) and PBX codes (such as `*97`) work too.'
                 ]
             },
             { type: 'h', text: 'During the call' },

@@ -197,7 +197,8 @@ export function parseLeadsCsv(
     return { leads, skipped, repeated }
 }
 
-const PHONE = /\+?\(?\d[\d\s().-]{1,}\d/
+// Número, ramal (2425) ou código do PBX (*97, 8000#): começa com +, *, # ou dígito.
+const PHONE = /[+*#]?\(?\d[\d\s().*#-]*/
 
 /**
  * Lista colada direto no painel, uma pessoa por linha: só o número, "nome número", "número nome" ou
@@ -219,7 +220,7 @@ export function parseLeadsText(
         let number = ''
         let rest: string[] = []
         if (parts.length > 1) {
-            const at = parts.findIndex((p) => PHONE.test(p) && digits(p).length >= 3 && !/[a-zA-Zà-ÿ]/.test(p))
+            const at = parts.findIndex((p) => PHONE.test(p) && digits(p).length >= 2 && !/[a-zA-Zà-ÿ]/.test(p))
             if (at >= 0) number = digits(parts[at]!)
             rest = parts.filter((_, i) => i !== at).filter(Boolean)
         } else {
@@ -229,7 +230,7 @@ export function parseLeadsText(
                 rest = [line.replace(match[0], ' ').replace(/\s+/g, ' ').trim()].filter(Boolean)
             }
         }
-        if (!number || number.length < 3) {
+        if (!number || number.length < 2) {
             skipped++
             continue
         }
