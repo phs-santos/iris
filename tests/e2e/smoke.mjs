@@ -70,7 +70,7 @@ try {
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
     step('chamada encerrada dos dois lados')
     await firstSteps.getByText('1 de 3').waitFor()
-    await firstSteps.getByRole('button', { name: 'Fechar' }).click()
+    await firstSteps.getByRole('button', { name: 'Fechar os primeiros passos' }).click()
     await firstSteps.waitFor({ state: 'detached' })
     step('primeiros passos: a chamada de teste marca o passo 1, e Fechar tira o quadro')
 

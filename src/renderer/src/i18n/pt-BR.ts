@@ -7,6 +7,7 @@ export const ptBR = {
         titulo: 'Primeiros passos',
         contagem: '{n} de 3',
         fechar: 'Fechar',
+        fechar_rotulo: 'Fechar os primeiros passos',
         feito: 'feito',
         passo1: 'Faça uma chamada de teste',
         passo1_texto: 'A conta Suporte 1001 já está no PBX simulado: ligue para a URA 8000 e mande dígitos pelo DTMF.',

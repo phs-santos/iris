@@ -62,7 +62,9 @@ const close = (): Promise<void> => prefs.setProfile({ tourDone: true })
         <header>
             <b>{{ $t('firstSteps.titulo') }}</b>
             <span class="count tabular">{{ $t('firstSteps.contagem', { n: doneCount }) }}</span>
-            <button class="btn small ghost" @click="close">{{ $t('firstSteps.fechar') }}</button>
+            <button class="btn small ghost" :aria-label="$t('firstSteps.fechar_rotulo')" @click="close">
+                {{ $t('firstSteps.fechar') }}
+            </button>
         </header>
         <ol>
             <li v-for="(step, i) in steps" :key="i" :class="{ done: step.done }">

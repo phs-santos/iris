@@ -40,7 +40,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-49 | Relatório JUnit (`.xml`) na linha de comando |
 | RF-41 | Áudio nos cenários: passos Tocar tom, Tocar arquivo WAV, Esperar áudio e Esperar silêncio. Pega chamada muda, que o código SIP não mostra. Tocar só em SIP puro e no simulado; medir, em qualquer conta |
 | RF-36 | Gravação da chamada em WAV estéreo (um lado em cada canal), por enquanto só em SIP puro |
-| Interface | Tema claro e do sistema, listas compactas, ícones nos botões, medidor do áudio que chega e barras de sinal na chamada, avatar com iniciais, avisos rápidos na tela e paleta de comandos (Ctrl/Cmd+K) |
+| Interface | Tema claro e do sistema, listas compactas, ícones nos botões, medidor do áudio que chega e barras de sinal na chamada, avatar com iniciais, avisos rápidos na tela, paleta de comandos (Ctrl/Cmd+K), primeiros passos no primeiro uso, grupos de PBX recolhíveis e chamada recebida na cor da conta |
 | Notificações | Chamada recebida (com Atender e Recusar no aviso, no macOS), chamada perdida, conta que caiu, correio de voz e monitor, cada um ligável em Configurações → Notificações, com botão de teste |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, salvar a partir do histórico, CSV, e o nome do contato nas chamadas e no histórico |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
