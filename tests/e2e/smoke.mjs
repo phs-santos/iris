@@ -36,6 +36,17 @@ try {
     step('1001 e 1002 registradas, Lab 2001 com 403')
     if (shots) await page.screenshot({ path: join(shots, '1-inicio.png') })
 
+    // Grupos de PBX recolhem e mostram o resumo; os primeiros passos aparecem no primeiro uso.
+    await page.getByRole('button', { name: /lab\.local/ }).click()
+    await page.getByRole('button', { name: /lab\.local.*0\/1 no ar/ }).waitFor()
+    if (await page.locator('.acc', { hasText: 'Lab 2001' }).count())
+        throw new Error('o grupo recolhido ainda mostra a conta')
+    await page.getByRole('button', { name: /lab\.local/ }).click()
+    await page.locator('.acc', { hasText: 'Lab 2001' }).waitFor()
+    step('grupo de PBX recolhe com o resumo e volta')
+    const firstSteps = page.getByRole('region', { name: 'Primeiros passos' })
+    await firstSteps.getByText('0 de 3').waitFor()
+
     await page.locator('.chip', { hasText: '1002' }).click()
     await page.locator('.pill', { hasText: 'tocando' }).waitFor()
     step('1002 tocando')
@@ -58,6 +69,10 @@ try {
     await outgoing.getByRole('button', { name: 'Desligar' }).click()
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
     step('chamada encerrada dos dois lados')
+    await firstSteps.getByText('1 de 3').waitFor()
+    await firstSteps.getByRole('button', { name: 'Fechar' }).click()
+    await firstSteps.waitFor({ state: 'detached' })
+    step('primeiros passos: a chamada de teste marca o passo 1, e Fechar tira o quadro')
 
     // Histórico (RF-40): as duas pontas da chamada ficam na lista e no arquivo.
     await page.getByRole('tab', { name: 'Histórico' }).click()

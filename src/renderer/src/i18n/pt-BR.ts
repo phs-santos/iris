@@ -3,6 +3,21 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    firstSteps: {
+        titulo: 'Primeiros passos',
+        contagem: '{n} de 3',
+        fechar: 'Fechar',
+        feito: 'feito',
+        passo1: 'Faça uma chamada de teste',
+        passo1_texto: 'A conta Suporte 1001 já está no PBX simulado: ligue para a URA 8000 e mande dígitos pelo DTMF.',
+        passo1_acao: 'Ligar para 8000',
+        passo2: 'Cadastre o seu PBX',
+        passo2_texto: 'Em Servidores ficam o domínio e o endereço do PBX, escritos uma vez só para todas as contas.',
+        passo2_acao: 'Abrir Servidores',
+        passo3: 'Registre o seu ramal',
+        passo3_texto: 'Crie uma conta, escolha o servidor e digite ramal e senha.',
+        passo3_acao: 'Nova conta'
+    },
     commandPalette: {
         titulo: 'Paleta de comandos',
         placeholder: 'Número, contato, conta, cenário ou ação',
@@ -215,6 +230,7 @@ export const ptBR = {
         importacao_invalida: 'Este arquivo não é uma exportação de contas da Íris'
     },
     app: {
+        acao_primeiros_passos: 'Mostrar os primeiros passos',
         atalho_configuracoes: 'Ctrl/Cmd+,',
         acao_nova_conta: 'Nova conta',
         acao_novo_contato: 'Novo contato',
@@ -324,6 +340,7 @@ export const ptBR = {
         falhou: 'Falhou: {p}'
     },
     accountsPane: {
+        grupo_resumo: '{registered}/{total} no ar',
         blf_livre: 'livre',
         blf_tocando: 'tocando',
         blf_ocupado: 'em chamada',

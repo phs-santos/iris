@@ -18,6 +18,28 @@ const accounts = useAccountsStore()
 const ai = useAiStore()
 const calls = useCallsStore()
 const confirmDelete = ref<string | null>(null)
+
+// Grupos de PBX recolhidos: preferência de quem está usando, guardada só nesta máquina.
+const COLLAPSED_KEY = 'iris.grupos-recolhidos'
+function readCollapsed(): Set<string> {
+    try {
+        return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]') as string[])
+    } catch {
+        return new Set()
+    }
+}
+const collapsed = ref(readCollapsed())
+function toggleGroup(domain: string): void {
+    const next = new Set(collapsed.value)
+    if (next.has(domain)) next.delete(domain)
+    else next.add(domain)
+    collapsed.value = next
+    try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next]))
+    } catch {
+        // sem armazenamento: vale só até fechar o app
+    }
+}
 const log = useLogStore()
 /** Conta com a tela de pedido SIP manual aberta (RF-45). */
 const requestFor = ref<string | null>(null)
@@ -98,9 +120,26 @@ async function remove(id: string): Promise<void> {
 
         <div class="list">
             <section v-for="group in accounts.groups" :key="group.domain" class="group">
-                <div class="pbx mono">{{ group.domain }}</div>
+                <button
+                    type="button"
+                    class="pbx mono"
+                    :aria-expanded="!collapsed.has(group.domain)"
+                    @click="toggleGroup(group.domain)"
+                >
+                    <span class="chevron" aria-hidden="true">{{ collapsed.has(group.domain) ? '▸' : '▾' }}</span>
+                    {{ group.domain }}
+                    <span v-if="collapsed.has(group.domain)" class="summary-count tabular">
+                        {{
+                            $t('accountsPane.grupo_resumo', {
+                                registered: group.accounts.filter((a) => accounts.statusOf(a.id).state === 'registered')
+                                    .length,
+                                total: group.accounts.length
+                            })
+                        }}
+                    </span>
+                </button>
                 <div
-                    v-for="account in group.accounts"
+                    v-for="account in collapsed.has(group.domain) ? [] : group.accounts"
                     :key="account.id"
                     class="acc"
                     :class="{ sel: accounts.selectedId === account.id }"
@@ -240,6 +279,14 @@ async function remove(id: string): Promise<void> {
     gap: 12px;
 }
 .pbx {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
     font-size: 11px;
     color: var(--muted);
     padding: 4px 6px;
@@ -381,5 +428,11 @@ async function remove(id: string): Promise<void> {
     height: 1px;
     overflow: hidden;
     clip-path: inset(50%);
+}
+.chevron {
+    width: 10px;
+}
+.summary-count {
+    margin-left: auto;
 }
 </style>

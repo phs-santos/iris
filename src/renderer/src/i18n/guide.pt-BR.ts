@@ -60,6 +60,11 @@ export const GUIDE: GuideSection[] = [
         title: 'Primeira chamada em 2 minutos',
         summary: 'O caminho mais curto para ver o app funcionando, com o PBX simulado e com a sua central.',
         blocks: [
+            {
+                type: 'note',
+                kind: 'dica',
+                text: 'No primeiro uso, o quadro **Primeiros passos**, no alto da aba Telefone, leva por estes três passos e marca cada um sozinho quando você o faz. Fechou e quer de volta? Ctrl/Cmd+K, "Mostrar os primeiros passos".'
+            },
             { type: 'h', text: 'Com o PBX simulado (sem servidor)' },
             {
                 type: 'p',
@@ -184,6 +189,10 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'p',
                 text: 'Quando o PBX avisa que há mensagens no **correio de voz** do ramal, a conta mostra a etiqueta "correio de voz" com a quantidade de mensagens novas, e o log registra a mudança.'
+            },
+            {
+                type: 'p',
+                text: 'Clique no nome do PBX (o domínio acima das contas) para **recolher o grupo**: ele mostra só quantas contas estão no ar, como "2/3 no ar". A escolha fica guardada nesta máquina.'
             },
             { type: 'h', text: 'Todas as contas de uma vez' },
             {

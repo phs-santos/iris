@@ -6,6 +6,8 @@ export interface Profile {
     name?: string
     /** Conta escolhida para discar quando o app abre. */
     mainAccountId?: string
+    /** A pessoa já terminou ou fechou os primeiros passos. */
+    tourDone?: boolean
 }
 
 export type InterfaceSize = 'small' | 'medium' | 'large'
@@ -103,7 +105,11 @@ export function isProfile(value: unknown): value is Profile {
     const p = value as Record<string, unknown>
     const optionalText = (v: unknown, max: number): boolean =>
         v === undefined || (typeof v === 'string' && v.length <= max)
-    return optionalText(p.name, 120) && optionalText(p.mainAccountId, 100)
+    return (
+        optionalText(p.name, 120) &&
+        optionalText(p.mainAccountId, 100) &&
+        (p.tourDone === undefined || typeof p.tourDone === 'boolean')
+    )
 }
 
 export function isAppearance(value: unknown): value is Appearance {

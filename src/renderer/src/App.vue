@@ -20,6 +20,7 @@ import PhoneView from './components/PhoneView.vue'
 import PhoneIcon from './components/PhoneIcon.vue'
 import HistoryPane from './components/HistoryPane.vue'
 import ToastStack from './components/ToastStack.vue'
+import FirstSteps from './components/FirstSteps.vue'
 import CommandPalette, { type PaletteAction } from './components/CommandPalette.vue'
 import ContactsPane from './components/ContactsPane.vue'
 import { useContactsStore } from './stores/contacts'
@@ -68,6 +69,7 @@ const paletteActions = computed<PaletteAction[]>(() => [
     { label: t('app.configuracoes'), hint: t('app.atalho_configuracoes'), run: () => (settingsAt.value = 'profile') },
     { label: t('app.acao_servidores'), run: () => (settingsAt.value = 'servers') },
     { label: t('app.acao_notificacoes'), run: () => (settingsAt.value = 'notifications') },
+    { label: t('app.acao_primeiros_passos'), run: () => void prefs.setProfile({ tourDone: false }) },
     { label: t('app.guia'), hint: 'F1', run: () => (showGuide.value = true) },
     { label: t('app.modo_telefone'), run: () => setMode('phone') }
 ])
@@ -339,6 +341,7 @@ onUnmounted(() => {
                     v-for="call in calls.ringingIncoming"
                     :key="call.id"
                     class="incoming"
+                    :style="{ '--account': accounts.byId(call.accountId)?.color }"
                     role="region"
                     :aria-label="$t('app.chamada_recebida_de', { p: call.remoteName || call.remote })"
                 >
@@ -351,6 +354,7 @@ onUnmounted(() => {
                     <button class="btn stop" @click="calls.reject(call.id)">{{ $t('app.recusar') }}</button>
                 </div>
                 <template v-if="centerTab === 'phone'">
+                    <FirstSteps @servers="settingsAt = 'servers'" @account="newAccount" />
                     <DialerPane ref="dialer" />
                     <div class="calls-head">
                         <span class="label">{{ $t('app.chamadas') }}</span>
@@ -460,7 +464,18 @@ onUnmounted(() => {
     gap: 10px;
     padding: 10px 14px;
     border-bottom: 1px solid var(--line);
-    background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+    background: color-mix(in srgb, var(--account, var(--accent)) 16%, var(--panel));
+    border-left: 4px solid var(--account, var(--accent));
+}
+@media (prefers-reduced-motion: no-preference) {
+    .incoming {
+        animation: ring-band 1.4s ease-in-out infinite;
+    }
+}
+@keyframes ring-band {
+    50% {
+        background: color-mix(in srgb, var(--account, var(--accent)) 28%, var(--panel));
+    }
 }
 .incoming-text {
     flex: 1;
@@ -477,9 +492,9 @@ onUnmounted(() => {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--account, var(--accent));
     flex: none;
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--account, var(--accent)) 25%, transparent);
 }
 @media (prefers-reduced-motion: no-preference) {
     .ring-dot {
