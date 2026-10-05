@@ -15,6 +15,7 @@ import type { MwiInfo, PresenceState } from './presence'
 import type { AccountTransport, SipTransportKind } from './sip-target'
 import type { LinkSettings, LinkStatus } from './links'
 import type { ShortcutAction, ShortcutSettings } from './shortcuts'
+import type { RingtoneId } from './ringtones'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
@@ -46,6 +47,8 @@ export interface Account {
     blf?: string
     /** Servidor cadastrado de onde vêm os dados de conexão (RF-51). */
     serverId?: string
+    /** Toque das chamadas recebidas nesta conta (RF-55). Sem o campo, vale o clássico. */
+    ringtone?: RingtoneId
     /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */
     iceServers: string
     dtmfMode: DtmfMode
@@ -108,6 +111,10 @@ export interface Settings {
     trustedHosts: string[]
     audioInputId?: string
     audioOutputId?: string
+    /** Volume do toque de chamada, de 0 a 100 (RF-55). Sem o campo, 50. */
+    ringVolume?: number
+    /** A tecla Tocar/Pausar (o botão do fone) atende e desliga enquanto há chamada (RF-55). */
+    mediaKey?: boolean
     /** Canal de atualização (RF-35). Sem o campo, vale o estável. */
     updateChannel?: UpdateChannel
     /** Ajuda da IA para ler o log (RF-38). */
@@ -132,6 +139,8 @@ export type SettingsPatch = Partial<
         | 'trustedHosts'
         | 'audioInputId'
         | 'audioOutputId'
+        | 'ringVolume'
+        | 'mediaKey'
         | 'profile'
         | 'appearance'
         | 'reconnect'
@@ -346,6 +355,8 @@ export interface IrisApi {
     shortcuts: {
         /** Ações cujo atalho o sistema recusou (outro programa já usa). */
         failed(): Promise<ShortcutAction[]>
+        /** A tecla Tocar/Pausar foi recusada pelo sistema na última chamada (RF-55). */
+        mediaKeyFailed(): Promise<boolean>
         onFired(listener: (action: ShortcutAction) => void): () => void
     }
     /** Diagnóstico de rede da Saúde (RF-46): DNS SRV, certificado TLS e STUN. */
@@ -452,6 +463,7 @@ export const IPC = {
     linksStatus: 'links:status',
     linksSetDefault: 'links:set-default',
     shortcutsFailed: 'shortcuts:failed',
+    mediaKeyFailed: 'shortcuts:media-key-failed',
     shortcutFired: 'shortcuts:fired',
     monitorWebhook: 'monitor:webhook',
     netDiagnose: 'net:diagnose',

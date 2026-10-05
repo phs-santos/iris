@@ -111,6 +111,42 @@ try {
     if (still) throw new Error('o atalho limpo continua registrado no sistema')
     step('limpar o atalho tira o registro do sistema')
 
+    // Botão do fone (RF-55): a tecla Tocar/Pausar só é da Íris enquanto há chamada.
+    const mediaKey = () => app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered('MediaPlayPause'))
+    await dialog.getByLabel('Botão do fone').check()
+    await page.waitForFunction(() => true)
+    if (settings().mediaKey !== true) throw new Error('a opção do botão do fone não foi gravada')
+    if (await mediaKey()) throw new Error('a tecla de mídia foi tomada sem chamada nenhuma')
+    await dialog.getByRole('tab', { name: 'Áudio' }).click()
+    await dialog.getByLabel('Volume do toque').fill('80')
+    await dialog.getByText('Volume do toque: 80%').waitFor()
+    await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
+    if (settings().ringVolume !== 80) throw new Error('o volume do toque não foi gravado')
+    await ring()
+    // Em máquinas sem permissão para teclas de mídia (macOS sem Acessibilidade) o sistema recusa; o
+    // teste só exige que, quando aceita, a tecla seja devolvida no fim da chamada.
+    const taken = await mediaKey()
+    await fire('hangup')
+    await page.waitForFunction(() => document.querySelectorAll('.call').length === 0, null, { timeout: 15000 })
+    if (await mediaKey()) throw new Error('a tecla de mídia continuou com a Íris depois da chamada')
+    step(
+        `botão do fone: tecla de mídia ${taken ? 'tomada na chamada e devolvida' : 'recusada pelo sistema nesta máquina'}; volume do toque gravado`
+    )
+
+    // Toque por conta: a escolha vai para accounts.json; o clássico não grava campo nenhum.
+    const support = page.locator('.acc', { hasText: 'Suporte 1001' })
+    await support.locator('.row').click()
+    await support.getByRole('button', { name: 'Editar', exact: true }).click()
+    const form = page.getByRole('dialog')
+    await form.getByLabel('Toque das chamadas recebidas').selectOption('sino')
+    await form.getByRole('button', { name: 'Ouvir' }).click()
+    await form.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await form.waitFor({ state: 'detached' })
+    const saved = JSON.parse(readFileSync(join(userData, 'accounts.json'), 'utf8')).accounts
+    if (saved.find((a) => a.name === 'Suporte 1001')?.ringtone !== 'sino') throw new Error('o toque não foi gravado')
+    if (saved.some((a) => a.name !== 'Suporte 1001' && a.ringtone)) throw new Error('toque gravado em conta errada')
+    step('toque por conta escolhido, ouvido e gravado')
+
     if (pageErrors.length) throw new Error(`erros na página: ${pageErrors.join(' | ')}`)
     console.log('Atalhos e links OK')
 } catch (error) {

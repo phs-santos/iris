@@ -45,6 +45,7 @@ import { HISTORY_LIMIT, isHistoryEntry, type HistoryEntry } from '@shared/histor
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
+import { isRingVolume } from '@shared/ringtones'
 import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
 import { diagnoseNetwork } from './net-diag'
@@ -113,9 +114,12 @@ app.on('open-url', (event, url) => {
 
 // Atalhos globais (RF-34): só os que o usuário definiu. Os que o sistema recusa ficam em `failedShortcuts`.
 let failedShortcuts: ShortcutAction[] = []
+let registeredShortcuts: ShortcutSettings = {}
 
 function applyShortcuts(shortcuts: ShortcutSettings | undefined): void {
-    globalShortcut.unregisterAll()
+    for (const action of SHORTCUT_ACTIONS)
+        if (registeredShortcuts[action]) globalShortcut.unregister(registeredShortcuts[action])
+    registeredShortcuts = {}
     failedShortcuts = []
     for (const action of SHORTCUT_ACTIONS) {
         const accelerator = shortcuts?.[action]
@@ -126,11 +130,38 @@ function applyShortcuts(shortcuts: ShortcutSettings | undefined): void {
         } catch {
             ok = false
         }
+        if (ok) registeredShortcuts[action] = accelerator
         if (!ok) {
             failedShortcuts.push(action)
             appLog('warn', `Atalho global recusado pelo sistema: ${accelerator}`)
         }
     }
+}
+
+/**
+ * Botão do fone (RF-55): quase todo fone manda a tecla Tocar/Pausar. A Íris só fica com ela enquanto
+ * há chamada tocando ou em andamento; no resto do tempo a tecla continua sendo do tocador de música.
+ */
+const MEDIA_KEY = 'MediaPlayPause'
+let mediaKeyOn = false
+let mediaKeyFailed = false
+let callsNow = { ringing: 0, calls: 0 }
+
+function syncMediaKey(): void {
+    const wanted = mediaKeyOn && !cli && callsNow.ringing + callsNow.calls > 0
+    const has = globalShortcut.isRegistered(MEDIA_KEY)
+    if (wanted && !has) {
+        let ok = false
+        try {
+            ok = globalShortcut.register(MEDIA_KEY, () =>
+                mainWindow?.webContents.send(IPC.shortcutFired, callsNow.ringing > 0 ? 'answer' : 'hangup')
+            )
+        } catch {
+            ok = false
+        }
+        if (!ok && !mediaKeyFailed) appLog('warn', 'O sistema recusou a tecla Tocar/Pausar para o botão do fone')
+        mediaKeyFailed = !ok
+    } else if (!wanted && has) globalShortcut.unregister(MEDIA_KEY)
 }
 
 function createWindow(): void {
@@ -297,6 +328,8 @@ function registerIpc(): void {
         'trustedHosts',
         'audioInputId',
         'audioOutputId',
+        'ringVolume',
+        'mediaKey',
         'profile',
         'appearance',
         'reconnect',
@@ -313,6 +346,8 @@ function registerIpc(): void {
                     (isList(patch.trustedHosts, 200) && patch.trustedHosts.every((h) => isString(h, 255)))) &&
                 isDeviceId(patch.audioInputId) &&
                 isDeviceId(patch.audioOutputId) &&
+                isRingVolume(patch.ringVolume) &&
+                (patch.mediaKey === undefined || typeof patch.mediaKey === 'boolean') &&
                 isProfile(patch.profile) &&
                 isAppearance(patch.appearance) &&
                 isReconnect(patch.reconnect) &&
@@ -323,6 +358,11 @@ function registerIpc(): void {
         )
         const settings = await updateSettings(patch)
         if ('shortcuts' in patch && !cli) applyShortcuts(settings.shortcuts)
+        if ('mediaKey' in patch) {
+            mediaKeyOn = Boolean(settings.mediaKey)
+            mediaKeyFailed = false
+            syncMediaKey()
+        }
         trustedHosts = new Set([...settings.trustedHosts, ...(cliOptions?.trustHosts ?? [])])
         return settings
     })
@@ -349,6 +389,7 @@ function registerIpc(): void {
         return linkStatus()
     })
     handle(IPC.shortcutsFailed, () => failedShortcuts)
+    handle(IPC.mediaKeyFailed, () => mediaKeyFailed)
 
     handle(IPC.filesSaveText, async (_e, defaultName: string, content: string) => {
         check(isString(defaultName, 255) && isString(content, 200_000_000), 'arquivo')
@@ -461,7 +502,10 @@ function registerIpc(): void {
     })
 
     on(IPC.tray, (_e, counts: unknown) => {
-        if (!tray || !isTrayCounts(counts)) return
+        if (!isTrayCounts(counts)) return
+        callsNow = { ringing: counts.ringing, calls: counts.calls }
+        syncMediaKey()
+        if (!tray) return
         const { state, tooltip } = traySummary(counts)
         tray.setToolTip(tooltip)
         if (state === trayState) return
@@ -551,6 +595,7 @@ app.whenReady().then(async () => {
     createWindow()
     createTray()
     applyShortcuts(saved?.shortcuts)
+    mediaKeyOn = Boolean(saved?.mediaKey)
 
     app.on('activate', showWindow)
 })

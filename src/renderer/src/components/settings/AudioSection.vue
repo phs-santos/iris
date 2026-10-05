@@ -2,6 +2,8 @@
 import { t } from '@renderer/i18n'
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useDevicesStore } from '@renderer/stores/devices'
+import { ringer } from '@renderer/sip/audio'
+import { DEFAULT_RINGTONE } from '@shared/ringtones'
 
 const devices = useDevicesStore()
 
@@ -119,6 +121,25 @@ onUnmounted(stopMeter)
                 {{ $t('audioSection.tocar_som_de_teste') }}
             </button>
         </div>
+
+        <label class="field">
+            <span class="label">{{ $t('audioSection.volume_do_toque', { n: devices.ringVolume }) }}</span>
+            <span class="ring">
+                <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="5"
+                    :value="devices.ringVolume"
+                    :aria-label="$t('audioSection.volume_do_toque_rotulo')"
+                    @change="devices.setRingVolume(Number(($event.target as HTMLInputElement).value))"
+                />
+                <button type="button" class="btn small" @click="ringer.preview(DEFAULT_RINGTONE)">
+                    {{ $t('audioSection.ouvir_toque') }}
+                </button>
+            </span>
+        </label>
+        <p class="set-hint">{{ $t('audioSection.toque_por_conta') }}</p>
     </section>
 </template>
 
@@ -133,6 +154,15 @@ onUnmounted(stopMeter)
     height: 100%;
     background: var(--ok);
     transition: width 60ms linear;
+}
+.ring {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.ring input {
+    flex: 1;
+    accent-color: var(--accent);
 }
 .error {
     color: var(--bad);

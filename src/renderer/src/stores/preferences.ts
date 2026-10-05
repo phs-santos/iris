@@ -36,6 +36,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
     const notifications = ref<NotificationSettings>({})
     const links = ref<LinkSettings>({})
     const shortcuts = ref<ShortcutSettings>({})
+    /** O botão do fone (tecla Tocar/Pausar) atende e desliga (RF-55). */
+    const mediaKey = ref(false)
     /** Tema em uso agora, já resolvido: para o que não dá para trocar só por CSS (o logo). */
     const theme = ref<'dark' | 'light'>('dark')
 
@@ -66,6 +68,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
         notifications.value = settings.notifications ?? {}
         links.value = settings.links ?? {}
         shortcuts.value = settings.shortcuts ?? {}
+        mediaKey.value = Boolean(settings.mediaKey)
         apply()
     }
 
@@ -125,7 +128,14 @@ export const usePreferencesStore = defineStore('preferences', () => {
         await window.iris.settings.update({ shortcuts: { ...next } })
     }
 
+    async function setMediaKey(on: boolean): Promise<void> {
+        mediaKey.value = on
+        await window.iris.settings.update({ mediaKey: on })
+    }
+
     return {
+        mediaKey,
+        setMediaKey,
         links,
         shortcuts,
         setLinks,

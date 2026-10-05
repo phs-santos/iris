@@ -8,6 +8,8 @@ import { ACCOUNT_COLORS, describeStatus, validateAccount } from '@renderer/lib/a
 import { createEngine, isNativeAccount, type RegStatus } from '@renderer/sip'
 import { useServersStore } from '@renderer/stores/servers'
 import { applyServer, serverFromAccount } from '@shared/servers'
+import { ringer } from '@renderer/sip/audio'
+import { DEFAULT_RINGTONE, RINGTONE_IDS, type RingtoneId } from '@shared/ringtones'
 
 const props = defineProps<{ account: Account }>()
 const emit = defineEmits<{ close: [] }>()
@@ -26,6 +28,23 @@ const testing = ref(false)
 const testResult = ref<{ ok: boolean; text: string } | null>(null)
 const saving = ref(false)
 const quickDialsText = ref(form.quickDials.map((q) => `${q.number} ${q.label}`).join('\n'))
+
+/** Toque desta conta (RF-55). O clássico não é gravado: é o que vale sem o campo. */
+const ringtone = computed<RingtoneId>({
+    get: () => form.ringtone ?? DEFAULT_RINGTONE,
+    set: (id) => {
+        if (id === DEFAULT_RINGTONE) delete form.ringtone
+        else form.ringtone = id
+    }
+})
+const ringtoneName = (id: RingtoneId): string =>
+    ({
+        classico: t('accountForm.toque_classico'),
+        digital: t('accountForm.toque_digital'),
+        suave: t('accountForm.toque_suave'),
+        sino: t('accountForm.toque_sino'),
+        nenhum: t('accountForm.toque_nenhum')
+    })[id]
 
 /** SIP puro por UDP, TCP ou TLS (RF-39): some o que é só do WebRTC. */
 const native = computed(() => isNativeAccount(form))
@@ -289,6 +308,23 @@ async function save(register: boolean): Promise<void> {
                     </label>
                 </div>
 
+                <label class="field ringtone">
+                    <span class="label">{{ $t('accountForm.toque') }}</span>
+                    <span class="ring-row">
+                        <select v-model="ringtone" class="input">
+                            <option v-for="id in RINGTONE_IDS" :key="id" :value="id">{{ ringtoneName(id) }}</option>
+                        </select>
+                        <button
+                            type="button"
+                            class="btn small"
+                            :disabled="ringtone === 'nenhum'"
+                            @click="ringer.preview(ringtone)"
+                        >
+                            {{ $t('accountForm.ouvir') }}
+                        </button>
+                    </span>
+                </label>
+
                 <button type="button" class="btn small ghost toggle-adv" @click="showAdvanced = !showAdvanced">
                     {{ $t('accountForm.avancado', { p: showAdvanced ? '▾' : '▸' }) }}
                 </button>
@@ -419,6 +455,17 @@ async function save(register: boolean): Promise<void> {
 }
 .field small.note {
     color: var(--muted);
+}
+.ring-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.ring-row select {
+    flex: 1;
+}
+.ringtone {
+    margin-top: 10px;
 }
 .toggles {
     display: grid;

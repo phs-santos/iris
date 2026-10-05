@@ -64,6 +64,7 @@ const api: IrisApi = {
     },
     shortcuts: {
         failed: () => ipcRenderer.invoke(IPC.shortcutsFailed),
+        mediaKeyFailed: () => ipcRenderer.invoke(IPC.mediaKeyFailed),
         onFired: (listener) => {
             const handler = (_e: Electron.IpcRendererEvent, action: ShortcutAction): void => listener(action)
             ipcRenderer.on(IPC.shortcutFired, handler)

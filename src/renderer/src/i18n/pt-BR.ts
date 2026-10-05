@@ -20,6 +20,11 @@ export const ptBR = {
         limpar_de: 'Limpar o atalho de {name}',
         recusado: 'O sistema recusou este atalho: outro programa já usa. Escolha outro.',
         repetido: 'Este atalho já é o de {name}.',
+        fone: 'Botão do fone',
+        fone_dica:
+            'A tecla Tocar/Pausar, que é a do botão da maioria dos fones, atende a chamada que toca e desliga a que está em andamento. Fora de chamada, a tecla continua sendo do tocador de música.',
+        fone_recusado:
+            'O sistema recusou a tecla na última chamada. No macOS, libere a Íris em Ajustes do Sistema → Privacidade e Segurança → Acessibilidade.',
         links: 'Links de telefone',
         links_explicacao:
             'Clicar num número numa página ou no CRM abre a Íris com o número no discador da conta escolhida.',
@@ -338,6 +343,13 @@ export const ptBR = {
         atraso_do_auto_atender_em: 'Atraso do auto-atender em milissegundos',
         ms: 'ms',
         mostrar_sip_bruto_no_log: 'Mostrar SIP bruto no log',
+        toque: 'Toque das chamadas recebidas',
+        ouvir: 'Ouvir',
+        toque_classico: 'Clássico',
+        toque_digital: 'Digital',
+        toque_suave: 'Suave',
+        toque_sino: 'Sino',
+        toque_nenhum: 'Nenhum (só o aviso na tela)',
         avancado: '{p} Avançado',
         preset: 'Preset',
         asterisk: 'Asterisk',
@@ -773,6 +785,10 @@ export const ptBR = {
         fale_alguma_coisa_a_barra: 'Fale alguma coisa: a barra deve se mexer.',
         alto_falante: 'Alto-falante',
         tocar_som_de_teste: 'Tocar som de teste',
+        volume_do_toque: 'Volume do toque: {n}%',
+        volume_do_toque_rotulo: 'Volume do toque',
+        ouvir_toque: 'Ouvir',
+        toque_por_conta: 'O som do toque é escolhido em cada conta (Editar → Toque das chamadas recebidas).',
         microfone_indisponivel: 'Microfone indisponível: {p}'
     },
     connectionSection: {

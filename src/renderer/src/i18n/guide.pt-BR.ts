@@ -750,7 +750,8 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     '**Microfone**: escolha o dispositivo. A barra embaixo se mexe quando você fala; se não mexer, o microfone está mudo ou sem permissão.',
                     '**Alto-falante**: escolha por onde sai o áudio das chamadas e o toque.',
-                    '**Tocar som de teste**: toca um bipe no alto-falante escolhido.'
+                    '**Tocar som de teste**: toca um bipe no alto-falante escolhido.',
+                    '**Volume do toque**: o quão alto a chamada recebida toca. "Ouvir" toca uma vez. O som em si é de cada conta: em Editar → **Toque das chamadas recebidas**, escolha Clássico, Digital, Suave, Sino ou Nenhum, para saber qual linha está tocando sem olhar a tela.'
                 ]
             },
             {
@@ -1132,6 +1133,11 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'p',
                 text: 'Os atalhos acima só valem com a janela da Íris em foco. Para **atender, desligar e ligar o mudo com outro programa na frente**, defina atalhos globais em **Configurações → Atalhos e links**: clique em "Definir atalho" e aperte a combinação. Ela precisa de Ctrl, Alt, Cmd ou Win, ou ser uma tecla de função. Se o sistema recusar (outro programa já usa), a tela avisa.'
+            },
+            { type: 'h', text: 'Botão do fone' },
+            {
+                type: 'p',
+                text: 'Ligue **Botão do fone** na mesma tela para atender e desligar pelo botão do fone de ouvido. Ele manda a tecla Tocar/Pausar, que a Íris só usa enquanto há chamada tocando ou em andamento; fora disso a tecla continua pausando a música. No macOS, o sistema só entrega essa tecla a programas liberados em Ajustes do Sistema → Privacidade e Segurança → Acessibilidade.'
             },
             { type: 'h', text: 'Links de telefone' },
             {

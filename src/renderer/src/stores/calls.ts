@@ -11,6 +11,7 @@ import { usePreferencesStore } from './preferences'
 import { notify } from '@renderer/lib/notify'
 import { useToastsStore } from './toasts'
 import type { ShortcutAction } from '@shared/shortcuts'
+import { DEFAULT_RINGTONE } from '@shared/ringtones'
 
 export type CallState = 'dialing' | 'ringing' | 'early' | 'established' | 'ended'
 
@@ -66,9 +67,13 @@ export const useCallsStore = defineStore('calls', () => {
     const ringingIncoming = computed(() => calls.value.filter((c) => c.direction === 'in' && c.state === 'ringing'))
 
     // Toque central: soa enquanto houver chamada recebida esperando atendimento manual.
+    // O som é o da conta da chamada que toca há mais tempo (RF-55).
     watch(
-        () => ringingIncoming.value.some((c) => !c.autoAnswerAt),
-        (ring) => (ring ? ringer.start() : ringer.stop())
+        () => {
+            const first = ringingIncoming.value.filter((c) => !c.autoAnswerAt).at(-1)
+            return first ? (useAccountsStore().byId(first.accountId)?.ringtone ?? DEFAULT_RINGTONE) : null
+        },
+        (tone) => (tone ? ringer.start(tone) : ringer.stop())
     )
 
     const view = (id: string): CallView | undefined => calls.value.find((c) => c.id === id)

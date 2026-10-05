@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { audioInput, audioOutput, ringer } from '@renderer/sip/audio'
 import { useCallsStore } from './calls'
 import { useLogStore } from './log'
+import { DEFAULT_RING_VOLUME } from '@shared/ringtones'
 
 export interface AudioDevice {
     id: string
@@ -15,6 +16,8 @@ export const useDevicesStore = defineStore('devices', () => {
     const outputs = ref<AudioDevice[]>([])
     const inputId = ref('')
     const outputId = ref('')
+    /** Volume do toque de chamada, de 0 a 100 (RF-55). */
+    const ringVolume = ref(DEFAULT_RING_VOLUME)
     let watching = false
     let labelsHidden = true
     const missing = { input: false, output: false }
@@ -55,6 +58,8 @@ export const useDevicesStore = defineStore('devices', () => {
         audioInput.deviceId = inputId.value
         await audioOutput.setDevice(outputId.value)
         ringer.setDevice(outputId.value)
+        ringVolume.value = settings.ringVolume ?? DEFAULT_RING_VOLUME
+        ringer.volume = ringVolume.value
         await refresh()
         if (!watching) {
             watching = true
@@ -85,6 +90,12 @@ export const useDevicesStore = defineStore('devices', () => {
         useLogStore().add(null, 'info', 'event', `Saída de áudio: ${labelOf(outputs.value, id)}`)
     }
 
+    async function setRingVolume(volume: number): Promise<void> {
+        ringVolume.value = volume
+        ringer.volume = volume
+        await window.iris.settings.update({ ringVolume: volume })
+    }
+
     /** Pede o microfone uma vez: sem essa permissão o Chromium não mostra os nomes dos dispositivos. */
     async function unlockLabels(): Promise<void> {
         if (!labelsHidden) return
@@ -97,7 +108,19 @@ export const useDevicesStore = defineStore('devices', () => {
         await refresh()
     }
 
-    return { inputs, outputs, inputId, outputId, load, refresh, setInput, setOutput, unlockLabels }
+    return {
+        inputs,
+        outputs,
+        inputId,
+        outputId,
+        ringVolume,
+        load,
+        refresh,
+        setInput,
+        setOutput,
+        setRingVolume,
+        unlockLabels
+    }
 })
 
 function labelOf(list: AudioDevice[], id: string): string {

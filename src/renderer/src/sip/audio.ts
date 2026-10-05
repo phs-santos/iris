@@ -1,5 +1,7 @@
 // Dispositivos de áudio (RF-19), saída das chamadas e toque central de chamada recebida.
 
+import { DEFAULT_RINGTONE, DEFAULT_RING_VOLUME, RINGTONES, ringGain, type RingtoneId } from '@shared/ringtones'
+
 type SinkElement = HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }
 
 class AudioOutput {
@@ -58,16 +60,18 @@ class AudioInput {
 
 export const audioInput = new AudioInput()
 
-/** Toque de chamada sintetizado (dois tons de 1 s a cada 3 s), um só para todas as contas. */
+/** Toque de chamada sintetizado (RF-55), um só tocando por vez; cada conta escolhe o seu. */
 class Ringer {
     private ctx?: AudioContext
     private timer?: ReturnType<typeof setInterval>
+    private deviceId = ''
+    /** Toque em andamento, para os testes e para não recomeçar o mesmo. */
+    current: RingtoneId | null = null
+    volume = DEFAULT_RING_VOLUME
 
     get ringing(): boolean {
         return this.timer !== undefined
     }
-
-    private deviceId = ''
 
     setDevice(deviceId: string): void {
         this.deviceId = deviceId
@@ -79,34 +83,52 @@ class Ringer {
         await ctx?.setSinkId?.(this.deviceId).catch(() => undefined)
     }
 
-    start(): void {
-        if (this.timer) return
+    /** Toca um ciclo do toque. */
+    private cycle(id: RingtoneId): void {
         if (!this.ctx) {
             this.ctx = new AudioContext()
             void this.applySink()
         }
-        const ring = (): void => {
-            const ctx = this.ctx
-            if (!ctx) return
-            if (ctx.state === 'suspended') ctx.resume().catch(() => undefined)
+        const ctx = this.ctx
+        if (ctx.state === 'suspended') ctx.resume().catch(() => undefined)
+        const level = ringGain(this.volume)
+        for (const note of RINGTONES[id].notes) {
+            const start = ctx.currentTime + note.atMs / 1000
+            const end = start + note.ms / 1000
             const gain = ctx.createGain()
-            gain.gain.value = 0.08
+            // A onda quadrada soa bem mais alta que a senoide na mesma amplitude.
+            const peak = note.wave === 'square' ? level * 0.4 : level
+            gain.gain.setValueAtTime(peak, start)
+            if (note.fade) gain.gain.exponentialRampToValueAtTime(Math.max(peak / 100, 0.0001), end)
             gain.connect(ctx.destination)
-            for (const freq of [440, 480]) {
+            for (const freq of note.freqs) {
                 const osc = ctx.createOscillator()
+                osc.type = note.wave
                 osc.frequency.value = freq
                 osc.connect(gain)
-                osc.start()
-                osc.stop(ctx.currentTime + 1)
+                osc.start(start)
+                osc.stop(end)
             }
         }
-        ring()
-        this.timer = setInterval(ring, 3000)
+    }
+
+    start(id: RingtoneId = DEFAULT_RINGTONE): void {
+        if (this.timer && this.current === id) return
+        this.stop()
+        this.current = id
+        this.cycle(id)
+        this.timer = setInterval(() => this.cycle(id), RINGTONES[id].periodMs)
     }
 
     stop(): void {
         if (this.timer) clearInterval(this.timer)
         this.timer = undefined
+        this.current = null
+    }
+
+    /** Um ciclo só, para ouvir o toque na tela de escolha. */
+    preview(id: RingtoneId): void {
+        if (!this.timer) this.cycle(id)
     }
 }
 
