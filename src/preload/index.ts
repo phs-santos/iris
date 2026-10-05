@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { LoadProgress } from '@shared/load'
 import type { NotificationAction } from '@shared/notifications'
+import type { ShortcutAction } from '@shared/shortcuts'
 import { IPC, type IrisApi, type CertificateErrorEvent, type NativeSipEvent, type UpdateStatus } from '@shared/types'
 
 // A interface só alcança o sistema por estes canais fixos (RNF-08).
@@ -50,6 +51,24 @@ const api: IrisApi = {
             listener(callId, action)
         ipcRenderer.on(IPC.notifyAction, handler)
         return () => ipcRenderer.removeListener(IPC.notifyAction, handler)
+    },
+    links: {
+        take: () => ipcRenderer.invoke(IPC.linksTake),
+        onArrived: (listener) => {
+            const handler = (): void => listener()
+            ipcRenderer.on(IPC.linksArrived, handler)
+            return () => ipcRenderer.removeListener(IPC.linksArrived, handler)
+        },
+        status: () => ipcRenderer.invoke(IPC.linksStatus),
+        setDefault: (kind, on) => ipcRenderer.invoke(IPC.linksSetDefault, kind, on)
+    },
+    shortcuts: {
+        failed: () => ipcRenderer.invoke(IPC.shortcutsFailed),
+        onFired: (listener) => {
+            const handler = (_e: Electron.IpcRendererEvent, action: ShortcutAction): void => listener(action)
+            ipcRenderer.on(IPC.shortcutFired, handler)
+            return () => ipcRenderer.removeListener(IPC.shortcutFired, handler)
+        }
     },
     net: {
         diagnose: (request) => ipcRenderer.invoke(IPC.netDiagnose, request)

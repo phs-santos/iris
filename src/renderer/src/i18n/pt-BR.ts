@@ -3,6 +3,35 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    shortcutsSection: {
+        atalhos: 'Atalhos globais',
+        explicacao:
+            'Funcionam com qualquer programa em foco. Use Ctrl, Alt, Cmd ou Win junto com uma tecla, ou uma tecla de função. Sem atalho definido, a Íris não registra nada no sistema.',
+        atender: 'Atender',
+        atender_dica: 'Atende a chamada que está tocando.',
+        desligar: 'Desligar',
+        desligar_dica: 'Encerra a chamada em andamento, ou recusa a que está tocando.',
+        mudo: 'Mudo',
+        mudo_dica: 'Liga e desliga o microfone da chamada em andamento.',
+        definir: 'Definir atalho',
+        definir_para: 'Atalho para {name}',
+        aperte: 'Aperte as teclas…',
+        limpar: 'Limpar',
+        limpar_de: 'Limpar o atalho de {name}',
+        recusado: 'O sistema recusou este atalho: outro programa já usa. Escolha outro.',
+        repetido: 'Este atalho já é o de {name}.',
+        links: 'Links de telefone',
+        links_explicacao:
+            'Clicar num número numa página ou no CRM abre a Íris com o número no discador da conta escolhida.',
+        links_tel: 'Abrir links tel: com a Íris',
+        links_tel_dica: 'Vale também para callto:.',
+        links_sip: 'Abrir links sip: com a Íris',
+        links_sip_dica: 'A chamada sai pelo PBX da conta escolhida, para o ramal do link.',
+        ligar_direto: 'Ligar direto, sem confirmar',
+        ligar_direto_dica:
+            'Desligado, o número só aparece no discador. Ligue com cuidado: qualquer página pode ter um link desses.',
+        so_instalado: 'Só a Íris instalada consegue se registrar no sistema para abrir links.'
+    },
     firstSteps: {
         titulo: 'Primeiros passos',
         contagem: '{n} de 3',
@@ -240,6 +269,8 @@ export const ptBR = {
         acao_aba: 'Abrir {name}',
         acao_servidores: 'Configurações › Servidores',
         acao_notificacoes: 'Configurações › Notificações',
+        acao_atalhos: 'Configurações › Atalhos e links',
+        link_recebido: 'Número {number} recebido de um link. Aperte Enter para ligar.',
         contatos: 'Contatos',
         historico: 'Histórico',
         iris: 'Íris',
@@ -795,6 +826,7 @@ export const ptBR = {
         certificado_de_nao_e_mais: 'Certificado de {host} não é mais aceito'
     },
     settingsDialog: {
+        atalhos: 'Atalhos e links',
         notificacoes: 'Notificações',
         servidores: 'Servidores',
         configuracoes: 'Configurações',

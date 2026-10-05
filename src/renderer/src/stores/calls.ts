@@ -10,6 +10,7 @@ import { useContactsStore } from './contacts'
 import { usePreferencesStore } from './preferences'
 import { notify } from '@renderer/lib/notify'
 import { useToastsStore } from './toasts'
+import type { ShortcutAction } from '@shared/shortcuts'
 
 export type CallState = 'dialing' | 'ringing' | 'early' | 'established' | 'ended'
 
@@ -402,6 +403,25 @@ export const useCallsStore = defineStore('calls', () => {
         }
     }
 
+    /**
+     * Atalho global ou botão do fone (RF-34): vale para a chamada que a pessoa esperaria, sem olhar a
+     * tela. Atender pega a que está tocando há mais tempo; desligar encerra a escolhida (ou recusa a
+     * que toca, se não há outra); mudo vale para a chamada em andamento.
+     */
+    function shortcut(action: ShortcutAction): void {
+        const ringing = ringingIncoming.value.at(-1)
+        const live = active.value.filter((c) => c.direction === 'out' || c.state !== 'ringing')
+        const current = live.find((c) => c.id === selectedId.value) ?? live[0]
+        if (action === 'answer' && ringing) void answer(ringing.id)
+        else if (action === 'hangup' && current) void hangup(current.id)
+        else if (action === 'hangup' && ringing) void reject(ringing.id)
+        else if (action === 'mute') {
+            const talking = live.find((c) => c.id === selectedId.value && c.state === 'established')
+            const target = talking ?? live.find((c) => c.state === 'established')
+            if (target) toggleMute(target.id)
+        }
+    }
+
     // Volume do que chega, para o medidor do cartão: rápido o bastante para acompanhar a fala.
     setInterval(async () => {
         for (const c of calls.value) {
@@ -436,6 +456,7 @@ export const useCallsStore = defineStore('calls', () => {
         reject,
         hangup,
         toggleMute,
+        shortcut,
         toggleHold,
         toggleRecording,
         audioLevel,

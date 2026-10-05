@@ -11,6 +11,8 @@ import {
 import { DEFAULT_RECONNECT } from '@shared/reconnect'
 import type { ReconnectSettings } from '@shared/types'
 import type { NotificationSettings } from '@shared/notifications'
+import type { LinkSettings } from '@shared/links'
+import type { ShortcutSettings } from '@shared/shortcuts'
 
 /** Seções da tela de Configurações. */
 export type SettingsSection =
@@ -18,6 +20,7 @@ export type SettingsSection =
     | 'appearance'
     | 'audio'
     | 'notifications'
+    | 'shortcuts'
     | 'servers'
     | 'connection'
     | 'ai'
@@ -31,6 +34,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
     const appearance = ref<Appearance>({})
     const reconnect = ref<ReconnectSettings>({ ...DEFAULT_RECONNECT })
     const notifications = ref<NotificationSettings>({})
+    const links = ref<LinkSettings>({})
+    const shortcuts = ref<ShortcutSettings>({})
     /** Tema em uso agora, já resolvido: para o que não dá para trocar só por CSS (o logo). */
     const theme = ref<'dark' | 'light'>('dark')
 
@@ -59,6 +64,8 @@ export const usePreferencesStore = defineStore('preferences', () => {
         appearance.value = settings.appearance ?? {}
         reconnect.value = settings.reconnect ?? { ...DEFAULT_RECONNECT }
         notifications.value = settings.notifications ?? {}
+        links.value = settings.links ?? {}
+        shortcuts.value = settings.shortcuts ?? {}
         apply()
     }
 
@@ -107,7 +114,22 @@ export const usePreferencesStore = defineStore('preferences', () => {
         await window.iris.settings.update({ notifications: JSON.parse(JSON.stringify(next)) })
     }
 
+    async function setLinks(next: LinkSettings): Promise<void> {
+        links.value = next
+        await window.iris.settings.update({ links: { ...next } })
+    }
+
+    /** O processo principal registra os atalhos no sistema assim que grava (RF-34). */
+    async function setShortcuts(next: ShortcutSettings): Promise<void> {
+        shortcuts.value = next
+        await window.iris.settings.update({ shortcuts: { ...next } })
+    }
+
     return {
+        links,
+        shortcuts,
+        setLinks,
+        setShortcuts,
         profile,
         appearance,
         reconnect,

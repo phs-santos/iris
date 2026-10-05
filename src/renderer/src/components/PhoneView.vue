@@ -150,7 +150,13 @@ const bars = computed(() => {
 
 const initial = (text: string): string => (text.trim()[0] ?? '?').toUpperCase()
 
-defineExpose({ focus: () => input.value?.focus() })
+defineExpose({
+    focus: () => input.value?.focus(),
+    setNumber: (value: string) => {
+        number.value = value
+        input.value?.focus()
+    }
+})
 </script>
 
 <template>

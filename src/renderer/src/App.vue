@@ -29,6 +29,7 @@ import { useHistoryStore } from './stores/history'
 import { useMonitorStore } from './stores/monitor'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
+import { useToastsStore } from './stores/toasts'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
 import logoMarkDark from './assets/logo-mark.svg'
 import logoMarkLight from './assets/logo-mark-light.svg'
@@ -42,6 +43,7 @@ const scenarios = useScenariosStore()
 const ai = useAiStore()
 const prefs = usePreferencesStore()
 const history = useHistoryStore()
+const toasts = useToastsStore()
 const centerTab = ref<'phone' | 'contacts' | 'scenarios' | 'history'>('phone')
 /** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
 const mode = ref<WindowMode>('bench')
@@ -69,6 +71,7 @@ const paletteActions = computed<PaletteAction[]>(() => [
     { label: t('app.configuracoes'), hint: t('app.atalho_configuracoes'), run: () => (settingsAt.value = 'profile') },
     { label: t('app.acao_servidores'), run: () => (settingsAt.value = 'servers') },
     { label: t('app.acao_notificacoes'), run: () => (settingsAt.value = 'notifications') },
+    { label: t('app.acao_atalhos'), run: () => (settingsAt.value = 'shortcuts') },
     { label: t('app.acao_primeiros_passos'), run: () => void prefs.setProfile({ tourDone: false }) },
     { label: t('app.guia'), hint: 'F1', run: () => (showGuide.value = true) },
     { label: t('app.modo_telefone'), run: () => setMode('phone') }
@@ -167,7 +170,30 @@ const firstPaint = (): Promise<void> =>
         setTimeout(resolve, 500)
     })
 
+/** Link tel: ou sip: aberto no sistema (RF-53): o número vai para o discador; ligar direto é opção. */
+async function takeLink(): Promise<void> {
+    const number = await window.iris.links.take()
+    if (!number) return
+    centerTab.value = 'phone'
+    showPalette.value = false
+    await nextTick()
+    ;(mode.value === 'phone' ? phone.value : dialer.value)?.setNumber(number)
+    const from = accounts.selected
+    if (prefs.links.autoDial && from) {
+        // O link pode ter aberto o app: dá um tempo para a conta registrar antes de desistir de ligar.
+        for (let i = 0; i < 80 && accounts.statusOf(from.id).state !== 'registered'; i++)
+            await new Promise((resolve) => setTimeout(resolve, 100))
+        if (accounts.statusOf(from.id).state === 'registered') {
+            void calls.dial(from.id, number).catch(() => undefined)
+            return
+        }
+    }
+    toasts.show(t('app.link_recebido', { number }), 'info')
+}
+
 let offCert: (() => void) | undefined
+let offLink: (() => void) | undefined
+let offShortcut: (() => void) | undefined
 let offNotification: (() => void) | undefined
 let offUpdate: (() => void) | undefined
 onMounted(async () => {
@@ -229,10 +255,15 @@ onMounted(async () => {
     await useContactsStore().load()
     await useServersStore().load()
     await accounts.refreshProblems()
+    offLink = window.iris.links.onArrived(() => void takeLink())
+    offShortcut = window.iris.shortcuts.onFired((action) => calls.shortcut(action))
+    void takeLink()
 })
 onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
     offCert?.()
+    offLink?.()
+    offShortcut?.()
     offNotification?.()
     offUpdate?.()
 })

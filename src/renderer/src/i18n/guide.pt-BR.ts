@@ -1127,6 +1127,21 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'p',
                 text: '"Chamada selecionada" é o cartão em que você clicou por último. No macOS use Cmd; no Windows e no Linux, Ctrl.'
+            },
+            { type: 'h', text: 'Atalhos globais' },
+            {
+                type: 'p',
+                text: 'Os atalhos acima só valem com a janela da Íris em foco. Para **atender, desligar e ligar o mudo com outro programa na frente**, defina atalhos globais em **Configurações → Atalhos e links**: clique em "Definir atalho" e aperte a combinação. Ela precisa de Ctrl, Alt, Cmd ou Win, ou ser uma tecla de função. Se o sistema recusar (outro programa já usa), a tela avisa.'
+            },
+            { type: 'h', text: 'Links de telefone' },
+            {
+                type: 'p',
+                text: 'Na mesma tela, ligue **Abrir links tel: com a Íris** (e, se quiser, os links sip:). A partir daí, clicar num número numa página ou no CRM abre a Íris com o número no discador da conta escolhida; tecle Enter para ligar.'
+            },
+            {
+                type: 'note',
+                kind: 'atenção',
+                text: '"Ligar direto, sem confirmar" faz a chamada sair assim que o link chega. Qualquer página pode ter um link desses, inclusive para números pagos: deixe desligado se você navega fora do sistema da empresa.'
             }
         ]
     },

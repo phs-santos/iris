@@ -42,6 +42,8 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-36 | Gravação da chamada em WAV estéreo (um lado em cada canal), por enquanto só em SIP puro |
 | Interface | Tema claro e do sistema, listas compactas, ícones nos botões, medidor do áudio que chega e barras de sinal na chamada, avatar com iniciais, avisos rápidos na tela, paleta de comandos (Ctrl/Cmd+K), primeiros passos no primeiro uso, grupos de PBX recolhíveis e chamada recebida na cor da conta |
 | Notificações | Chamada recebida (com Atender e Recusar no aviso, no macOS), chamada perdida, conta que caiu, correio de voz e monitor, cada um ligável em Configurações → Notificações, com botão de teste |
+| RF-53 | Links de telefone: a Íris abre `tel:`, `callto:`, `sip:` e `sips:` e põe o número no discador; ligar direto é opção, desligada por padrão |
+| RF-34 | Atalhos globais para atender, desligar e mudo, definidos em Configurações → Atalhos e links |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, salvar a partir do histórico, CSV, e o nome do contato nas chamadas e no histórico |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
 | RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |
@@ -154,6 +156,7 @@ npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
 npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
+npm run test:atalhos       # links tel: e sip: e atalhos globais no simulado
 npm run test:notificacoes  # notificações no simulado: chamada recebida, Atender pelo aviso, chamada perdida e a escolha em Configurações
 npm run test:contatos   # agenda de contatos e servidores cadastrados pela tela, no simulado (RF-50, RF-51)
 npm run test:monitor    # monitor: cenário que falha sozinho, aviso no log e webhook num servidor local (RF-43)

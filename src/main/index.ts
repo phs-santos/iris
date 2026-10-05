@@ -1,4 +1,16 @@
-import { app, BrowserWindow, dialog, Menu, nativeImage, net, Notification, session, shell, Tray } from 'electron'
+import {
+    app,
+    BrowserWindow,
+    dialog,
+    globalShortcut,
+    Menu,
+    nativeImage,
+    net,
+    Notification,
+    session,
+    shell,
+    Tray
+} from 'electron'
 import { promises as fs } from 'node:fs'
 import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
@@ -37,6 +49,8 @@ import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
 import { diagnoseNetwork } from './net-diag'
 import { isNetDiagRequest, type NetDiagRequest } from '@shared/net-diag'
+import { findCallLink, isLinkSettings, parseCallLink, type LinkStatus } from '@shared/links'
+import { isShortcutSettings, SHORTCUT_ACTIONS, type ShortcutAction, type ShortcutSettings } from '@shared/shortcuts'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
@@ -78,6 +92,45 @@ const cli = prepareCli()
 
 if (!cli && !app.requestSingleInstanceLock()) {
     app.quit()
+}
+
+// Links de telefone (RF-53). No Windows e no Linux o link chega como argumento; no macOS, pelo evento
+// `open-url`, que pode vir antes do app ficar pronto. O número espera aqui até a interface buscar.
+let pendingLink: string | null = cli ? null : findCallLink(process.argv.slice(1))
+
+function receiveLink(number: string | null): void {
+    if (!number || cli) return
+    pendingLink = number
+    appLog('info', `Link de telefone recebido: ${number}`)
+    if (!app.isReady()) return
+    showWindow()
+    mainWindow?.webContents.send(IPC.linksArrived)
+}
+app.on('open-url', (event, url) => {
+    event.preventDefault()
+    receiveLink(parseCallLink(url))
+})
+
+// Atalhos globais (RF-34): só os que o usuário definiu. Os que o sistema recusa ficam em `failedShortcuts`.
+let failedShortcuts: ShortcutAction[] = []
+
+function applyShortcuts(shortcuts: ShortcutSettings | undefined): void {
+    globalShortcut.unregisterAll()
+    failedShortcuts = []
+    for (const action of SHORTCUT_ACTIONS) {
+        const accelerator = shortcuts?.[action]
+        if (!accelerator) continue
+        let ok = false
+        try {
+            ok = globalShortcut.register(accelerator, () => mainWindow?.webContents.send(IPC.shortcutFired, action))
+        } catch {
+            ok = false
+        }
+        if (!ok) {
+            failedShortcuts.push(action)
+            appLog('warn', `Atalho global recusado pelo sistema: ${accelerator}`)
+        }
+    }
 }
 
 function createWindow(): void {
@@ -247,7 +300,9 @@ function registerIpc(): void {
         'profile',
         'appearance',
         'reconnect',
-        'notifications'
+        'notifications',
+        'links',
+        'shortcuts'
     ]
     const isDeviceId = (v: unknown): boolean => v === undefined || isString(v, 500)
     handle(IPC.settingsUpdate, async (_e, patch: SettingsPatch) => {
@@ -261,13 +316,39 @@ function registerIpc(): void {
                 isProfile(patch.profile) &&
                 isAppearance(patch.appearance) &&
                 isReconnect(patch.reconnect) &&
-                isNotificationSettings(patch.notifications),
+                isNotificationSettings(patch.notifications) &&
+                isLinkSettings(patch.links) &&
+                isShortcutSettings(patch.shortcuts),
             'preferências'
         )
         const settings = await updateSettings(patch)
+        if ('shortcuts' in patch && !cli) applyShortcuts(settings.shortcuts)
         trustedHosts = new Set([...settings.trustedHosts, ...(cliOptions?.trustHosts ?? [])])
         return settings
     })
+
+    handle(IPC.linksTake, () => {
+        const number = pendingLink
+        pendingLink = null
+        return number
+    })
+    const linkStatus = (): LinkStatus => ({
+        supported: app.isPackaged,
+        tel: app.isDefaultProtocolClient('tel'),
+        sip: app.isDefaultProtocolClient('sip')
+    })
+    handle(IPC.linksStatus, linkStatus)
+    handle(IPC.linksSetDefault, (_e, kind: 'tel' | 'sip', enabled: boolean) => {
+        check((kind === 'tel' || kind === 'sip') && typeof enabled === 'boolean', 'links de telefone')
+        // Sem empacotar, o registro apontaria o sistema para o binário do Electron.
+        if (app.isPackaged)
+            for (const scheme of kind === 'tel' ? ['tel', 'callto'] : ['sip', 'sips']) {
+                if (enabled) app.setAsDefaultProtocolClient(scheme)
+                else app.removeAsDefaultProtocolClient(scheme)
+            }
+        return linkStatus()
+    })
+    handle(IPC.shortcutsFailed, () => failedShortcuts)
 
     handle(IPC.filesSaveText, async (_e, defaultName: string, content: string) => {
         check(isString(defaultName, 255) && isString(content, 200_000_000), 'arquivo')
@@ -435,7 +516,10 @@ function setWindowMode(mode: WindowMode): void {
     }
 }
 
-app.on('second-instance', showWindow)
+app.on('second-instance', (_event, argv) => {
+    showWindow()
+    receiveLink(findCallLink(argv.slice(1)))
+})
 
 app.whenReady().then(async () => {
     appLog(
@@ -466,6 +550,7 @@ app.whenReady().then(async () => {
     })
     createWindow()
     createTray()
+    applyShortcuts(saved?.shortcuts)
 
     app.on('activate', showWindow)
 })
@@ -473,6 +558,7 @@ app.whenReady().then(async () => {
 app.on('before-quit', () => {
     quitting = true
 })
+app.on('will-quit', () => globalShortcut.unregisterAll())
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()

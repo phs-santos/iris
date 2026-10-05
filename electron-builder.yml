@@ -22,6 +22,11 @@ electronFuses:
     # Sem certificado, refaz a assinatura ad-hoc depois de mexer no binário (o macOS em Apple Silicon
     # mata binários com assinatura inválida). Com o Developer ID do M4, a assinatura real substitui esta.
     resetAdHocDarwinSignature: true
+# Links de telefone (RF-53): declara os esquemas para o sistema oferecer a Íris; virar o padrão é
+# escolha do usuário, em Configurações → Atalhos e links.
+protocols:
+    - name: Chamada telefônica
+      schemes: [tel, callto, sip, sips]
 # Atualização automática (RF-35): o app instalado procura versões novas nos releases deste repositório.
 # Os scripts dist:* usam --publish never: geram os arquivos (latest*.yml), mas não enviam nada.
 publish:

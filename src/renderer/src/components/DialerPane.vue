@@ -54,7 +54,14 @@ async function dial(number = destination.value): Promise<void> {
     }
 }
 
-defineExpose({ focus: () => input.value?.focus() })
+defineExpose({
+    focus: () => input.value?.focus(),
+    /** Número vindo de fora (um link tel:, RF-53): fica no campo, pronto para ligar. */
+    setNumber: (number: string) => {
+        destination.value = number
+        input.value?.focus()
+    }
+})
 </script>
 
 <template>

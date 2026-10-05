@@ -154,6 +154,16 @@ São 37 requisitos em cinco grupos: 15 essenciais, 16 importantes e 6 desejávei
 | RF-51 | Cadastro de servidores (PBX): domínio, transporte, endereço, STUN/TURN, SRTP e preset, reaproveitados pelas contas. Editar o servidor atualiza todas as contas ligadas a ele e registra de novo as que estavam no ar | Importante | 1.6 | Trocar o endereço de um servidor muda as três contas que o usam, sem editar uma por uma |
 | RF-52 | Chamada de vídeo. Planejado, sem data | Desejável | Depois | Vídeo nos dois sentidos entre dois ramais WebRTC do mesmo PBX |
 
+### Depois do 1.7 (pedidos pelo usuário em 04/10/2026)
+
+| ID | Requisito | Prioridade | Marco | Critério de aceitação |
+| --- | --- | --- | --- | --- |
+| RF-53 | Links de telefone: a Íris pode ser o programa que abre `tel:`, `callto:`, `sip:` e `sips:`. O número do link vai para o discador da conta escolhida; ligar direto, sem confirmar, é uma opção desligada por padrão, porque qualquer página pode ter um link desses | Importante | 1.8 | Abrir a Íris com `tel:+551130000000` põe o número no discador |
+| RF-34 | Atalhos globais para atender, desligar e mudo (já na lista acima), escolhidos em Configurações. Sem atalho definido, nada é registrado no sistema | Desejável | 1.8 | O atalho funciona com outro app em foco |
+| RF-54 | Mensagens de texto por SIP MESSAGE (RFC 3428) entre ramais: conversa por contato, com aviso de mensagem recebida. Em SIP puro, WebRTC e no simulado | Desejável | 1.8 | Duas contas do mesmo PBX trocam mensagens nos dois sentidos |
+| RF-55 | Toques: escolha do toque de chamada entre os que vêm com o app, por conta, com volume; e os botões do fone (atender, desligar e mudo) pelas teclas de mídia | Desejável | 1.8 | Duas contas com toques diferentes soam diferente ao receber chamada |
+| RF-56 | Interface em inglês, além do português, com a escolha em Configurações → Aparência e o idioma do sistema como padrão | Importante | 1.8 | Com inglês escolhido, nenhuma tela mostra texto em português |
+
 ## Requisitos não funcionais
 
 Os números abaixo são metas iniciais para validar no M0 e ajustar se necessário.

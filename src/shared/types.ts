@@ -13,6 +13,8 @@ import type { LoadProgress, LoadReport, LoadSpec } from './load'
 import type { NotificationAction, NotificationSettings, NotifyRequest } from './notifications'
 import type { MwiInfo, PresenceState } from './presence'
 import type { AccountTransport, SipTransportKind } from './sip-target'
+import type { LinkSettings, LinkStatus } from './links'
+import type { ShortcutAction, ShortcutSettings } from './shortcuts'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
@@ -117,13 +119,25 @@ export interface Settings {
     reconnect?: ReconnectSettings
     /** Quais eventos viram notificação do sistema. */
     notifications?: NotificationSettings
+    /** Links tel: e sip: (RF-53). */
+    links?: LinkSettings
+    /** Atalhos globais (RF-34). */
+    shortcuts?: ShortcutSettings
 }
 
 /** Campos que a interface pode mudar em `settings.json`; o canal de atualização e a IA têm canais próprios. */
 export type SettingsPatch = Partial<
     Pick<
         Settings,
-        'trustedHosts' | 'audioInputId' | 'audioOutputId' | 'profile' | 'appearance' | 'reconnect' | 'notifications'
+        | 'trustedHosts'
+        | 'audioInputId'
+        | 'audioOutputId'
+        | 'profile'
+        | 'appearance'
+        | 'reconnect'
+        | 'notifications'
+        | 'links'
+        | 'shortcuts'
     >
 >
 
@@ -319,6 +333,21 @@ export interface IrisApi {
     focusWindow(): void
     /** Clique em Atender, Recusar ou na própria notificação de uma chamada. */
     onNotificationAction(listener: (callId: string, action: NotificationAction) => void): () => void
+    /** Links de telefone (RF-53). */
+    links: {
+        /** O número do último link recebido, uma vez só; null se não há nenhum esperando. */
+        take(): Promise<string | null>
+        onArrived(listener: () => void): () => void
+        status(): Promise<LinkStatus>
+        /** Faz (ou deixa de fazer) a Íris abrir os links de telefone (`tel`) ou de SIP (`sip`) no sistema. */
+        setDefault(kind: 'tel' | 'sip', on: boolean): Promise<LinkStatus>
+    }
+    /** Atalhos globais (RF-34). */
+    shortcuts: {
+        /** Ações cujo atalho o sistema recusou (outro programa já usa). */
+        failed(): Promise<ShortcutAction[]>
+        onFired(listener: (action: ShortcutAction) => void): () => void
+    }
     /** Diagnóstico de rede da Saúde (RF-46): DNS SRV, certificado TLS e STUN. */
     net: {
         diagnose(request: NetDiagRequest): Promise<NetDiagResult>
@@ -418,6 +447,12 @@ export const IPC = {
     notifyClose: 'app:notify-close',
     notifyAction: 'app:notify-action',
     focusWindow: 'app:focus-window',
+    linksTake: 'links:take',
+    linksArrived: 'links:arrived',
+    linksStatus: 'links:status',
+    linksSetDefault: 'links:set-default',
+    shortcutsFailed: 'shortcuts:failed',
+    shortcutFired: 'shortcuts:fired',
     monitorWebhook: 'monitor:webhook',
     netDiagnose: 'net:diagnose',
     tray: 'app:tray',
