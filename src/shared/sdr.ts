@@ -197,6 +197,60 @@ export function parseLeadsCsv(
     return { leads, skipped, repeated }
 }
 
+const PHONE = /\+?\(?\d[\d\s().-]{1,}\d/
+
+/**
+ * Lista colada direto no painel, uma pessoa por linha: só o número, "nome número", "número nome" ou
+ * "nome; número; empresa". O número é o primeiro trecho com dígitos; o resto vira nome e empresa.
+ */
+export function parseLeadsText(
+    text: string,
+    newId: () => string,
+    existing: Lead[] = []
+): { leads: Lead[]; skipped: number; repeated: number } {
+    const seen = new Set(existing.map((l) => digits(l.number)))
+    const leads: Lead[] = []
+    let skipped = 0
+    let repeated = 0
+    for (const raw of text.split(/\r?\n/).slice(0, LEADS_LIMIT)) {
+        const line = raw.trim()
+        if (!line) continue
+        const parts = line.split(/[;\t,]/).map((p) => p.trim())
+        let number = ''
+        let rest: string[] = []
+        if (parts.length > 1) {
+            const at = parts.findIndex((p) => PHONE.test(p) && digits(p).length >= 3 && !/[a-zA-Zà-ÿ]/.test(p))
+            if (at >= 0) number = digits(parts[at]!)
+            rest = parts.filter((_, i) => i !== at).filter(Boolean)
+        } else {
+            const match = PHONE.exec(line)
+            if (match) {
+                number = digits(match[0])
+                rest = [line.replace(match[0], ' ').replace(/\s+/g, ' ').trim()].filter(Boolean)
+            }
+        }
+        if (!number || number.length < 3) {
+            skipped++
+            continue
+        }
+        if (seen.has(number)) {
+            repeated++
+            continue
+        }
+        seen.add(number)
+        leads.push({
+            id: newId(),
+            name: (rest[0] ?? '').slice(0, 200),
+            number: number.slice(0, 64),
+            company: rest[1]?.slice(0, 200) || undefined,
+            fields: {},
+            status: 'pending',
+            attempts: 0
+        })
+    }
+    return { leads, skipped, repeated }
+}
+
 /** A fila com o que aconteceu, para o CRM. */
 export function leadsToCsv(leads: Lead[], outcomeName: (id: OutcomeId) => string): string {
     const extras = [...new Set(leads.flatMap((l) => Object.keys(l.fields)))]

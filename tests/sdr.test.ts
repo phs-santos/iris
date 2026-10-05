@@ -13,6 +13,7 @@ import {
     nextLead,
     openingFor,
     parseLeadsCsv,
+    parseLeadsText,
     withinHours,
     type Lead
 } from '../src/shared/sdr'
@@ -58,6 +59,23 @@ describe('modo SDR: planilha', () => {
         expect(csv.split('\r\n')[0]).toContain(';observacao;cargo')
         expect(csv).toContain('Ana Souza;1002;;;concluida;REUNIAO;2;')
         expect(csv).toContain('"quinta; 10h";CEO')
+    })
+})
+
+describe('modo SDR: lista colada no painel', () => {
+    it('aceita só o número, nome e número em qualquer ordem, e nome; número; empresa', () => {
+        const { leads, skipped, repeated } = parseLeadsText(
+            '1002\nAna Lima 11 3000-0001\n(11) 3000-0002 Beto\nCaio; +55 11 3000-0003; Acme\n\nsó nome\n1002\n12',
+            id
+        )
+        expect(leads.map((l) => [l.name, l.number, l.company])).toEqual([
+            ['', '1002', undefined],
+            ['Ana Lima', '1130000001', undefined],
+            ['Beto', '1130000002', undefined],
+            ['Caio', '+551130000003', 'Acme']
+        ])
+        expect(skipped).toBe(2)
+        expect(repeated).toBe(1)
     })
 })
 

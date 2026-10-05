@@ -23,6 +23,21 @@ const note = ref('')
 const callbackAt = ref('')
 const choosingCallback = ref(false)
 const listFilter = ref<'pending' | 'done'>('pending')
+/** Caixa para colar números direto, sem planilha. */
+const pasting = ref(false)
+const pasted = ref('')
+
+function addPasted(): void {
+    const r = sdr.addText(pasted.value)
+    toasts.show(
+        t('sdr.importados', { added: r.added, repeated: r.repeated, skipped: r.skipped }),
+        r.added ? 'ok' : 'bad'
+    )
+    if (r.added) {
+        pasted.value = ''
+        pasting.value = false
+    }
+}
 
 const call = computed(() => calls.calls.find((c) => c.id === sdr.current?.callId))
 const account = computed(() => accounts.byId(sdr.current?.accountId ?? sdr.settings.accountId ?? accounts.selectedId))
@@ -122,6 +137,9 @@ onUnmounted(() => {
             <button v-else class="btn" @click="sdr.pause()">{{ $t('sdr.pausar') }}</button>
             <span class="who mono">{{ account ? `${account.name} · ${account.extension}` : $t('sdr.sem_conta') }}</span>
             <span class="spacer"></span>
+            <button class="btn small" :class="{ on: pasting }" @click="pasting = !pasting">
+                {{ $t('sdr.adicionar_numeros') }}
+            </button>
             <button class="btn small" @click="importCsv">{{ $t('sdr.importar') }}</button>
             <button class="btn small" :disabled="!sdr.data.leads.length" @click="exportCsv">
                 {{ $t('sdr.exportar') }}
@@ -130,6 +148,24 @@ onUnmounted(() => {
                 <PhoneIcon name="gear" />{{ $t('sdr.opcoes') }}
             </button>
         </div>
+
+        <form v-if="pasting" class="paste" @submit.prevent="addPasted">
+            <label class="field">
+                <span class="label">{{ $t('sdr.colar_rotulo') }}</span>
+                <textarea
+                    v-model="pasted"
+                    class="input mono"
+                    rows="5"
+                    :placeholder="$t('sdr.colar_exemplo')"
+                ></textarea>
+            </label>
+            <div class="paste-actions">
+                <button type="submit" class="btn primary small" :disabled="!pasted.trim()">
+                    {{ $t('sdr.adicionar_a_fila') }}
+                </button>
+                <button type="button" class="btn small" @click="pasting = false">{{ $t('sdr.cancelar') }}</button>
+            </div>
+        </form>
 
         <section class="stats" :aria-label="$t('sdr.painel')">
             <div class="goal">
@@ -365,6 +401,16 @@ onUnmounted(() => {
 }
 .spacer {
     flex: 1;
+}
+.paste {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 14px 10px;
+}
+.paste-actions {
+    display: flex;
+    gap: 6px;
 }
 .stats {
     display: flex;

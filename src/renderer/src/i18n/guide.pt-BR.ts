@@ -761,7 +761,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'steps',
                 items: [
-                    '**Importar planilha**: um CSV com as colunas `nome;numero;empresa;segmento`. As outras colunas viram variáveis do roteiro: uma coluna `cargo` vira `{cargo}`. Números repetidos não entram de novo.',
+                    '**Adicionar números**: cole a lista direto no painel, uma pessoa por linha: só o número, "nome número" ou "nome; número; empresa". Ou **Importar planilha**: um CSV com as colunas `nome;numero;empresa;segmento`. As outras colunas viram variáveis do roteiro: uma coluna `cargo` vira `{cargo}`. Números repetidos não entram de novo.',
                     'Em **Opções**, escolha a conta, escreva o roteiro e grave a abertura (ou escolha um WAV). Dá para ter uma abertura por segmento.',
                     'Ainda em Opções, defina o horário e os dias em que a fila pode ligar, quantas tentativas cada pessoa recebe e a meta do dia.',
                     'Clique em **Começar a fila**.'

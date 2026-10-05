@@ -65,6 +65,15 @@ try {
     await page.getByText('4 pessoas na fila; 0 já estavam').waitFor()
     step('planilha importada com 4 pessoas')
 
+    // Números colados direto no painel, sem planilha.
+    await page.getByRole('button', { name: 'Adicionar números' }).click()
+    await page.getByLabel(/Uma pessoa por linha/).fill('1002\nBia Rocha 1003\nsem número')
+    await page.getByRole('button', { name: 'Adicionar à fila' }).click()
+    await page.getByText('1 pessoas na fila; 1 já estavam e 1 linhas sem número foram puladas.').waitFor()
+    await page.getByRole('region', { name: 'Fila' }).getByText('Bia Rocha').waitFor()
+    await page.getByRole('region', { name: 'Fila' }).getByRole('button', { name: 'Tirar Bia Rocha da fila' }).click()
+    step('números colados no painel entram na fila, sem repetir quem já estava')
+
     // Opções: conta, abertura gravada, recado da caixa postal e horário o dia todo (o teste roda a qualquer hora).
     await page.getByRole('button', { name: 'Opções' }).click()
     const form = page.getByRole('dialog', { name: 'Opções do modo SDR' })

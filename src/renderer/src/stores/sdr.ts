@@ -13,6 +13,7 @@ import {
     OUTCOMES,
     openingFor,
     parseLeadsCsv,
+    parseLeadsText,
     withinHours,
     type Lead,
     type OutcomeId,
@@ -109,6 +110,14 @@ export const useSdrStore = defineStore('sdr', () => {
 
     function importCsv(text: string): { added: number; skipped: number; repeated: number } {
         const result = parseLeadsCsv(text, () => crypto.randomUUID(), data.value.leads)
+        data.value = { ...data.value, leads: [...data.value.leads, ...result.leads] }
+        persist()
+        return { added: result.leads.length, skipped: result.skipped, repeated: result.repeated }
+    }
+
+    /** Lista colada no painel: uma pessoa por linha. */
+    function addText(text: string): { added: number; skipped: number; repeated: number } {
+        const result = parseLeadsText(text, () => crypto.randomUUID(), data.value.leads)
         data.value = { ...data.value, leads: [...data.value.leads, ...result.leads] }
         persist()
         return { added: result.leads.length, skipped: result.skipped, repeated: result.repeated }
@@ -452,6 +461,7 @@ export const useSdrStore = defineStore('sdr', () => {
         load,
         setSettings,
         importCsv,
+        addText,
         removeLead,
         clearLeads,
         exportCsv,
