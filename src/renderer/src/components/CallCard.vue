@@ -6,6 +6,7 @@ import { useCallsStore, type CallView } from '@renderer/stores/calls'
 import { DtmfSyntaxError, parseDtmfSequence } from '@renderer/lib/dtmf'
 import { duration, now } from '@renderer/lib/now'
 import { useAiStore } from '@renderer/stores/ai'
+import PhoneIcon from './PhoneIcon.vue'
 
 const props = defineProps<{ call: CallView }>()
 const accounts = useAccountsStore()
@@ -164,7 +165,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     :disabled="!established"
                     @click="calls.toggleMute(call.id)"
                 >
-                    {{ call.muted ? $t('callCard.ativar_mic') : $t('callCard.mudo_2') }}
+                    <PhoneIcon name="mic" />{{ call.muted ? $t('callCard.ativar_mic') : $t('callCard.mudo_2') }}
                 </button>
                 <button
                     class="btn"
@@ -172,7 +173,7 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     :disabled="!established"
                     @click="calls.toggleHold(call.id)"
                 >
-                    {{ call.held ? $t('callCard.retomar') : $t('callCard.espera') }}
+                    <PhoneIcon name="pause" />{{ call.held ? $t('callCard.retomar') : $t('callCard.espera') }}
                 </button>
                 <button
                     v-if="call.canRecord"
@@ -182,10 +183,12 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     :title="call.recording ?? $t('callCard.gravar_dica')"
                     @click="calls.toggleRecording(call.id)"
                 >
-                    {{ call.recording ? $t('callCard.parar_gravacao') : $t('callCard.gravar') }}
+                    <PhoneIcon name="record" />{{
+                        call.recording ? $t('callCard.parar_gravacao') : $t('callCard.gravar')
+                    }}
                 </button>
                 <button class="btn" :class="{ on: showDtmf }" :disabled="!established" @click="showDtmf = !showDtmf">
-                    {{ $t('callCard.dtmf') }}
+                    <PhoneIcon name="grid" />{{ $t('callCard.dtmf') }}
                 </button>
                 <button
                     class="btn"
@@ -193,9 +196,11 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     :disabled="!established || Boolean(consulting) || Boolean(consultOf)"
                     @click="showTransfer = !showTransfer"
                 >
-                    {{ $t('callCard.transferir') }}
+                    <PhoneIcon name="transfer" />{{ $t('callCard.transferir') }}
                 </button>
-                <button class="btn stop" @click="calls.hangup(call.id)">{{ $t('callCard.desligar') }}</button>
+                <button class="btn stop" @click="calls.hangup(call.id)">
+                    <PhoneIcon name="hangup" />{{ $t('callCard.desligar') }}
+                </button>
             </template>
         </div>
 
@@ -482,5 +487,12 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
     .meter-fill {
         transition: none;
     }
+}
+.actions .btn :deep(.phone-icon),
+.btn :deep(.phone-icon) {
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    vertical-align: -3px;
 }
 </style>

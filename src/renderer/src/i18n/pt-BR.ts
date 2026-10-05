@@ -3,6 +3,19 @@
 // catálogo em index.ts.
 
 export const ptBR = {
+    commandPalette: {
+        titulo: 'Paleta de comandos',
+        placeholder: 'Número, contato, conta, cenário ou ação',
+        ligar_para: 'Ligar para {number}',
+        registrar: 'Registrar {name}',
+        desregistrar: 'Desregistrar {name}',
+        rodar_cenario: 'Rodar cenário {name}',
+        nada: 'Nada encontrado.',
+        teclas: '↑ ↓ escolhe · Enter executa · Esc fecha'
+    },
+    toastStack: {
+        fechar: 'Fechar aviso'
+    },
     notificationsSection: {
         notificacoes: 'Notificações',
         explicacao:
@@ -47,6 +60,8 @@ export const ptBR = {
         exportados: 'Contatos exportados para {path}'
     },
     contactForm: {
+        criado: 'Contato {name} criado',
+        salvo: 'Contato salvo',
         novo: 'Novo contato',
         editar: 'Editar {name}',
         fechar: 'Fechar',
@@ -200,6 +215,14 @@ export const ptBR = {
         importacao_invalida: 'Este arquivo não é uma exportação de contas da Íris'
     },
     app: {
+        atalho_configuracoes: 'Ctrl/Cmd+,',
+        acao_nova_conta: 'Nova conta',
+        acao_novo_contato: 'Novo contato',
+        acao_registrar_todas: 'Registrar todas as contas',
+        acao_desregistrar_todas: 'Desregistrar todas as contas',
+        acao_aba: 'Abrir {name}',
+        acao_servidores: 'Configurações › Servidores',
+        acao_notificacoes: 'Configurações › Notificações',
         contatos: 'Contatos',
         historico: 'Histórico',
         iris: 'Íris',

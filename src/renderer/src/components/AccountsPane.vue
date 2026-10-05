@@ -11,6 +11,7 @@ import SipRequestDialog from './SipRequestDialog.vue'
 import LoadDialog from './LoadDialog.vue'
 import type { PresenceState } from '@shared/presence'
 import { useLogStore } from '@renderer/stores/log'
+import { useToastsStore } from '@renderer/stores/toasts'
 
 const emit = defineEmits<{ new: []; edit: [account: Account]; health: [id: string] }>()
 const accounts = useAccountsStore()
@@ -49,7 +50,10 @@ function moreActions(account: Account): Array<{ label: string; action: () => voi
             log.add(account.id, 'error', 'event', t('accountsPane.pcap_falhou', { message: error.message }))
             return null
         })
-        if (path) log.add(account.id, 'info', 'event', t('accountsPane.pcap_salvo', { path }))
+        if (path) {
+            log.add(account.id, 'info', 'event', t('accountsPane.pcap_salvo', { path }))
+            useToastsStore().show(t('accountsPane.pcap_salvo', { path }))
+        }
     }
     return [
         { label: t('accountsPane.saude'), action: () => emit('health', account.id) },

@@ -1107,6 +1107,10 @@ export const GUIDE: GuideSection[] = [
                     ['Ctrl/Cmd + M', 'Liga ou desliga o mudo da chamada selecionada'],
                     ['Ctrl/Cmd + H', 'Põe em espera ou retoma a chamada selecionada'],
                     ['Ctrl/Cmd + 1 a 9', 'Seleciona a conta nessa posição da lista'],
+                    [
+                        'Ctrl/Cmd + K',
+                        'Abre a paleta de comandos: digite um número, um contato, uma conta, um cenário ou uma ação e tecle Enter'
+                    ],
                     ['F1', 'Abre este guia'],
                     ['Esc', 'Fecha a janela que estiver aberta por cima']
                 ]

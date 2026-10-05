@@ -17,7 +17,10 @@ import GuideDialog from './components/GuideDialog.vue'
 import { useAiStore } from './stores/ai'
 import ScenariosPane from './components/ScenariosPane.vue'
 import PhoneView from './components/PhoneView.vue'
+import PhoneIcon from './components/PhoneIcon.vue'
 import HistoryPane from './components/HistoryPane.vue'
+import ToastStack from './components/ToastStack.vue'
+import CommandPalette, { type PaletteAction } from './components/CommandPalette.vue'
 import ContactsPane from './components/ContactsPane.vue'
 import { useContactsStore } from './stores/contacts'
 import { useServersStore } from './stores/servers'
@@ -52,6 +55,22 @@ const editing = ref<Account | null>(null)
 /** Seção aberta da tela de Configurações; null com a tela fechada. */
 const settingsAt = ref<SettingsSection | null>(null)
 const showGuide = ref(false)
+const showPalette = ref(false)
+/** Ações da janela para a paleta de comandos (Ctrl/Cmd+K). */
+const paletteActions = computed<PaletteAction[]>(() => [
+    { label: t('app.acao_nova_conta'), run: newAccount },
+    { label: t('app.acao_novo_contato'), run: () => (centerTab.value = 'contacts') },
+    { label: t('app.acao_registrar_todas'), run: () => void accounts.registerAll() },
+    { label: t('app.acao_desregistrar_todas'), run: () => void accounts.unregisterAll() },
+    { label: t('app.acao_aba', { name: t('app.contatos') }), run: () => (centerTab.value = 'contacts') },
+    { label: t('app.acao_aba', { name: t('app.historico') }), run: () => (centerTab.value = 'history') },
+    { label: t('app.acao_aba', { name: t('app.cenarios') }), run: () => (centerTab.value = 'scenarios') },
+    { label: t('app.configuracoes'), hint: t('app.atalho_configuracoes'), run: () => (settingsAt.value = 'profile') },
+    { label: t('app.acao_servidores'), run: () => (settingsAt.value = 'servers') },
+    { label: t('app.acao_notificacoes'), run: () => (settingsAt.value = 'notifications') },
+    { label: t('app.guia'), hint: 'F1', run: () => (showGuide.value = true) },
+    { label: t('app.modo_telefone'), run: () => setMode('phone') }
+])
 const update = ref<UpdateInfo | null>(null)
 // O botão da barra avisa quando há versão nova para baixar ou já baixada (RF-35).
 const updatePending = computed(() => ['available', 'ready'].includes(update.value?.status.state ?? ''))
@@ -115,6 +134,10 @@ function onKey(event: KeyboardEvent): void {
     }
     const mod = event.ctrlKey || event.metaKey
     if (!mod) return
+    if (event.key.toLowerCase() === 'k') {
+        showPalette.value = !showPalette.value
+        return event.preventDefault()
+    }
     if (event.key === ',') {
         settingsAt.value ??= 'profile'
         return event.preventDefault()
@@ -233,14 +256,16 @@ onUnmounted(() => {
             </span>
             <span class="spacer"></span>
             <button class="btn small" :title="$t('app.so_o_discador_e_a')" @click="setMode('phone')">
-                {{ $t('app.modo_telefone') }}
+                <PhoneIcon name="phone" class="top-icon" />{{ $t('app.modo_telefone') }}
             </button>
             <button v-if="updatePending" class="btn small primary" @click="openUpdate">
                 {{ $t('app.atualizacao_disponivel') }}
             </button>
-            <button class="btn small" @click="showGuide = true">{{ $t('app.guia') }}</button>
+            <button class="btn small" @click="showGuide = true">
+                <PhoneIcon name="book" class="top-icon" />{{ $t('app.guia') }}
+            </button>
             <button class="btn small" :title="$t('app.configuracoes_ctrl_cmd')" @click="settingsAt = 'profile'">
-                {{ $t('app.configuracoes') }}
+                <PhoneIcon name="gear" class="top-icon" />{{ $t('app.configuracoes') }}
             </button>
         </header>
 
@@ -350,6 +375,13 @@ onUnmounted(() => {
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
         <GuideDialog v-if="showGuide" @close="showGuide = false" />
         <AiDialog v-if="ai.ask" :ask="ai.ask" @close="ai.ask = null" />
+        <ToastStack />
+        <CommandPalette
+            v-if="showPalette"
+            :actions="paletteActions"
+            @close="showPalette = false"
+            @tab="(tab) => (centerTab = tab)"
+        />
         <SettingsDialog
             v-if="settingsAt"
             :section="settingsAt"
@@ -503,5 +535,11 @@ onUnmounted(() => {
 .empty {
     color: var(--muted);
     margin: 8px 0;
+}
+.top-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 5px;
+    vertical-align: -2px;
 }
 </style>

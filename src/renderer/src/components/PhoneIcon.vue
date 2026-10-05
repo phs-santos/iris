@@ -1,6 +1,22 @@
 <script setup lang="ts">
-/** Ícones de traço do modo Telefone, desenhados aqui para não depender de fonte nem de emoji do sistema. */
-defineProps<{ name: 'phone' | 'hangup' | 'mic' | 'pause' | 'grid' | 'transfer' | 'plus' | 'log' | 'x' | 'erase' }>()
+/** Ícones de traço da Íris, desenhados aqui para não depender de fonte nem de emoji do sistema. */
+defineProps<{
+    name:
+        | 'phone'
+        | 'hangup'
+        | 'mic'
+        | 'pause'
+        | 'grid'
+        | 'transfer'
+        | 'plus'
+        | 'log'
+        | 'x'
+        | 'erase'
+        | 'record'
+        | 'gear'
+        | 'book'
+        | 'search'
+}>()
 </script>
 
 <template>
@@ -23,6 +39,23 @@ defineProps<{ name: 'phone' | 'hangup' | 'mic' | 'pause' | 'grid' | 'transfer' |
                 d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"
             />
         </g>
+        <template v-else-if="name === 'record'">
+            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="3" fill="currentColor" />
+        </template>
+        <template v-else-if="name === 'gear'">
+            <circle cx="12" cy="12" r="3" />
+            <path
+                d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"
+            />
+        </template>
+        <template v-else-if="name === 'book'">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5" />
+        </template>
+        <template v-else-if="name === 'search'">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M21 21l-4.3-4.3" />
+        </template>
         <template v-else-if="name === 'mic'">
             <rect x="9" y="2" width="6" height="12" rx="3" />
             <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" />

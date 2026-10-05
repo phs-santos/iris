@@ -79,6 +79,19 @@ try {
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
     step('histórico lista a chamada, grava em history.json e liga de novo')
 
+    // Paleta de comandos (Ctrl/Cmd+K): acha conta e liga para um número digitado.
+    await page.keyboard.press('ControlOrMeta+k')
+    const palette = page.getByRole('dialog', { name: 'Paleta de comandos' })
+    await palette.getByRole('combobox').fill('vendas')
+    await palette.getByRole('option', { name: /Desregistrar Vendas 1002/ }).waitFor()
+    await palette.getByRole('combobox').fill('8000')
+    await palette.getByRole('option', { name: 'Ligar para 8000' }).waitFor()
+    await page.keyboard.press('Enter')
+    const ura = page.locator('.call', { hasText: /→\s*8000/ })
+    await ura.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 8000 })
+    await ura.getByRole('button', { name: 'Desligar' }).click()
+    step('paleta de comandos acha a conta e liga para o número digitado')
+
     // Transferência assistida (RF-16): 1001 liga para 1002, que consulta a URA 8000 e transfere.
     const live = (text) => page.locator('.call:not(.ended)', { hasText: text })
     await page.locator('.chip', { hasText: '1002' }).click()

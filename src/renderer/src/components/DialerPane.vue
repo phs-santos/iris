@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
 import { useContactsStore } from '@renderer/stores/contacts'
+import PhoneIcon from './PhoneIcon.vue'
 import { MOCK_NUMBERS } from '@renderer/sip/mock-engine'
 
 const accounts = useAccountsStore()
@@ -86,7 +87,7 @@ defineExpose({ focus: () => input.value?.focus() })
                 <option v-for="c in contacts.contacts" :key="c.id" :value="c.number">{{ c.name }}</option>
             </datalist>
             <button class="btn go big" type="submit" :disabled="!registered || !destination.trim()">
-                {{ $t('dialerPane.ligar') }}
+                <PhoneIcon name="phone" class="dial-icon" />{{ $t('dialerPane.ligar') }}
             </button>
         </form>
 
@@ -221,5 +222,11 @@ defineExpose({ focus: () => input.value?.focus() })
 }
 .mock-help b {
     color: var(--fg);
+}
+.dial-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    vertical-align: -3px;
 }
 </style>

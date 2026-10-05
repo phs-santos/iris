@@ -31,9 +31,10 @@ try {
     await form.getByLabel('Empresa').fill('Matriz')
     await form.getByRole('button', { name: 'Salvar' }).click()
     await page.locator('.contact', { hasText: 'Ana do Financeiro' }).waitFor()
+    await page.getByText('Contato Ana do Financeiro criado').waitFor()
     if (read('contacts.json').contacts[0]?.number !== '1002')
         throw new Error('o contato não foi gravado em contacts.json')
-    step('contato criado, com a validação do formulário, e gravado em contacts.json')
+    step('contato criado, com a validação do formulário, o aviso na tela, e gravado em contacts.json')
 
     await page.getByRole('searchbox').fill('financeiro')
     await page.locator('.contact', { hasText: 'Ana' }).waitFor()

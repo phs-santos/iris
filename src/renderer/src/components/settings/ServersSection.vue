@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from 'vue'
 import { t } from '@renderer/i18n'
 import { useServersStore } from '@renderer/stores/servers'
+import { useToastsStore } from '@renderer/stores/toasts'
 import { parseSipServer } from '@shared/sip-target'
 import type { SipServer } from '@shared/servers'
 
@@ -53,6 +54,7 @@ async function save(): Promise<void> {
     const changed = await servers.save(server)
     editing.value = null
     message.value = changed ? t('serversSection.contas_atualizadas', { n: changed }) : t('serversSection.salvo')
+    useToastsStore().show(message.value)
 }
 
 async function remove(id: string): Promise<void> {

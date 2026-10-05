@@ -5,6 +5,7 @@ import { useAccountsStore } from '@renderer/stores/accounts'
 import { useContactsStore } from '@renderer/stores/contacts'
 import { digits, type Contact } from '@shared/contacts'
 import { t } from '@renderer/i18n'
+import { useToastsStore } from '@renderer/stores/toasts'
 
 /** Cadastrar ou editar um contato da agenda (RF-50). */
 const props = defineProps<{ contact: Contact }>()
@@ -34,6 +35,7 @@ async function save(): Promise<void> {
         favorite: form.favorite || undefined,
         accountId: form.accountId || undefined
     })
+    useToastsStore().show(isNew ? t('contactForm.criado', { name: form.name.trim() }) : t('contactForm.salvo'))
     emit('close')
 }
 </script>

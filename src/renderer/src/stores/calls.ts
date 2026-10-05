@@ -9,6 +9,7 @@ import { useHistoryStore } from './history'
 import { useContactsStore } from './contacts'
 import { usePreferencesStore } from './preferences'
 import { notify } from '@renderer/lib/notify'
+import { useToastsStore } from './toasts'
 
 export type CallState = 'dialing' | 'ringing' | 'early' | 'established' | 'ended'
 
@@ -291,6 +292,7 @@ export const useCallsStore = defineStore('calls', () => {
             if (!current) return
             if (current.recording) {
                 log.add(c.accountId, 'info', 'event', `Gravação salva em ${current.recording}`)
+                useToastsStore().show(`Gravação salva em ${current.recording}`)
                 current.recording = undefined
             } else if (path) {
                 current.recording = path
