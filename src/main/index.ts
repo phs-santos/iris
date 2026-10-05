@@ -459,10 +459,13 @@ function registerIpc(): void {
         mainWindow?.webContents.send(IPC.notifyAction, callId, action)
     }
     on(IPC.notify, (_e, request: unknown) => {
-        if (!Notification.isSupported() || !isNotifyRequest(request)) return
+        if (!isNotifyRequest(request)) return
         const { kind, title, body, callId } = request
         // Uma linha no log interno: quando alguém diz que não viu o aviso, dá para saber se ele saiu.
+        // Sem serviço de notificações (alguns Linux, o CI), a linha diz isso em vez de sumir.
         appLog('info', `Notificação ${kind}: ${title}${callId ? ` (${callId})` : ''}`)
+        if (!Notification.isSupported())
+            return appLog('info', 'O sistema não mostra notificações: o aviso não apareceu')
         const call = kind === 'incoming' && callId
         const notification = new Notification({
             title,
