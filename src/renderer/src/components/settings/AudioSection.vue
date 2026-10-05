@@ -51,6 +51,14 @@ async function chooseInput(id: string): Promise<void> {
     await startMeter()
 }
 
+const folderError = ref('')
+async function openRecordings(): Promise<void> {
+    folderError.value = ''
+    await window.iris.audio.openRecordings().catch((cause: Error) => {
+        folderError.value = t('audioSection.gravacoes_erro', { p: cause.message })
+    })
+}
+
 /** Toca um bipe curto na saída escolhida. */
 async function testOutput(): Promise<void> {
     testing.value = true
@@ -140,6 +148,15 @@ onUnmounted(stopMeter)
             </span>
         </label>
         <p class="set-hint">{{ $t('audioSection.toque_por_conta') }}</p>
+
+        <div class="set-head">
+            <h3>{{ $t('audioSection.gravacoes') }}</h3>
+            <p>{{ $t('audioSection.gravacoes_dica') }}</p>
+        </div>
+        <div>
+            <button class="btn" @click="openRecordings">{{ $t('audioSection.abrir_gravacoes') }}</button>
+        </div>
+        <p v-if="folderError" class="error" role="alert">{{ folderError }}</p>
     </section>
 </template>
 

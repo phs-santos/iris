@@ -76,6 +76,7 @@ const paletteActions = computed<PaletteAction[]>(() => [
     { label: t('app.acao_servidores'), run: () => (settingsAt.value = 'servers') },
     { label: t('app.acao_notificacoes'), run: () => (settingsAt.value = 'notifications') },
     { label: t('app.acao_atalhos'), run: () => (settingsAt.value = 'shortcuts') },
+    { label: t('app.acao_gravacoes'), run: () => void window.iris.audio.openRecordings().catch(() => undefined) },
     { label: t('app.acao_primeiros_passos'), run: () => void prefs.setProfile({ tourDone: false }) },
     { label: t('app.guia'), hint: 'F1', run: () => (showGuide.value = true) },
     { label: t('app.modo_telefone'), run: () => setMode('phone') }

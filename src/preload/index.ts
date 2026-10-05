@@ -45,7 +45,8 @@ const api: IrisApi = {
     },
     audio: {
         pickWav: () => ipcRenderer.invoke(IPC.audioPickWav),
-        loadWav: (path) => ipcRenderer.invoke(IPC.audioLoadWav, path)
+        loadWav: (path) => ipcRenderer.invoke(IPC.audioLoadWav, path),
+        openRecordings: () => ipcRenderer.invoke(IPC.audioOpenRecordings)
     },
     notify: (request) => ipcRenderer.send(IPC.notify, request),
     closeNotification: (callId) => ipcRenderer.send(IPC.notifyClose, callId),

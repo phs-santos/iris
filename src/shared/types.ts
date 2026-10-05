@@ -206,7 +206,7 @@ export type NativeSipEventBody =
     | { type: 'presence'; extension: string; state: PresenceState }
     | { type: 'mwi'; info: MwiInfo }
     | { type: 'message'; from: string; fromName?: string; text: string }
-    /** 20 ms de áudio recebido: 160 amostras de 16 bits a 8000 Hz. */
+    /** 20 ms de áudio recebido: 320 amostras de 16 bits a 16000 Hz. */
     | { type: 'audio'; callId: string; pcm: Int16Array }
 
 export type NativeCallEvent =
@@ -346,6 +346,8 @@ export interface IrisApi {
         /** Abre o diálogo e devolve o caminho escolhido, ou null. */
         pickWav(): Promise<string | null>
         loadWav(path: string): Promise<Int16Array>
+        /** Abre no gerenciador de arquivos a pasta das gravações de chamadas (RF-36). */
+        openRecordings(): Promise<void>
     }
     notify(request: NotifyRequest): void
     /** Tira a notificação de uma chamada que já foi atendida, recusada ou desistida. */
@@ -436,7 +438,7 @@ export interface IrisApi {
         loadStart(engineId: string, spec: LoadSpec): Promise<LoadReport>
         loadStop(engineId: string): Promise<void>
         onLoadProgress(listener: (engineId: string, progress: LoadProgress) => void): () => void
-        /** 20 ms do microfone para a chamada. */
+        /** 20 ms do microfone para a chamada: 320 amostras de 16 bits a 16000 Hz. */
         sendAudio(engineId: string, callId: string, pcm: Int16Array): void
         onEvent(listener: (event: NativeSipEvent) => void): () => void
     }
@@ -470,6 +472,7 @@ export const IPC = {
     filesOpenText: 'files:open-text',
     audioPickWav: 'audio:pick-wav',
     audioLoadWav: 'audio:load-wav',
+    audioOpenRecordings: 'audio:open-recordings',
     notify: 'app:notify',
     notifyClose: 'app:notify-close',
     notifyAction: 'app:notify-action',

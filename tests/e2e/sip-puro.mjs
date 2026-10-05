@@ -172,6 +172,14 @@ try {
     if (wav.toString('latin1', 0, 4) !== 'RIFF' || wav.readUInt16LE(22) !== 2 || frames < 8000)
         throw new Error(`gravação inválida: ${frames} amostras por canal`)
     if (loud(0) < 500 || loud(1) < 500) throw new Error(`gravação muda: picos ${loud(0)} e ${loud(1)}`)
+    // O botão da pasta das gravações pede ao sistema para abrir a pasta certa (aqui, sem abrir de verdade).
+    await app.evaluate(({ shell }) => {
+        shell.openPath = async (path) => ((globalThis.openedPath = path), '')
+    })
+    await echo.getByRole('button', { name: 'Abrir a pasta das gravações' }).click()
+    await page.waitForTimeout(300)
+    const opened = await app.evaluate(() => globalThis.openedPath)
+    if (!opened || !wavPath.startsWith(opened)) throw new Error(`pasta das gravações errada: ${opened}`)
     step(`gravação em WAV estéreo com ${(frames / 8000).toFixed(1)} s e áudio nos dois canais`)
     await echo.getByRole('button', { name: 'Mudo' }).click()
     await echo.getByRole('button', { name: 'Desligar' }).click()
@@ -328,6 +336,105 @@ try {
     step('chamada recebida com cifra: SRTP de um lado, RTP comum do outro, com áudio nos dois')
     await answered.getByRole('button', { name: 'Desligar' }).click()
     await answered.waitFor({ state: 'detached', timeout: 10000 })
+    await page.waitForTimeout(500)
+
+    // ─── G.722 (RF-47) ───
+    // O 2007 só fala G.722 e o 2002 só G.711: o Asterisk converte nos dois sentidos. As duas contas usam
+    // o mesmo microfone falso (um bipe), então em cada gravação o canal de quem fala e o do outro lado
+    // têm que mostrar o mesmo tom. Se o codificador ou o decodificador da Íris não combinasse com o do
+    // Asterisk, o outro lado chegaria como ruído, com outra frequência.
+    await addAccount('Puro G722', '2007', 'UDP')
+    await account('Puro G722').locator('.dot.registered').waitFor({ timeout: 15000 })
+    await dial('Puro G722', '2002')
+    const wideCaller = live(/2007\s*→\s*2002/)
+    const wideCallee = live(/2002\s*←\s*2007/)
+    await wideCaller.locator('.quality').filter({ hasText: /G722$/ }).waitFor({ timeout: 20000 })
+    await wideCallee
+        .locator('.quality')
+        .filter({ hasText: /PCM[UA]$/ })
+        .waitFor({ timeout: 20000 })
+    step(
+        `G.722 de um lado e G.711 do outro: ${(await wideCaller.locator('.quality').textContent()).trim().replace(/\s+/g, ' ')}`
+    )
+    await page.getByRole('tab', { name: 'Eventos' }).click()
+    const before = await page
+        .locator('.list')
+        .getByText(/Gravação salva em .*\.wav/)
+        .count()
+    await wideCaller.getByRole('button', { name: 'Gravar' }).click()
+    await wideCallee.getByRole('button', { name: 'Gravar' }).click()
+    await page.waitForTimeout(5000)
+    await wideCaller.getByRole('button', { name: 'Parar gravação' }).click()
+    await wideCallee.getByRole('button', { name: 'Parar gravação' }).click()
+    const savedLines = page.locator('.list').getByText(/Gravação salva em .*\.wav/)
+    await page.waitForFunction(
+        ([n]) =>
+            [...document.querySelectorAll('.list *')].filter(
+                (el) => !el.children.length && /Gravação salva em .*\.wav/.test(el.textContent)
+            ).length >= n,
+        [before + 2],
+        { timeout: 10000 }
+    )
+    const paths = new Set()
+    for (const text of await savedLines.allTextContents()) paths.add(/salva em (.*\.wav)/.exec(text)[1])
+    /**
+     * O tom mais forte nos trechos com som de um canal: a força de cada frequência de 100 a 3900 Hz,
+     * somada bloco a bloco de 20 ms. `sharp` diz o quanto o pico se destaca da média: um tom dá um pico
+     * alto, e ruído espalha a força por todas.
+     */
+    const toneOf = (file, channel) => {
+        const data = readFileSync(file)
+        const total = Math.floor((data.length - 44) / 4)
+        const loud = []
+        for (let start = 0; start + 160 <= total; start += 160) {
+            const block = new Array(160)
+            let energy = 0
+            for (let i = 0; i < 160; i++) {
+                block[i] = data.readInt16LE(44 + (start + i) * 4 + channel * 2)
+                energy += block[i] * block[i]
+            }
+            if (Math.sqrt(energy / 160) > 600) loud.push(block)
+        }
+        let best = { hz: 0, power: 0 }
+        let sum = 0
+        let count = 0
+        for (let hz = 100; hz <= 3900; hz += 20) {
+            const w = (2 * Math.PI * hz) / 8000
+            let power = 0
+            for (const block of loud) {
+                let re = 0
+                let im = 0
+                for (let i = 0; i < 160; i++) {
+                    re += block[i] * Math.cos(w * i)
+                    im += block[i] * Math.sin(w * i)
+                }
+                power += Math.hypot(re, im)
+            }
+            sum += power
+            count++
+            if (power > best.power) best = { hz, power }
+        }
+        return { frames: loud.length, hz: best.hz, sharp: sum ? best.power / (sum / count) : 0 }
+    }
+    const recent = [...paths].slice(-2)
+    if (recent.length < 2) throw new Error('faltou uma das duas gravações da chamada G.722')
+    for (const file of recent) {
+        const mine = toneOf(file, 0)
+        const theirs = toneOf(file, 1)
+        if (mine.frames < 5 || theirs.frames < 5)
+            throw new Error(`gravação sem som suficiente: ${mine.frames} e ${theirs.frames} blocos`)
+        if (Math.abs(theirs.hz - mine.hz) > 40 || theirs.sharp < mine.sharp / 3)
+            throw new Error(
+                `o tom chegou diferente pelo G.722: ${mine.hz} Hz (pico ${mine.sharp.toFixed(1)}×) de um lado, ` +
+                    `${theirs.hz} Hz (pico ${theirs.sharp.toFixed(1)}×) do outro`
+            )
+        step(
+            `G.722 conferido com o Asterisk: tom de ${mine.hz} Hz enviado, ${theirs.hz} Hz recebido ` +
+                `(pico ${mine.sharp.toFixed(1)}× e ${theirs.sharp.toFixed(1)}× a média)`
+        )
+    }
+    await wideCaller.getByRole('button', { name: 'Desligar' }).click()
+    await wideCaller.waitFor({ state: 'detached', timeout: 10000 })
     await page.waitForTimeout(500)
 
     // ─── Opus (RF-47) ───

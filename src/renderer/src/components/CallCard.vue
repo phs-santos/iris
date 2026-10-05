@@ -103,6 +103,7 @@ const consultOf = computed(() => calls.calls.find((x) => x.id === c.value.consul
 const consulting = computed(() => calls.calls.find((x) => x.id === c.value.consultId))
 
 const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
+const openRecordings = (): void => void window.iris.audio.openRecordings().catch(() => undefined)
 </script>
 
 <template>
@@ -192,6 +193,15 @@ const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
                     <PhoneIcon name="record" />{{
                         call.recording ? $t('callCard.parar_gravacao') : $t('callCard.gravar')
                     }}
+                </button>
+                <button
+                    v-if="call.canRecord"
+                    class="btn ghost"
+                    :title="$t('callCard.pasta_gravacoes_dica')"
+                    :aria-label="$t('callCard.pasta_gravacoes_dica')"
+                    @click="openRecordings"
+                >
+                    {{ $t('callCard.pasta_gravacoes') }}
                 </button>
                 <button class="btn" :class="{ on: showDtmf }" :disabled="!established" @click="showDtmf = !showDtmf">
                     <PhoneIcon name="grid" />{{ $t('callCard.dtmf') }}

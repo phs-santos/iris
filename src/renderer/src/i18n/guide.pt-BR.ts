@@ -269,7 +269,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'Contas por SIP puro (UDP, TCP ou TLS)' },
             {
                 type: 'p',
-                text: 'Servem para centrais que não têm WebSocket. A conta **registra**, renova o registro sozinha, **liga e recebe chamadas** com áudio G.711 (PCMU ou PCMA) ou Opus, manda e recebe **DTMF** (por RTP ou SIP INFO), tem **mudo**, **espera** e **transferência** cega e assistida, mede a **Saúde** e a qualidade (perda, variação do atraso e tempo de ida e volta) e mostra o **SIP bruto** e o **Fluxo SIP**.'
+                text: 'Servem para centrais que não têm WebSocket. A conta **registra**, renova o registro sozinha, **liga e recebe chamadas** com áudio G.722 (voz em alta definição), G.711 (PCMU ou PCMA) ou Opus, manda e recebe **DTMF** (por RTP ou SIP INFO), tem **mudo**, **espera** e **transferência** cega e assistida, mede a **Saúde** e a qualidade (perda, variação do atraso e tempo de ida e volta) e mostra o **SIP bruto** e o **Fluxo SIP**.'
             },
             {
                 type: 'list',
@@ -280,7 +280,7 @@ export const GUIDE: GuideSection[] = [
                     'O áudio vai por **RTP sem cifra**, a não ser que você marque **Exigir áudio cifrado (SRTP)** na conta. Com essa opção, a Íris oferece SRTP ao ligar e recusa (`488`) quem liga sem ele; na linha de qualidade aparece `(SRTP)` ao lado do codec. Uma chamada recebida que já venha com SRTP é atendida com cifra mesmo sem a opção.',
                     'A chave do SRTP vai dentro da sinalização (SDES). Para ela não passar em claro, use o transporte **TLS** junto.',
                     'Com SRTP, o tempo de ida e volta (RTT) fica em 0: ele vem do RTCP, que a Íris só troca sem cifra.',
-                    'A central precisa aceitar **G.711** ou **Opus**. A Íris prefere o G.711 e usa o Opus quando é o que a central tem. O Opus sai em banda estreita (8 kHz), a mesma qualidade do G.711. Uma central que só oferece G.729 ou G.722 recusa a chamada com `488`.',
+                    'A central precisa aceitar **G.722**, **G.711** ou **Opus**. A Íris oferece o G.722 primeiro: quando a central aceita, a voz vai em alta definição (16 kHz, até 7 kHz de agudos) e a linha de qualidade mostra `G722`. Senão vale o G.711, e o Opus quando é só o que a central tem; o Opus sai em banda estreita (8 kHz), a mesma qualidade do G.711. Uma central que só oferece G.729 recusa a chamada com `488`. A gravação e os tons dos cenários continuam a 8 kHz, mesmo em chamada G.722.',
                     'Na primeira vez, o firewall do sistema pode perguntar se a Íris pode usar a rede. Permita: sem isso o áudio não chega.'
                 ]
             },
@@ -387,7 +387,7 @@ export const GUIDE: GuideSection[] = [
                 type: 'list',
                 items: [
                     '**Atalhos**: os botões com número e descrição ligam com um clique. Vêm dos "Atalhos de discagem" da conta e, no simulado, das outras contas e da URA.',
-                    '**teclado**: abre um teclado numérico para montar o número com o mouse.',
+                    '**teclado**: abre um teclado de telefone para montar o número com o mouse, com o botão de ligar e o de apagar. Segurar o **0** escreve **+**.',
                     '**cabeçalhos SIP**: abre um campo para mandar cabeçalhos extras no INVITE, um por linha, como `X-Test-Id: cenario-42`. Serve para testar regras da central que dependem de cabeçalho.'
                 ]
             },
@@ -421,7 +421,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'note',
                 kind: 'atenção',
-                text: 'Em chamadas de **SIP puro** aparece também o botão **Gravar**: ele grava os dois lados num arquivo WAV (o seu lado no canal esquerdo, o outro no direito) na pasta `gravacoes` dos dados da Íris, e o log mostra o caminho. A gravação para sozinha quando a chamada termina. Avise quem está do outro lado antes de gravar: em muitos lugares isso é exigido por lei.'
+                text: 'Em chamadas de **SIP puro** aparece também o botão **Gravar**: ele grava os dois lados num arquivo WAV (o seu lado no canal esquerdo, o outro no direito) na pasta `gravacoes` dos dados da Íris, e o log mostra o caminho. O botão **Gravações**, ao lado, abre essa pasta; ela também abre por **Configurações › Áudio**. A gravação para sozinha quando a chamada termina. Avise quem está do outro lado antes de gravar: em muitos lugares isso é exigido por lei.'
             },
             { type: 'image', name: 'dtmf', alt: 'Cartão de chamada com o painel de DTMF aberto' },
             { type: 'h', text: 'O que o cartão mostra' },

@@ -29,7 +29,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
-| RF-47 | Opus em SIP puro, além do G.711: a Íris prefere o G.711 e usa o Opus quando é o que o PBX tem, com o DTMF no relógio de 48 kHz. G.722 ficou de fora |
+| RF-47 | G.722 e Opus em SIP puro, além do G.711. O G.722 é oferecido primeiro e leva a voz em alta definição (16 kHz); o codec e a troca de taxa são próprios, em TypeScript, conferidos contra o Asterisk. O Opus sai em banda estreita, com o DTMF no relógio de 48 kHz. A gravação e os tons dos cenários continuam a 8 kHz |
 | RF-27 | BLF em SIP puro e no simulado: a conta acompanha o estado (livre, tocando, em chamada) dos ramais escolhidos; e aviso de correio de voz (MWI) |
 | RF-42 | Teste de carga por SIP puro: até 200 chamadas simultâneas por uma conta, cada uma tocando um tom, com relatório de atendidas, áudio, tempo até atender, perda e jitter |
 | RF-46 | Diagnóstico de rede na Saúde: registros DNS SRV do domínio, certificado TLS do PBX (emissor, validade, nomes) e endereço público pelo servidor STUN da conta |
@@ -141,7 +141,7 @@ Cadastre contas com domínio `127.0.0.1`, WebSocket `wss://127.0.0.1:8089/ws`, r
 
 Números do plano de discagem: `1001`–`1020` (ramais), `8000` (URA que lê 4 dígitos), `600` (eco), `601` (atende e fica mudo), `602` (183 com um tom por 5 s antes de atender), `603` (só toca por 5 s antes de atender), `486` (ocupado).
 
-Para SIP puro (RF-39), o mesmo Asterisk atende em UDP e TCP na porta `5060` e em TLS na `5061`, com os ramais `2001` a `2005` (senha `1234`); o `2005` exige SRTP. Na conta, escolha o transporte e use o domínio `127.0.0.1`. O ramal `2006` é de SIP puro só com Opus. O ramal `1021` é WebRTC só com G.711, para ligar entre SIP puro e WebRTC: esta imagem do Asterisk não converte Opus, e os ramais `1001` a `1020` preferem Opus. Depois de mudar um arquivo de `docker/asterisk`, recrie o contêiner (`docker compose … up -d --force-recreate`): no Docker Desktop, o contêiner pode continuar vendo o arquivo antigo.
+Para SIP puro (RF-39), o mesmo Asterisk atende em UDP e TCP na porta `5060` e em TLS na `5061`, com os ramais `2001` a `2005` (senha `1234`); o `2005` exige SRTP. Na conta, escolha o transporte e use o domínio `127.0.0.1`. O ramal `2006` é de SIP puro só com Opus, e o `2007`, só com G.722. Se um teste com muitas chamadas falhar depois de outros (o áudio usa só 50 portas, de 10000 a 10100), recrie o contêiner. O ramal `1021` é WebRTC só com G.711, para ligar entre SIP puro e WebRTC: esta imagem do Asterisk não converte Opus, e os ramais `1001` a `1020` preferem Opus. Depois de mudar um arquivo de `docker/asterisk`, recrie o contêiner (`docker compose … up -d --force-recreate`): no Docker Desktop, o contêiner pode continuar vendo o arquivo antigo.
 
 ## Testes
 

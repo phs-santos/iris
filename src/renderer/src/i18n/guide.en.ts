@@ -244,7 +244,7 @@ export const GUIDE_EN: GuideSection[] = [
             { type: 'h', text: 'Plain SIP accounts (UDP, TCP or TLS)' },
             {
                 type: 'p',
-                text: 'They are for PBXs without WebSocket. The account **registers**, renews the registration on its own, **makes and receives calls** with G.711 (PCMU or PCMA) or Opus audio, sends and receives **DTMF** (over RTP or SIP INFO), has **mute**, **hold** and blind and attended **transfer**, measures **Health** and quality (loss, jitter and round-trip time) and shows the **raw SIP** and the **SIP flow**.'
+                text: 'They are for PBXs without WebSocket. The account **registers**, renews the registration on its own, **makes and receives calls** with G.722 (HD voice), G.711 (PCMU or PCMA) or Opus audio, sends and receives **DTMF** (over RTP or SIP INFO), has **mute**, **hold** and blind and attended **transfer**, measures **Health** and quality (loss, jitter and round-trip time) and shows the **raw SIP** and the **SIP flow**.'
             },
             {
                 type: 'list',
@@ -255,7 +255,7 @@ export const GUIDE_EN: GuideSection[] = [
                     'Audio goes over **unencrypted RTP**, unless you tick **Require encrypted audio (SRTP)** in the account. With that option, Íris offers SRTP when calling and refuses (`488`) callers without it; the quality line shows `(SRTP)` next to the codec. An incoming call that already comes with SRTP is answered encrypted even without the option.',
                     'The SRTP key travels inside the signaling (SDES). So that it does not go in the clear, use the **TLS** transport with it.',
                     'With SRTP, the round-trip time (RTT) stays at 0: it comes from RTCP, which Íris only exchanges unencrypted.',
-                    'The PBX has to accept **G.711** or **Opus**. Íris prefers G.711 and uses Opus when that is what the PBX has. Opus goes out in narrowband (8 kHz), the same quality as G.711. A PBX that only offers G.729 or G.722 refuses the call with `488`.',
+                    'The PBX has to accept **G.722**, **G.711** or **Opus**. Íris offers G.722 first: when the PBX accepts it, voice goes in high definition (16 kHz, up to 7 kHz of treble) and the quality line shows `G722`. Otherwise G.711 applies, and Opus when that is all the PBX has; Opus goes out in narrowband (8 kHz), the same quality as G.711. A PBX that only offers G.729 refuses the call with `488`. Recording and scenario tones stay at 8 kHz, even on a G.722 call.',
                     'The first time, the system firewall may ask whether Íris can use the network. Allow it: without that the audio does not arrive.'
                 ]
             },
@@ -362,7 +362,7 @@ export const GUIDE_EN: GuideSection[] = [
                 type: 'list',
                 items: [
                     '**Shortcuts**: the buttons with a number and description call with one click. They come from the "Speed dials" of the account and, on the simulated PBX, from the other accounts and the IVR.',
-                    '**keypad**: opens a numeric keypad to build the number with the mouse.',
+                    '**keypad**: opens a phone keypad to build the number with the mouse, with the call and delete buttons. Holding **0** types **+**.',
                     '**SIP headers**: opens a field to send extra headers in the INVITE, one per line, such as `X-Test-Id: scenario-42`. It is for testing PBX rules that depend on a header.'
                 ]
             },
@@ -396,7 +396,7 @@ export const GUIDE_EN: GuideSection[] = [
             {
                 type: 'note',
                 kind: 'atenção',
-                text: 'On **plain SIP** calls the **Record** button also shows: it records both sides to a WAV file (your side on the left channel, the other on the right) in the `gravacoes` folder of the Íris data, and the log shows the path. Recording stops on its own when the call ends. Tell the other side before recording: in many places the law requires it.'
+                text: 'On **plain SIP** calls the **Record** button also shows: it records both sides to a WAV file (your side on the left channel, the other on the right) in the `gravacoes` folder of the Íris data, and the log shows the path. The **Recordings** button, next to it, opens that folder; it also opens from **Settings › Audio**. Recording stops on its own when the call ends. Tell the other side before recording: in many places the law requires it.'
             },
             { type: 'image', name: 'dtmf', alt: 'Call card with the DTMF panel open' },
             { type: 'h', text: 'What the card shows' },

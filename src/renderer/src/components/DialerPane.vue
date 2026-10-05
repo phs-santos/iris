@@ -32,7 +32,43 @@ const shortcuts = computed(() => {
     return [...peers, ...account.quickDials, ...favorites]
 })
 
-const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
+/** Teclas com as letras de um telefone; segurar o 0 escreve "+", como no celular. */
+const keys = [
+    ['1', ''],
+    ['2', 'ABC'],
+    ['3', 'DEF'],
+    ['4', 'GHI'],
+    ['5', 'JKL'],
+    ['6', 'MNO'],
+    ['7', 'PQRS'],
+    ['8', 'TUV'],
+    ['9', 'WXYZ'],
+    ['*', ''],
+    ['0', '+'],
+    ['#', '']
+]
+let plusTimer: ReturnType<typeof setTimeout> | undefined
+let plusTyped = false
+
+function keyDown(key: string): void {
+    plusTyped = false
+    if (key !== '0') return
+    plusTimer = setTimeout(() => {
+        destination.value += '+'
+        plusTyped = true
+    }, 500)
+}
+
+function keyUp(key: string): void {
+    clearTimeout(plusTimer)
+    // O clique que vem depois de segurar o 0 já escreveu o "+".
+    if (!plusTyped) destination.value += key
+    plusTyped = false
+}
+
+const cancelPlus = (): void => clearTimeout(plusTimer)
+
+const erase = (): string => (destination.value = destination.value.slice(0, -1))
 
 async function dial(number = destination.value): Promise<void> {
     error.value = ''
@@ -121,8 +157,39 @@ defineExpose({
             </button>
         </div>
 
-        <div v-if="showKeypad" class="keypad">
-            <button v-for="k in keys" :key="k" class="btn mono" type="button" @click="destination += k">{{ k }}</button>
+        <div v-if="showKeypad" class="keypad" role="group" :aria-label="$t('dialerPane.teclado_rotulo')">
+            <button
+                v-for="[k, letters] in keys"
+                :key="k"
+                class="key"
+                type="button"
+                :aria-label="k === '0' ? $t('dialerPane.tecla_zero') : k"
+                @pointerdown="keyDown(k)"
+                @pointerleave="cancelPlus"
+                @click="keyUp(k)"
+            >
+                <b :class="{ star: k === '*' }">{{ k }}</b>
+                <small aria-hidden="true">{{ letters }}</small>
+            </button>
+            <span></span>
+            <button
+                class="key call"
+                type="button"
+                :disabled="!registered || !destination.trim()"
+                :aria-label="$t('dialerPane.ligar')"
+                @click="dial()"
+            >
+                <PhoneIcon name="phone" />
+            </button>
+            <button
+                class="key plain"
+                type="button"
+                :disabled="!destination"
+                :aria-label="$t('dialerPane.apagar')"
+                @click="erase"
+            >
+                <PhoneIcon name="erase" />
+            </button>
         </div>
 
         <div v-if="showHeaders" class="headers">
@@ -202,9 +269,82 @@ defineExpose({
     cursor: default;
 }
 .keypad {
+    align-self: center;
     display: grid;
-    grid-template-columns: repeat(3, 56px);
-    gap: 6px;
+    grid-template-columns: repeat(3, 68px);
+    gap: 10px 18px;
+    padding: 14px 22px 16px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    background: var(--panel-2);
+}
+.key {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--raise);
+    color: var(--fg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    cursor: pointer;
+    transition:
+        background 120ms,
+        transform 80ms;
+}
+.key:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 22%, var(--raise));
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+.key:active:not(:disabled) {
+    transform: scale(0.94);
+}
+.key b {
+    font-size: 24px;
+    font-weight: 500;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+}
+/* O asterisco da fonte é pequeno e fica no alto da linha: maior e mais para baixo, ele se alinha ao #. */
+.key b.star {
+    font-size: 34px;
+    line-height: 0.6;
+    padding-top: 14px;
+}
+.key small {
+    min-height: 11px;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+}
+.key.call {
+    border: 0;
+    background: color-mix(in srgb, var(--ok) 55%, #000);
+    color: #fff;
+}
+.key.call:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--ok) 68%, #000);
+}
+.key.plain {
+    border-color: transparent;
+    background: transparent;
+    color: var(--muted);
+}
+.key:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+.key :deep(svg) {
+    width: 26px;
+    height: 26px;
+}
+@media (prefers-reduced-motion: reduce) {
+    .key {
+        transition: none;
+    }
 }
 .headers {
     display: flex;

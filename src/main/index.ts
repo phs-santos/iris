@@ -439,6 +439,14 @@ function registerIpc(): void {
         return parseWav(await fs.readFile(path)).subarray(0, SAMPLE_RATE * 120)
     })
 
+    // Pasta das gravações (RF-36): criada se ainda não existe, para o botão não abrir um erro.
+    handle(IPC.audioOpenRecordings, async () => {
+        const dir = join(app.getPath('userData'), 'gravacoes')
+        await fs.mkdir(dir, { recursive: true })
+        const error = await shell.openPath(dir)
+        if (error) throw new Error(error)
+    })
+
     // Notificações do sistema. A de chamada recebida tem Atender e Recusar (no macOS) e fica guardada
     // pelo id da chamada, para sumir quando ela for atendida em outro lugar.
     const ringing = new Map<string, Notification>()
