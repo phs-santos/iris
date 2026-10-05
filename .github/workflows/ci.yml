@@ -52,45 +52,77 @@ jobs:
             - run: npm run build
             # O Ubuntu 24.04 bloqueia o sandbox do Chromium para binários fora de pacotes do sistema.
             # Liberar aqui mantém o sandbox ligado nos testes, como no app instalado.
+            # Cada teste roda mesmo que um anterior tenha falhado (`!cancelled()`): uma falha no começo não
+            # esconde o resultado dos testes com o Asterisk, e o job continua reprovando.
             - name: Liberar o sandbox do Chromium
               run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
             - name: Ponta a ponta no modo simulado
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/smoke.mjs
             - name: Cenários no modo simulado
+              if: ${{ !cancelled() }}
               run: RUNS=5 xvfb-run -a node tests/e2e/scenarios.mjs
             - name: Cenários pela linha de comando
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/cli.mjs
             - name: Acessibilidade (axe, WCAG A/AA) e atalhos
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/a11y.mjs
             - name: Senhas em arquivo local e migração do formato antigo (RNF-07)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/senhas.mjs
             - name: Ajuda da IA com uma OpenRouter falsa (RF-38)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/ai.mjs
             - name: Arquivos de dados estragados, gravação em fila e log interno (RNF-14, RNF-19)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/arquivos.mjs
             - name: Notificações
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/notificacoes.mjs
             - name: Contatos e servidores cadastrados (RF-50, RF-51)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/contatos.mjs
+            - name: Mensagens de texto no simulado (RF-54)
+              if: ${{ !cancelled() }}
+              run: xvfb-run -a node tests/e2e/mensagens.mjs
+            - name: Links de telefone, atalhos globais e toque por conta (RF-53, RF-34, RF-55)
+              if: ${{ !cancelled() }}
+              run: xvfb-run -a node tests/e2e/atalhos.mjs
+            - name: Interface e guia em inglês (RF-56)
+              if: ${{ !cancelled() }}
+              run: xvfb-run -a node tests/e2e/idioma.mjs
+            - name: Chamada de vídeo no simulado (RF-52)
+              if: ${{ !cancelled() }}
+              run: xvfb-run -a node tests/e2e/video.mjs
             - name: Monitor com webhook num servidor local (RF-43)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/monitor.mjs
             - name: Subir Asterisk de teste
+              if: ${{ !cancelled() }}
               run: |
                   ./docker/asterisk/gen-cert.sh
                   docker compose up -d
                   sleep 8
             - name: Integração com Asterisk
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/asterisk.mjs
             - name: Cenário de URA 20 vezes no Asterisk (critério do M3)
+              if: ${{ !cancelled() }}
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/scenarios.mjs
             - name: URA 20 vezes pela linha de comando no Asterisk
+              if: ${{ !cancelled() }}
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/cli.mjs
             - name: SIP puro por UDP, TCP e TLS com o motor próprio (RF-39)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/sip-puro.mjs
             - name: Verificação de áudio nos cenários, pela linha de comando (RF-41)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/audio.mjs
             - name: Carga por SIP puro, 50 chamadas simultâneas (RF-42)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/carga-sip.mjs
             # Por último: este teste para e religa o contêiner do PBX.
             - name: Reconexão derrubando o contêiner do PBX (RNF-06)
+              if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/reconexao.mjs

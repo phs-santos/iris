@@ -97,7 +97,17 @@ try {
         await account.getByRole('button', { name: 'Salvar', exact: true }).click()
         await page.locator('.acc', { hasText: `Matriz ${ext}` }).waitFor()
     }
-    const saved = read('accounts.json').accounts.filter((a) => a.name.startsWith('Matriz'))
+    // A tela muda antes de o arquivo ser gravado: numa máquina lenta (o CI), espera a gravação.
+    const matriz = async (ready) => {
+        let list = []
+        for (let i = 0; i < 40; i++) {
+            list = read('accounts.json').accounts.filter((a) => a.name.startsWith('Matriz'))
+            if (ready(list)) break
+            await page.waitForTimeout(100)
+        }
+        return list
+    }
+    const saved = await matriz((list) => list.length === 2)
     if (saved.length !== 2 || !saved.every((a) => a.domain === 'pbx.matriz.com' && a.serverId))
         throw new Error(`contas ligadas ao servidor gravadas errado: ${JSON.stringify(saved)}`)
     step('duas contas criadas a partir do servidor, só com ramal e senha')
@@ -110,7 +120,7 @@ try {
     await settings.getByLabel('WebSocket (WSS)').fill('wss://novo.matriz.com/ws')
     await settings.getByRole('button', { name: 'Salvar' }).click()
     await settings.getByText('Servidor salvo e 2 conta(s) atualizada(s).').waitFor()
-    const updated = read('accounts.json').accounts.filter((a) => a.name.startsWith('Matriz'))
+    const updated = await matriz((list) => list.every((a) => a.wssUrl === 'wss://novo.matriz.com/ws'))
     if (!updated.every((a) => a.wssUrl === 'wss://novo.matriz.com/ws'))
         throw new Error('as contas não mudaram com o servidor')
     step('editar o servidor atualiza as duas contas ligadas a ele')
@@ -118,7 +128,7 @@ try {
     await settings.getByRole('button', { name: 'Excluir PBX da Matriz' }).click()
     await settings.getByRole('button', { name: 'Excluir mesmo' }).click()
     await settings.getByText('Servidor excluído').waitFor()
-    const loose = read('accounts.json').accounts.filter((a) => a.name.startsWith('Matriz'))
+    const loose = await matriz((list) => !list.some((a) => a.serverId))
     if (loose.some((a) => a.serverId) || !loose.every((a) => a.wssUrl === 'wss://novo.matriz.com/ws'))
         throw new Error('excluir o servidor deveria soltar as contas sem perder os dados')
     step('excluir o servidor solta as contas, que mantêm os dados de conexão')
