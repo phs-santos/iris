@@ -88,13 +88,24 @@ export async function transferirCega(page, numero, destino) {
     await cartao.getByRole('button', { name: 'Cega' }).click()
 }
 
-/** Linhas do log (aba "Tudo", que traz o SIP bruto e os eventos) que casam com o texto. */
-export async function linhasDoLog(page, texto) {
+/** Quantas linhas do log (aba "Tudo", com eventos e SIP bruto) casam com o texto. */
+export async function contarLinhas(page, texto) {
     await page.getByRole('tab', { name: 'Tudo' }).click()
-    return page.locator('.line', { hasText: texto })
+    return page.locator('.line', { hasText: texto }).count()
 }
 
-/** Linha de andamento da transferência (NOTIFY do REFER), na lista de eventos. */
-export function andamentoDaTransferencia(page, texto) {
-    return page.locator('.list').getByText(texto).first()
+/** Espera aparecer uma linha do log além das `antes` que já existiam: só vale o que veio depois do gesto. */
+export async function esperarLinhaNova(page, texto, antes, timeout = 10000) {
+    const limite = Date.now() + timeout
+    while (Date.now() < limite) {
+        if ((await contarLinhas(page, texto)) > antes) return
+        await page.waitForTimeout(200)
+    }
+    throw new Error(`nenhuma linha nova do log com ${texto} (havia ${antes})`)
 }
+
+/** Linha de andamento final da transferência (NOTIFY do REFER). */
+export const LINHA_TRANSFERENCIA = 'Transferência: 200 OK'
+
+/** Linha que a Íris escreve a cada dígito DTMF enviado. */
+export const linhaDtmf = (digito) => `DTMF enviado: ${digito}`

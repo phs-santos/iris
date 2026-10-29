@@ -5,7 +5,10 @@ import { rmSync } from 'node:fs'
 import {
     abrir,
     acao,
-    andamentoDaTransferencia,
+    contarLinhas,
+    esperarLinhaNova,
+    LINHA_TRANSFERENCIA,
+    linhaDtmf,
     chamadaAtiva,
     chamadaEncerrada,
     criarConta,
@@ -14,7 +17,6 @@ import {
     escolherConta,
     esperarContasSimuladas,
     estado,
-    linhasDoLog,
     transferirCega
 } from './helpers/tela.mjs'
 
@@ -55,8 +57,9 @@ try {
     const ura = /→\s*8000/
     await ligar('8000', 5000)
     step('simulado: a chamada para 8000 aparece "em chamada" em até 5 s')
+    let antes = await contarLinhas(page, linhaDtmf(3))
     await enviarDtmf(page, ura, '123')
-    await (await linhasDoLog(page, /INFO|telephone-event|URA recebeu o dígito/)).first().waitFor({ timeout: 5000 })
+    await esperarLinhaNova(page, linhaDtmf(3), antes, 5000)
     step('simulado: o log mostra o DTMF')
     await esperaERetomada(ura)
     step('simulado: "em espera" aparece e some')
@@ -65,8 +68,9 @@ try {
 
     const para1002 = /→\s*1002/
     await ligar('1002', 5000)
+    antes = await contarLinhas(page, LINHA_TRANSFERENCIA)
     await transferirCega(page, para1002, '1003')
-    await andamentoDaTransferencia(page, 'Transferência: 200 OK').waitFor({ timeout: 10000 })
+    await esperarLinhaNova(page, LINHA_TRANSFERENCIA, antes, 10000)
     await chamadaAtiva(page, para1002).waitFor({ state: 'detached', timeout: 10000 })
     step('simulado: transferência cega para 1003 termina com 200 OK e libera a chamada')
 
@@ -82,16 +86,18 @@ try {
         step('Asterisk: 2001 liga para 2002 e a chamada fica "em chamada"')
         await esperaERetomada(ate2002)
         step('Asterisk: espera e retomada')
+        antes = await contarLinhas(page, LINHA_TRANSFERENCIA)
         await transferirCega(page, ate2002, '600')
-        await andamentoDaTransferencia(page, 'Transferência: 200 OK').waitFor({ timeout: 15000 })
+        await esperarLinhaNova(page, LINHA_TRANSFERENCIA, antes, 15000)
         await chamadaAtiva(page, ate2002).waitFor({ state: 'detached', timeout: 15000 })
         step('Asterisk: transferência cega termina com o NOTIFY 200')
         await desligar(/2002\s*←\s*2001/)
         await page.waitForTimeout(500)
 
         await ligar('8000', 20000)
+        antes = await contarLinhas(page, linhaDtmf(1))
         await enviarDtmf(page, /2001\s*→\s*8000/, 'w1 4321')
-        await (await linhasDoLog(page, /INFO|telephone-event/)).first().waitFor({ timeout: 10000 })
+        await esperarLinhaNova(page, linhaDtmf(1), antes, 10000)
         step('Asterisk: DTMF enviado para a URA 8000')
         await page.waitForTimeout(1500)
         const restante = chamadaAtiva(page, /2001\s*→\s*8000/)
