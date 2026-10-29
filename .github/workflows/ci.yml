@@ -116,6 +116,9 @@ jobs:
             - name: Integração com Asterisk
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/asterisk.mjs
+            - name: Chamada pela tela, simulada e no Asterisk
+              if: ${{ !cancelled() }}
+              run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/chamada.mjs
             - name: Cenário de URA 20 vezes no Asterisk (critério do M3)
               if: ${{ !cancelled() }}
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/scenarios.mjs

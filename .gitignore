@@ -7,3 +7,5 @@ dist-diag/
 docker/asterisk/keys/
 *.tsbuildinfo
 coverage/
+graphify-out/
+.superpowers/
