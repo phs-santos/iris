@@ -23,7 +23,7 @@ describe('links de telefone (RF-53)', () => {
     it('recusa o que não é número nem usuário', () => {
         expect(parseCallLink('tel:')).toBeNull()
         expect(parseCallLink('tel:abc')).toBeNull()
-        expect(parseCallLink('tel:1002\n--cenario x')).toBeNull()
+        expect(parseCallLink('tel:1002\n--teste x')).toBeNull()
         expect(parseCallLink('sip:pbx.empresa.com')).toBeNull()
         expect(parseCallLink('sip:a b@pbx')).toBeNull()
         expect(parseCallLink('tel:%E0%A4%A')).toBeNull()
@@ -34,7 +34,7 @@ describe('links de telefone (RF-53)', () => {
 
     it('acha o link entre os argumentos do app', () => {
         expect(findCallLink(['.', '--no-sandbox', 'tel:1002'])).toBe('1002')
-        expect(findCallLink(['.', '--cenario', 'x'])).toBeNull()
+        expect(findCallLink(['.', '--teste', 'x'])).toBeNull()
     })
 
     it('confere as preferências antes de gravar', () => {

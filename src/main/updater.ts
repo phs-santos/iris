@@ -1,5 +1,5 @@
 // Atualização automática (RF-35) pelo GitHub Releases, com canais estável e beta.
-// Só roda no app instalado e com janela: em desenvolvimento e na linha de comando (RF-31) o
+// Só roda no app instalado e com janela: em desenvolvimento o
 // electron-updater nem é carregado. A verificação de assinatura dele fica como vem de fábrica.
 
 import { app, shell } from 'electron'

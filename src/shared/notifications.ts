@@ -1,8 +1,8 @@
 // Notificações do sistema: quais eventos avisam (escolha do usuário em Configurações → Notificações).
 
-export type NotificationKind = 'incoming' | 'missed' | 'registration' | 'voicemail' | 'monitor'
+export type NotificationKind = 'incoming' | 'missed' | 'registration' | 'voicemail'
 
-export const NOTIFICATION_KINDS: NotificationKind[] = ['incoming', 'missed', 'registration', 'voicemail', 'monitor']
+export const NOTIFICATION_KINDS: NotificationKind[] = ['incoming', 'missed', 'registration', 'voicemail']
 
 export interface NotificationSettings {
     /** Sem a chave, o evento avisa: tudo ligado por padrão. */

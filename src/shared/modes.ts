@@ -1,9 +1,9 @@
 // Modos (pedido do usuário em 05/10/2026): o app abre só com o padrão de chamada (contas, discador,
 // chamadas, contatos). O resto liga numa área escondida das Configurações.
 
-export type ModeId = 'log' | 'scenarios' | 'video'
+export type ModeId = 'log' | 'video'
 
-export const MODE_IDS: ModeId[] = ['log', 'scenarios', 'video']
+export const MODE_IDS: ModeId[] = ['log', 'video']
 
 /** Sem a chave, o modo está desligado. `unlocked` diz se a área dos modos já foi aberta nesta máquina. */
 export interface ModeSettings {
@@ -14,7 +14,7 @@ export interface ModeSettings {
 export const modeOn = (settings: ModeSettings | undefined, mode: ModeId): boolean => settings?.enabled?.[mode] === true
 
 export const ALL_MODES: ModeSettings = {
-    enabled: { log: true, scenarios: true, video: true }
+    enabled: { log: true, video: true }
 }
 
 export function isModeSettings(v: unknown): v is ModeSettings | undefined {

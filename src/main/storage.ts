@@ -4,15 +4,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { isContact, type Contact, type ContactsFile } from '@shared/contacts'
 import { isSipServer, type ServersFile, type SipServer } from '@shared/servers'
-import type {
-    Account,
-    AccountsFile,
-    Scenario,
-    ScenariosFile,
-    SecretsStatus,
-    Settings,
-    SettingsPatch
-} from '@shared/types'
+import type { Account, AccountsFile, SecretsStatus, Settings, SettingsPatch } from '@shared/types'
 
 const dataDir = (): string => app.getPath('userData')
 const file = (name: string): string => join(dataDir(), name)
@@ -101,20 +93,6 @@ export async function loadAccounts(): Promise<Account[]> {
 export async function saveAccounts(accounts: Account[]): Promise<void> {
     const data: AccountsFile = { schemaVersion: 1, accounts }
     await writeJson('accounts.json', data)
-}
-
-export async function loadScenarios(): Promise<Scenario[]> {
-    const data = await readDataFile<ScenariosFile>(
-        'scenarios.json',
-        'cenários',
-        (d) => isObject(d) && Array.isArray(d.scenarios)
-    )
-    return data?.scenarios ?? []
-}
-
-export async function saveScenarios(scenarios: Scenario[]): Promise<void> {
-    const data: ScenariosFile = { schemaVersion: 1, scenarios }
-    await writeJson('scenarios.json', data)
 }
 
 export async function loadContacts(): Promise<Contact[]> {
@@ -333,10 +311,10 @@ export function getSecret(accountId: string): Promise<string | null> {
     })
 }
 
-export function setSecret(accountId: string, password: string | null, persist = true): Promise<void> {
+export function setSecret(accountId: string, password: string | null): Promise<void> {
     if (password === null) memorySecrets.delete(accountId)
     else memorySecrets.set(accountId, password)
-    return persist ? serial(() => storeSecret(accountId, password)) : Promise.resolve()
+    return serial(() => storeSecret(accountId, password))
 }
 
 async function storeSecret(accountId: string, password: string | null): Promise<void> {

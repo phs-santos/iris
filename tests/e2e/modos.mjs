@@ -23,7 +23,6 @@ try {
     await page.locator('.dot.registered').nth(1).waitFor()
     await page.getByRole('tab', { name: 'Telefone' }).waitFor()
     await absent(page.getByRole('tab', { name: 'Eventos' }), 'o log')
-    for (const name of ['Cenários']) await absent(page.getByRole('tab', { name }), `a aba ${name}`)
     await absent(page.getByRole('button', { name: 'Ligar com vídeo' }), 'o botão de vídeo')
     await absent(page.getByRole('button', { name: 'cabeçalhos SIP' }), 'os cabeçalhos SIP')
     await page.getByRole('tab', { name: 'Contatos' }).waitFor()
@@ -37,7 +36,7 @@ try {
     await dialog.getByRole('tab', { name: 'Perfil' }).waitFor()
     await absent(dialog.getByRole('tab', { name: 'Modos' }), 'a área dos modos')
     await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
-    step('sem modos ligados: só contas, telefone e contatos; log, cenários, vídeo e diagnóstico escondidos')
+    step('sem modos ligados: só contas, telefone e contatos; log, vídeo e diagnóstico escondidos')
 
     // Quatro cliques não abrem; o quinto, sim.
     const logo = page.locator('.brand')
@@ -49,15 +48,12 @@ try {
     step('cinco cliques seguidos no logo abrem a área secreta')
 
     await dialog.getByLabel('Log e diagnóstico').check()
-    await dialog.getByLabel('Cenários').check()
     await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
     await page.getByRole('tab', { name: 'Eventos' }).waitFor()
-    await page.getByRole('tab', { name: 'Cenários' }).waitFor()
     await page.getByRole('button', { name: 'cabeçalhos SIP' }).waitFor()
     const saved = settings().modes
-    if (!saved?.enabled?.log || !saved.enabled.scenarios || !saved.unlocked)
-        throw new Error(`modos gravados errado: ${JSON.stringify(saved)}`)
-    step('ligar Log e Cenários mostra o log, os cabeçalhos e a aba Cenários, e fica gravado')
+    if (!saved?.enabled?.log || !saved.unlocked) throw new Error(`modos gravados errado: ${JSON.stringify(saved)}`)
+    step('ligar o Log mostra o log e os cabeçalhos, e fica gravado')
 
     // Esconder a área tira a seção, mas os modos ligados continuam; Ctrl+Alt+Shift+M volta.
     await page.keyboard.press('ControlOrMeta+,')
@@ -66,13 +62,13 @@ try {
     await dialog.getByRole('tab', { name: 'Perfil', selected: true }).waitFor()
     await absent(dialog.getByRole('tab', { name: 'Modos' }), 'a área depois de esconder')
     await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
-    await page.getByRole('tab', { name: 'Cenários' }).waitFor()
+    await page.getByRole('tab', { name: 'Eventos' }).waitFor()
     await page.keyboard.press('Control+Alt+Shift+M')
     await dialog.getByRole('tab', { name: 'Modos', selected: true }).waitFor()
-    await dialog.getByLabel('Cenários').uncheck()
+    await dialog.getByLabel('Log e diagnóstico').uncheck()
     await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
-    await absent(page.getByRole('tab', { name: 'Cenários' }), 'a aba Cenários desligada')
-    step('esconder a área mantém os modos; o atalho reabre; desligar tira a aba')
+    await absent(page.getByRole('tab', { name: 'Eventos' }), 'o log desligado')
+    step('esconder a área mantém os modos; o atalho reabre; desligar tira o log')
 
     console.log('Modos OK')
 } catch (error) {

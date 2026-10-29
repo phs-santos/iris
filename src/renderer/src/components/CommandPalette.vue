@@ -4,13 +4,11 @@ import { useDialog } from '@renderer/lib/dialog'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
 import { useContactsStore } from '@renderer/stores/contacts'
-import { useScenariosStore } from '@renderer/stores/scenarios'
-import { usePreferencesStore } from '@renderer/stores/preferences'
 import { searchContacts, digits } from '@shared/contacts'
 import { t } from '@renderer/i18n'
 
 /**
- * Paleta de comandos (Ctrl/Cmd+K): digite um número, um contato, uma conta, um cenário ou uma ação e
+ * Paleta de comandos (Ctrl/Cmd+K): digite um número, um contato, uma conta ou uma ação e
  * tecle Enter. As ações da janela (abrir telas, trocar de aba) vêm do App.
  */
 export interface PaletteAction {
@@ -19,15 +17,13 @@ export interface PaletteAction {
     run: () => void
 }
 const props = defineProps<{ actions: PaletteAction[] }>()
-const emit = defineEmits<{ close: []; tab: [tab: 'phone' | 'scenarios'] }>()
+const emit = defineEmits<{ close: []; tab: [tab: 'phone'] }>()
 const dialogEl = ref<HTMLElement | null>(null)
 const input = ref<HTMLInputElement | null>(null)
 useDialog(dialogEl, () => emit('close'))
 const accounts = useAccountsStore()
 const calls = useCallsStore()
 const contacts = useContactsStore()
-const scenarios = useScenariosStore()
-const prefs = usePreferencesStore()
 const query = ref('')
 const active = ref(0)
 
@@ -72,17 +68,6 @@ const results = computed<PaletteAction[]>(() => {
                 : t('commandPalette.registrar', { name: a.name }),
             hint: `${a.extension}@${a.domain}`,
             run: () => void (registered ? accounts.unregister(a.id) : accounts.register(a.id))
-        })
-    }
-    for (const s of prefs.isOn('scenarios') ? scenarios.scenarios : []) {
-        if (q && !plain(s.name).includes(q)) continue
-        list.push({
-            label: t('commandPalette.rodar_cenario', { name: s.name }),
-            run: () => {
-                emit('tab', 'scenarios')
-                scenarios.selectedId = s.id
-                void scenarios.run(s.id)
-            }
         })
     }
     for (const action of props.actions)

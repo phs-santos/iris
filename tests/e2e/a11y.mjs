@@ -171,19 +171,14 @@ try {
         )
         for (const alt of broken.filter(Boolean)) problems.push(`[guia] imagem não carregou: ${alt}`)
     }
-    await guide.getByRole('button', { name: 'Cenários', exact: true }).click()
-    await scan('guia, seção com tabela e imagem')
-    await guide.getByLabel('Buscar no guia').fill('p95')
-    if ((await entries.count()) !== 1) problems.push('[guia] a busca por "p95" deveria deixar só a seção de cenários')
+    await guide.getByRole('button', { name: 'Seus dados e segurança', exact: true }).click()
+    await scan('guia, seção com tabela')
+    await guide.getByLabel('Buscar no guia').fill('chave-local')
+    if ((await entries.count()) !== 1)
+        problems.push('[guia] a busca por "chave-local" deveria deixar só a seção de dados')
     await page.keyboard.press('Escape')
     await guide.waitFor({ state: 'detached', timeout: 2000 }).catch(() => problems.push('[guia] Esc não fecha'))
     step(`guia com ${total} seções, capturas carregadas e busca`)
-
-    await page.getByRole('tab', { name: 'Cenários' }).click()
-    await page.getByRole('button', { name: '+ Exemplo de URA' }).click()
-    await page.getByRole('button', { name: 'Executar', exact: true }).click()
-    await page.getByText(/^Passou em/).waitFor({ timeout: 20000 })
-    await scan('cenários')
 
     // Modo Telefone: teclado, chamada recebida e chamada em andamento.
     await page.getByRole('tab', { name: 'Telefone' }).click()

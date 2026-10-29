@@ -106,7 +106,7 @@ export const useAccountsStore = defineStore('accounts', () => {
         for (const account of list) if (account.autoRegister) void register(account.id)
     }
 
-    /** Relê os avisos sobre os arquivos de dados (senhas, contas, cenários e preferências). */
+    /** Relê os avisos sobre os arquivos de dados (senhas, contas, contatos e preferências). */
     async function refreshProblems(): Promise<void> {
         secretsProblem.value = (await window.iris.secrets.status()).problem
     }

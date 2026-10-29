@@ -75,15 +75,15 @@ try {
     await app.close()
     writeFileSync(join(userData, 'settings.json'), '{ isto não é JSON')
     writeFileSync(join(userData, 'accounts.json'), '[1, 2, 3]')
-    writeFileSync(join(userData, 'scenarios.json'), '')
+    writeFileSync(join(userData, 'contacts.json'), '')
     app = await launch()
     page = await app.firstWindow()
     await page.getByText('3 contas').waitFor({ timeout: 15000 })
-    step('o app abre com preferências, contas e cenários estragados')
+    step('o app abre com preferências, contas e contatos estragados')
     for (const [name, what] of [
         ['settings.json', 'preferências'],
         ['accounts.json', 'contas'],
-        ['scenarios.json', 'cenários']
+        ['contacts.json', 'contatos']
     ]) {
         if (!readdirSync(userData).some((f) => f.startsWith(`${name}.corrompido-`)))
             fail(`${name} estragado não foi guardado à parte`)

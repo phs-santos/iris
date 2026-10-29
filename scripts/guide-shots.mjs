@@ -151,11 +151,6 @@ try {
     await shot('atualizacao', dialog())
     await close()
 
-    await page.getByRole('tab', { name: 'Cenários' }).click()
-    await page.getByRole('button', { name: '+ Exemplo de URA' }).click()
-    await page.getByRole('button', { name: 'Executar', exact: true }).click()
-    await page.getByText(/^Passou em/).waitFor({ timeout: 20000 })
-    await shot('cenarios', page.locator('section.center'))
     console.log('Capturas do guia OK')
 } catch (error) {
     console.error(error)

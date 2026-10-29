@@ -1,12 +1,10 @@
 // Tipos compartilhados entre o processo principal, o preload e a interface.
 
 import type { AiModel, AiRequest, AiResult, AiSettings, AiStatus } from './ai'
-import type { CliConfig } from './cli'
 import type { Appearance, Profile } from './appearance'
 import type { TrayCounts } from './tray'
 import type { Contact } from './contacts'
 import type { SipServer } from './servers'
-import type { MonitorSettings, WebhookPayload } from './monitor'
 import type { NetDiagRequest, NetDiagResult } from './net-diag'
 import type { LoadProgress, LoadReport, LoadSpec } from './load'
 import type { NotificationAction, NotificationSettings, NotifyRequest } from './notifications'
@@ -74,45 +72,6 @@ export interface Account {
 export interface AccountsFile {
     schemaVersion: 1
     accounts: Account[]
-}
-
-// ─── Cenários (RF-28 a RF-30) ──────────────────────────────────────────────
-// Cada chamada aberta por um passo ganha um apelido ("c1"); os passos seguintes se referem a ela por ele.
-
-export type ScenarioCallState = 'ringing' | 'early' | 'established' | 'held' | 'ended'
-export type ScenarioCheck = 'code' | 'dtmfReceived' | 'log'
-
-export type ScenarioStep =
-    | { type: 'register'; account?: string }
-    | { type: 'dial'; account?: string; to: string; call: string }
-    | { type: 'answer'; account?: string; call: string; timeoutMs: number }
-    | { type: 'wait'; ms: number }
-    | { type: 'waitState'; call: string; state: ScenarioCallState; timeoutMs: number }
-    | { type: 'dtmf'; call: string; digits: string }
-    | { type: 'transfer'; call: string; to: string }
-    | { type: 'hangup'; call: string }
-    | { type: 'verify'; call: string; check: ScenarioCheck; expected: string }
-    // Áudio (RF-41): tocar no lugar do microfone e conferir o que chega.
-    | { type: 'playTone'; call: string; hz: number; ms: number }
-    | { type: 'playFile'; call: string; path: string }
-    | { type: 'waitAudio'; call: string; timeoutMs: number }
-    | { type: 'waitSilence'; call: string; timeoutMs: number }
-
-export type ScenarioStepType = ScenarioStep['type']
-
-export interface Scenario {
-    id: string
-    name: string
-    /** Conta de origem: usada pelos passos que não escolhem outra. */
-    accountId: string
-    steps: ScenarioStep[]
-    /** Execução automática de tempos em tempos, com aviso quando o resultado muda (RF-43). */
-    monitor?: MonitorSettings
-}
-
-export interface ScenariosFile {
-    schemaVersion: 1
-    scenarios: Scenario[]
 }
 
 export interface Settings {
@@ -296,7 +255,7 @@ export interface AccountsExport {
     accounts: Array<Account & { password?: string }>
 }
 
-/** Situação dos arquivos de dados: senhas (RNF-07), contas, cenários e preferências. */
+/** Situação dos arquivos de dados: senhas (RNF-07), contas, contatos e preferências. */
 export interface SecretsStatus {
     /** Algo deu errado e precisa de aviso na tela; null quando está tudo certo. */
     problem: string | null
@@ -312,10 +271,6 @@ export interface IrisApi {
     accounts: {
         load(): Promise<Account[]>
         save(accounts: Account[]): Promise<void>
-    }
-    scenarios: {
-        load(): Promise<Scenario[]>
-        save(scenarios: Scenario[]): Promise<void>
     }
     /** Agenda de contatos (RF-50) e servidores cadastrados (RF-51). */
     contacts: {
@@ -342,7 +297,7 @@ export interface IrisApi {
         /** Abre o diálogo e devolve o texto do arquivo escolhido. `csv` troca o filtro de JSON por CSV. */
         openText(kind?: 'json' | 'csv'): Promise<string | null>
     }
-    /** Arquivos WAV para os cenários (RF-41): o processo principal lê e devolve PCM de 16 bits a 8000 Hz. */
+    /** Arquivos WAV para o áudio de atendimento (RF-57): o processo principal lê e devolve PCM de 16 bits a 8000 Hz. */
     audio: {
         /** Abre o diálogo e devolve o caminho escolhido, ou null. */
         pickWav(): Promise<string | null>
@@ -378,22 +333,10 @@ export interface IrisApi {
     net: {
         diagnose(request: NetDiagRequest): Promise<NetDiagResult>
     }
-    /** Monitor (RF-43): o POST do webhook sai do processo principal; devolve o código HTTP da resposta. */
-    monitor: {
-        webhook(url: string, payload: WebhookPayload): Promise<number>
-    }
     /** Estado geral para o ícone da bandeja (RF-33). */
     setTray(counts: TrayCounts): void
     /** Erro da interface para o log interno do app (RNF-14). */
     logError(text: string): void
-    /** Modo linha de comando (RF-31): null quando o app abriu com janela. */
-    cli: {
-        config(): Promise<CliConfig | null>
-        /** Escreve uma linha no terminal; `error` vai para o stderr. */
-        print(line: string, error?: boolean): void
-        writeReport(content: string): Promise<string | null>
-        finish(code: number): void
-    }
     onCertificateError(listener: (event: CertificateErrorEvent) => void): () => void
     /** Atualização automática (RF-35). Nada é baixado sem o usuário pedir. */
     update: {
@@ -452,8 +395,6 @@ export type WindowMode = 'phone' | 'bench'
 export const IPC = {
     accountsLoad: 'accounts:load',
     accountsSave: 'accounts:save',
-    scenariosLoad: 'scenarios:load',
-    scenariosSave: 'scenarios:save',
     contactsLoad: 'contacts:load',
     contactsSave: 'contacts:save',
     serversLoad: 'servers:load',
@@ -479,7 +420,6 @@ export const IPC = {
     shortcutsFailed: 'shortcuts:failed',
     mediaKeyFailed: 'shortcuts:media-key-failed',
     shortcutFired: 'shortcuts:fired',
-    monitorWebhook: 'monitor:webhook',
     netDiagnose: 'net:diagnose',
     tray: 'app:tray',
     logError: 'app:log-error',
@@ -512,9 +452,5 @@ export const IPC = {
     aiSetKey: 'ai:set-key',
     aiSetOptions: 'ai:set-options',
     aiModels: 'ai:models',
-    aiExplain: 'ai:explain',
-    cliConfig: 'cli:config',
-    cliPrint: 'cli:print',
-    cliReport: 'cli:report',
-    cliFinish: 'cli:finish'
+    aiExplain: 'ai:explain'
 } as const

@@ -215,7 +215,7 @@ defineExpose({
                 v-model="headersText"
                 class="input mono"
                 rows="2"
-                :placeholder="$t('dialerPane.x_test_id_cenario_42')"
+                :placeholder="$t('dialerPane.x_test_id_teste_42')"
             ></textarea>
         </div>
 

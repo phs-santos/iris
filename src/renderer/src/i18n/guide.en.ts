@@ -21,8 +21,7 @@ export const GUIDE_EN: GuideSection[] = [
                     '**Call from one extension to another** without two devices: several accounts stay registered at the same time in the same window.',
                     '**Test an IVR**: dial, wait for the answer, send the digits and see what came back.',
                     '**Test transfer, hold and mute** and see the SIP signaling of each action.',
-                    '**Read the log side by side with the call**, with the raw SIP when you need it.',
-                    '**Repeat a test many times** with scenarios, on screen or from the command line.'
+                    '**Read the log side by side with the call**, with the raw SIP when you need it.'
                 ]
             },
             { type: 'image', name: 'principal', alt: 'Main Íris window with two calls in progress' },
@@ -102,11 +101,6 @@ export const GUIDE_EN: GuideSection[] = [
                         'Pick which extension you call from and see the state of each one'
                     ],
                     ['Middle: Phone', 'The dialer and the call cards', 'Call, answer and act on each call'],
-                    [
-                        'Middle: Scenarios',
-                        'Test scripts made of steps',
-                        'Repeat a test on its own and measure time and success rate'
-                    ],
                     ['Right: Log', 'What happened, in order, per account', 'Understand why something worked or failed']
                 ]
             },
@@ -255,7 +249,7 @@ export const GUIDE_EN: GuideSection[] = [
                     'Audio goes over **unencrypted RTP**, unless you tick **Require encrypted audio (SRTP)** in the account. With that option, Íris offers SRTP when calling and refuses (`488`) callers without it; the quality line shows `(SRTP)` next to the codec. An incoming call that already comes with SRTP is answered encrypted even without the option.',
                     'The SRTP key travels inside the signaling (SDES). So that it does not go in the clear, use the **TLS** transport with it.',
                     'With SRTP, the round-trip time (RTT) stays at 0: it comes from RTCP, which Íris only exchanges unencrypted.',
-                    'The PBX has to accept **G.722**, **G.711** or **Opus**. Íris offers G.722 first: when the PBX accepts it, voice goes in high definition (16 kHz, up to 7 kHz of treble) and the quality line shows `G722`. Otherwise G.711 applies, and Opus when that is all the PBX has; Opus goes out in narrowband (8 kHz), the same quality as G.711. A PBX that only offers G.729 refuses the call with `488`. Recording and scenario tones stay at 8 kHz, even on a G.722 call.',
+                    'The PBX has to accept **G.722**, **G.711** or **Opus**. Íris offers G.722 first: when the PBX accepts it, voice goes in high definition (16 kHz, up to 7 kHz of treble) and the quality line shows `G722`. Otherwise G.711 applies, and Opus when that is all the PBX has; Opus goes out in narrowband (8 kHz), the same quality as G.711. A PBX that only offers G.729 refuses the call with `488`. Recording stays at 8 kHz, even on a G.722 call.',
                     'The first time, the system firewall may ask whether Íris can use the network. Allow it: without that the audio does not arrive.'
                 ]
             },
@@ -263,7 +257,7 @@ export const GUIDE_EN: GuideSection[] = [
             {
                 type: 'list',
                 items: [
-                    '**Simulated PBX (no network)**: the account uses the built-in fake PBX. Good for practicing and for building scenarios.',
+                    '**Simulated PBX (no network)**: the account uses the built-in fake PBX. Good for practicing.',
                     '**Register when the app opens**: the account goes online on its own when Íris opens.',
                     '**Auto-answer after … ms**: the account answers on its own after the given time. This is what lets you test a call between two extensions without clicking Answer.',
                     '**Show raw SIP in the log**: turns on the recording of the full SIP messages of this account. Without it, the "Raw SIP" tab stays empty for it.'
@@ -307,11 +301,11 @@ export const GUIDE_EN: GuideSection[] = [
     {
         id: 'simulado',
         title: 'Simulated PBX',
-        summary: 'A built-in fake PBX, to learn the app and build scenarios without a server or network.',
+        summary: 'A built-in fake PBX, to learn the app without a server or network.',
         blocks: [
             {
                 type: 'p',
-                text: 'The accounts marked **SIM** talk to a pretend PBX inside the app itself. Registration, calls, DTMF and errors are simulated, but the screen, the log and the scenarios work the same way.'
+                text: 'The accounts marked **SIM** talk to a pretend PBX inside the app itself. Registration, calls, DTMF and errors are simulated, but the screen and the log work the same way.'
             },
             {
                 type: 'table',
@@ -363,7 +357,7 @@ export const GUIDE_EN: GuideSection[] = [
                 items: [
                     '**Shortcuts**: the buttons with a number and description call with one click. They come from the "Speed dials" of the account and, on the simulated PBX, from the other accounts and the IVR.',
                     '**keypad**: opens a phone keypad to build the number with the mouse, with the call and delete buttons. Holding **0** types **+**.',
-                    '**SIP headers**: opens a field to send extra headers in the INVITE, one per line, such as `X-Test-Id: scenario-42`. It is for testing PBX rules that depend on a header.'
+                    '**SIP headers**: opens a field to send extra headers in the INVITE, one per line, such as `X-Test-Id: test-42`. It is for testing PBX rules that depend on a header.'
                 ]
             },
             { type: 'h', text: 'Receiving' },
@@ -391,7 +385,7 @@ export const GUIDE_EN: GuideSection[] = [
                     'The PBX has to accept a video codec on the extension. On Asterisk, add `vp8` (or `h264`) to the `allow` of both extensions.',
                     '**Plain SIP** accounts do not do video yet: the button does not show for them.',
                     'On macOS and Windows, the system asks for camera permission on the first video call.',
-                    'Phone mode, recording and scenarios do not have video yet.'
+                    'Phone mode and recording do not have video yet.'
                 ]
             },
             { type: 'h', text: 'What you hear before they answer' },
@@ -753,159 +747,6 @@ export const GUIDE_EN: GuideSection[] = [
         ]
     },
     {
-        id: 'cenarios',
-        title: 'Scenarios',
-        summary: 'Test scripts that Íris runs on its own, step by step, as many times as you want.',
-        blocks: [
-            { type: 'image', name: 'cenarios', alt: 'Scenarios tab with the IVR example run' },
-            {
-                type: 'p',
-                text: 'A scenario is a list of steps. Íris runs them one by one, marks each as passed (✓) or failed (✗) and shows how long it took. Use it to repeat the same test after every change on the PBX.'
-            },
-            { type: 'h', text: 'Start with the example' },
-            {
-                type: 'steps',
-                items: [
-                    'Open the **Scenarios** tab, next to **Phone**.',
-                    'Click **+ IVR example**. It creates: register, dial 8000, wait for "in call", wait 2 s, send 1234 and hang up.',
-                    'Pick the **Source account** and click **Run**.'
-                ]
-            },
-            { type: 'h', text: 'Step types' },
-            {
-                type: 'table',
-                head: ['Step', 'What it does'],
-                rows: [
-                    ['Register', 'Registers the account (the source one or another) and waits until it is registered'],
-                    ['Dial', 'Calls a number and gives the call an alias, such as `c1`'],
-                    ['Answer', 'Answers a call that is ringing on an account and gives it an alias'],
-                    ['Wait', 'Waits a fixed time, in seconds'],
-                    [
-                        'Wait for state',
-                        'Waits for the call to reach a state (calling, early media, in call, on hold, ended) up to a limit. Fails if the call ends first, showing the code'
-                    ],
-                    ['DTMF', 'Sends a sequence of digits, with the same syntax as the call card'],
-                    ['Transfer', 'Transfers the call to a destination'],
-                    ['Hang up', 'Ends the call'],
-                    ['Verify', 'Checks a SIP code, the DTMF received or a text in the log'],
-                    ['Play tone', 'Plays a tone (frequency and length) on the call, in place of the microphone'],
-                    ['Play WAV file', 'Plays a 16-bit PCM WAV file, up to 2 minutes long'],
-                    [
-                        'Wait for audio',
-                        'Passes when audio arrives on the call; fails if it stays silent until the timeout'
-                    ],
-                    ['Wait for silence', 'Passes when the audio stops; fails if it keeps arriving until the timeout']
-                ]
-            },
-            { type: 'h', text: 'Monitor: leave a scenario on watch' },
-            {
-                type: 'p',
-                text: 'Tick **Monitor** at the top of the scenario and give the interval in minutes: Íris starts running it on its own, with the app open or in the tray. It only notifies when the result **changes**: a system notification and a log line when the scenario starts failing, and another when it passes again. While it keeps failing, it does not repeat the notice.'
-            },
-            {
-                type: 'list',
-                items: [
-                    'In the **webhook** field you can put an `http://` or `https://` address. On each change, Íris sends a `POST` with JSON: `event` (`failed` or `recovered`), `scenario`, `failedStep`, `message`, `durationMs` and `at`. Use it to post to a chat channel or open a ticket.',
-                    'Beside it you see the time of the last run and of the next one.',
-                    'If you are running another scenario at that moment, the monitor waits for it to finish.',
-                    'The monitor only runs with Íris open. To keep watch with nobody logged in, use the command line in a scheduler (cron).'
-                ]
-            },
-            { type: 'h', text: 'The same script for several accounts' },
-            {
-                type: 'p',
-                text: 'In the number, digits and expected value fields you can write `{ramal}`, `{dominio}` and `{nome}`: at run time they become the extension, domain and name of the **source account** of the scenario. That way a script like "dial `*97`, send `{ramal}#`" works for any extension: change the source account at the top of the scenario or, on the command line, use `--conta`.'
-            },
-            { type: 'h', text: 'Checking the audio' },
-            {
-                type: 'p',
-                text: 'The right SIP code does not guarantee there is sound: a silent call, or one with audio on one side only, completes just the same. The audio steps catch that. A typical script against an echo number: **Dial**, **Wait for state** in call, **Play tone** for 1 s and **Wait for audio**. If the tone does not come back, the step fails and shows the measured level.'
-            },
-            {
-                type: 'list',
-                items: [
-                    '**Wait for audio** and **Wait for silence** work on any account. The line between the two is −50 dBFS, and the step requires three readings in a row, so that a click does not count as audio.',
-                    '**Play tone** and **Play file** only work on **plain SIP** accounts and on the **simulated PBX**: on WebRTC Íris does not replace what the microphone sends, and the step fails saying so.',
-                    'While a tone or file plays, the microphone does not go into the call.',
-                    'The WAV file stays where it is on disk; the scenario keeps only the path. When you take the scenario to another machine, take the file along.'
-                ]
-            },
-            {
-                type: 'p',
-                text: 'The **aliases** connect the steps: "Dial … as c1" creates the call c1, and the following steps pick c1 to act on it. With two aliases you test a call between two of your extensions: one step dials, another answers.'
-            },
-            { type: 'h', text: 'Editing' },
-            {
-                type: 'list',
-                items: [
-                    '**+ Step** adds a step of the type selected beside it.',
-                    'The **↑ ↓** arrows change the order and the **✕** removes the step.',
-                    'Each step can use the source account or another account.',
-                    '**+ New**, **Duplicate** and **Delete** manage the scenarios. Everything is saved on its own at each edit.'
-                ]
-            },
-            { type: 'h', text: 'Repeat and measure' },
-            {
-                type: 'p',
-                text: 'Type a number next to **Run** and click **Repeat N×**. At the end the report shows: success rate, how many passed, average time and p95 (the time that 95% of the runs did not exceed). **Report .txt** and **Report .json** save the result. **Stop** interrupts.'
-            },
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'A scenario that passes 20 times in a row is a good criterion to say an IVR or a route is stable.'
-            }
-        ]
-    },
-    {
-        id: 'linha-de-comando',
-        title: 'Command line',
-        summary: 'Run scenarios without opening the window, for automated tests and CI.',
-        blocks: [
-            {
-                type: 'p',
-                text: 'The same app runs scenarios from the terminal. It writes the result of each step, saves the report if you ask and exits with a code your script can check.'
-            },
-            {
-                type: 'code',
-                text: 'iris --scenario "URA 8000" --runs 20 --report result.json'
-            },
-            {
-                type: 'table',
-                head: ['Option', 'What it does'],
-                rows: [
-                    ['--scenario <name|id>', 'Scenario to run. You can repeat the option to run several'],
-                    ['--all', 'Runs all scenarios'],
-                    ['--runs <n>', 'Repeats each scenario n times (default 1)'],
-                    [
-                        '--report <file>',
-                        'Saves the report as `.json`, `.txt` or `.xml`. The `.xml` comes in the JUnit format, which CI systems show as a list of tests'
-                    ],
-                    [
-                        '--account <account>',
-                        'Runs the scenario with this source account (id, name or `extension@domain`) instead of the one in it. Repeat the option to run once with each account'
-                    ],
-                    [
-                        '--accounts <file>',
-                        'Uses accounts from a file exported by Íris, with passwords. It neither reads nor changes your data'
-                    ],
-                    ['--scenarios <file>', 'Uses a scenarios file instead of the ones saved in the app'],
-                    ['--trust-host <host>', 'Accepts the self-signed certificate of that host. Can be repeated'],
-                    ['--fake-media', 'Uses a fake microphone, for machines without a sound card'],
-                    ['--help', 'Shows the help']
-                ]
-            },
-            {
-                type: 'p',
-                text: 'Exit codes: **0** everything passed, **1** some step failed, **2** usage or configuration error. The Portuguese names work too (`--cenario`, `--todos`, `--vezes`, `--relatorio`, `--conta`, `--contas`, `--cenarios`, `--confiar-host`, `--midia-falsa`, `--ajuda`). The output of the command line is written in Portuguese.'
-            },
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'On Linux without a display, run it with `xvfb-run -a`. The command-line mode can run with the app open and does not check for updates.'
-            }
-        ]
-    },
-    {
         id: 'importar',
         title: 'Importing and exporting accounts',
         summary: 'Take the accounts to another machine or hand them to a colleague.',
@@ -915,7 +756,7 @@ export const GUIDE_EN: GuideSection[] = [
             { type: 'h', text: 'Export' },
             {
                 type: 'p',
-                text: 'Saves all accounts to a JSON file. By default the **passwords do not go** in the file: whoever imports it types the password of each account. Tick **Include passwords in plain text in the file** only when you need to, for example to use with `--accounts` on the command line.'
+                text: 'Saves all accounts to a JSON file. By default the **passwords do not go** in the file: whoever imports it types the password of each account. Tick **Include passwords in plain text in the file** only when you need to, for example to take everything to another machine.'
             },
             {
                 type: 'note',
@@ -1078,7 +919,7 @@ export const GUIDE_EN: GuideSection[] = [
                     'The **icon color** tells the overall state: grey with no account registered, green with registered accounts, yellow with a call ringing, blue in a call and red when some account is in error. Hovering over it shows the numbers.',
                     '**Sair** (quit) really closes the app: the extensions go offline and the calls drop.',
                     'An **incoming call** raises a system notification, with **Atender** (answer) and **Recusar** (decline) on the notification itself (on macOS); clicking it opens the window. In the Bench, it also shows on a colored strip at the top of the middle column.',
-                    'These also notify: **missed call**, **account dropped**, new **voicemail** and a **monitored scenario** that failed or passed again. In **Settings → Notifications** you choose which ones you want, can make an incoming call bring the window to the front and have the **Test notification** button.',
+                    'These also notify: **missed call**, **account dropped** and new **voicemail**. In **Settings → Notifications** you choose which ones you want, can make an incoming call bring the window to the front and have the **Test notification** button.',
                     'Nothing shows? On macOS, check in **System Settings → Notifications → Iris** whether notifications are allowed and **Do Not Disturb** is off. Auto-answer accounts do not notify of incoming calls.'
                 ]
             },
@@ -1106,7 +947,7 @@ export const GUIDE_EN: GuideSection[] = [
                     ['Ctrl/Cmd + 1 to 9', 'Selects the account at that position in the list'],
                     [
                         'Ctrl/Cmd + K',
-                        'Opens the command palette: type a number, a contact, an account, a scenario or an action and press Enter'
+                        'Opens the command palette: type a number, a contact, an account or an action and press Enter'
                     ],
                     ['F1', 'Opens this guide'],
                     ['Esc', 'Closes whatever window is open on top']
@@ -1152,7 +993,6 @@ export const GUIDE_EN: GuideSection[] = [
                         'Extension passwords and AI key',
                         '`senhas.json`, encrypted with its own key (`chave-local.bin`); both can only be read by your system account'
                     ],
-                    ['Scenarios', '`scenarios.json`'],
                     ['Contacts and servers', '`contacts.json` and `servers.json`'],
                     [
                         'Call recordings',
@@ -1175,7 +1015,7 @@ export const GUIDE_EN: GuideSection[] = [
                 type: 'list',
                 items: [
                     'It does not store passwords in plain text: the passwords file is encrypted. Whoever has the whole data folder, though, can read the passwords; treat that folder as confidential.',
-                    'It does not delete a damaged file. Passwords, accounts, scenarios or preferences that cannot be read are set aside, with the date in the name, and the screen tells you. The app opens anyway.',
+                    'It does not delete a damaged file. Passwords, accounts or preferences that cannot be read are set aside, with the date in the name, and the screen tells you. The app opens anyway.',
                     'It does not put a password, hash or nonce in the log, on screen or in saved files.',
                     'It sends nothing out beyond what you ask for: registration and calls with your PBX, the update check on GitHub and, if you use it, the preview text to OpenRouter.',
                     'It does not accept an invalid certificate unless you say so, and only for the chosen host.'

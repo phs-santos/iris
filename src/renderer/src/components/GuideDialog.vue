@@ -11,8 +11,7 @@ import { GUIDE_EN } from '@renderer/i18n/guide.en'
 /** Seções que só aparecem com o modo ligado. */
 const SECTION_MODE: Record<string, ModeId> = {
     log: 'log',
-    saude: 'log',
-    cenarios: 'scenarios'
+    saude: 'log'
 }
 const prefs = usePreferencesStore()
 const GUIDE = (currentLocale() === 'en' ? GUIDE_EN : GUIDE_PT).filter(

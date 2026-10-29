@@ -38,8 +38,7 @@ export const GUIDE: GuideSection[] = [
                     '**Ligar de um ramal para outro** sem precisar de dois aparelhos: várias contas ficam registradas ao mesmo tempo na mesma janela.',
                     '**Testar uma URA**: discar, esperar atender, mandar os dígitos e ver o que voltou.',
                     '**Testar transferência, espera e mudo** e ver a sinalização SIP de cada ação.',
-                    '**Ler o log lado a lado com a chamada**, com o SIP bruto quando precisar.',
-                    '**Repetir um teste muitas vezes** com os cenários, na tela ou pela linha de comando.'
+                    '**Ler o log lado a lado com a chamada**, com o SIP bruto quando precisar.'
                 ]
             },
             { type: 'image', name: 'principal', alt: 'Janela principal da Íris com duas chamadas em andamento' },
@@ -122,11 +121,6 @@ export const GUIDE: GuideSection[] = [
                         'Centro: Telefone',
                         'O discador e os cartões de chamada',
                         'Ligar, atender e agir sobre cada chamada'
-                    ],
-                    [
-                        'Centro: Cenários',
-                        'Roteiros de teste com passos',
-                        'Repetir um teste sozinho e medir tempo e taxa de sucesso'
                     ],
                     [
                         'Direita: Log',
@@ -280,7 +274,7 @@ export const GUIDE: GuideSection[] = [
                     'O áudio vai por **RTP sem cifra**, a não ser que você marque **Exigir áudio cifrado (SRTP)** na conta. Com essa opção, a Íris oferece SRTP ao ligar e recusa (`488`) quem liga sem ele; na linha de qualidade aparece `(SRTP)` ao lado do codec. Uma chamada recebida que já venha com SRTP é atendida com cifra mesmo sem a opção.',
                     'A chave do SRTP vai dentro da sinalização (SDES). Para ela não passar em claro, use o transporte **TLS** junto.',
                     'Com SRTP, o tempo de ida e volta (RTT) fica em 0: ele vem do RTCP, que a Íris só troca sem cifra.',
-                    'A central precisa aceitar **G.722**, **G.711** ou **Opus**. A Íris oferece o G.722 primeiro: quando a central aceita, a voz vai em alta definição (16 kHz, até 7 kHz de agudos) e a linha de qualidade mostra `G722`. Senão vale o G.711, e o Opus quando é só o que a central tem; o Opus sai em banda estreita (8 kHz), a mesma qualidade do G.711. Uma central que só oferece G.729 recusa a chamada com `488`. A gravação e os tons dos cenários continuam a 8 kHz, mesmo em chamada G.722.',
+                    'A central precisa aceitar **G.722**, **G.711** ou **Opus**. A Íris oferece o G.722 primeiro: quando a central aceita, a voz vai em alta definição (16 kHz, até 7 kHz de agudos) e a linha de qualidade mostra `G722`. Senão vale o G.711, e o Opus quando é só o que a central tem; o Opus sai em banda estreita (8 kHz), a mesma qualidade do G.711. Uma central que só oferece G.729 recusa a chamada com `488`. A gravação continua a 8 kHz, mesmo em chamada G.722.',
                     'Na primeira vez, o firewall do sistema pode perguntar se a Íris pode usar a rede. Permita: sem isso o áudio não chega.'
                 ]
             },
@@ -288,7 +282,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'list',
                 items: [
-                    '**PBX simulado (sem rede)**: a conta usa a central falsa embutida. Bom para treinar e para montar cenários.',
+                    '**PBX simulado (sem rede)**: a conta usa a central falsa embutida. Bom para treinar.',
                     '**Registrar ao abrir o app**: a conta entra no ar sozinha quando a Íris abre.',
                     '**Auto-atender após … ms**: a conta atende sozinha depois do tempo informado. É o que permite testar uma chamada entre dois ramais sem clicar em Atender.',
                     '**Mostrar SIP bruto no log**: liga o registro das mensagens SIP completas dessa conta. Sem isso, a aba "SIP bruto" fica vazia para ela.'
@@ -332,11 +326,11 @@ export const GUIDE: GuideSection[] = [
     {
         id: 'simulado',
         title: 'PBX simulado',
-        summary: 'Uma central falsa embutida, para aprender o app e montar cenários sem servidor nem rede.',
+        summary: 'Uma central falsa embutida, para aprender o app sem servidor nem rede.',
         blocks: [
             {
                 type: 'p',
-                text: 'As contas marcadas com **SIM** falam com uma central de mentira dentro do próprio app. O registro, as chamadas, o DTMF e os erros são simulados, mas a tela, o log e os cenários funcionam igual.'
+                text: 'As contas marcadas com **SIM** falam com uma central de mentira dentro do próprio app. O registro, as chamadas, o DTMF e os erros são simulados, mas a tela e o log funcionam igual.'
             },
             {
                 type: 'table',
@@ -388,7 +382,7 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     '**Atalhos**: os botões com número e descrição ligam com um clique. Vêm dos "Atalhos de discagem" da conta e, no simulado, das outras contas e da URA.',
                     '**teclado**: abre um teclado de telefone para montar o número com o mouse, com o botão de ligar e o de apagar. Segurar o **0** escreve **+**.',
-                    '**cabeçalhos SIP**: abre um campo para mandar cabeçalhos extras no INVITE, um por linha, como `X-Test-Id: cenario-42`. Serve para testar regras da central que dependem de cabeçalho.'
+                    '**cabeçalhos SIP**: abre um campo para mandar cabeçalhos extras no INVITE, um por linha, como `X-Test-Id: teste-42`. Serve para testar regras da central que dependem de cabeçalho.'
                 ]
             },
             { type: 'h', text: 'Receber' },
@@ -416,7 +410,7 @@ export const GUIDE: GuideSection[] = [
                     'O PBX precisa aceitar um codec de vídeo no ramal. No Asterisk, inclua `vp8` (ou `h264`) no `allow` dos dois ramais.',
                     'Contas de **SIP puro** ainda não fazem vídeo: o botão não aparece para elas.',
                     'No macOS e no Windows, o sistema pede permissão de câmera na primeira chamada de vídeo.',
-                    'O modo Telefone, a gravação e os cenários ainda não têm vídeo.'
+                    'O modo Telefone e a gravação ainda não têm vídeo.'
                 ]
             },
             { type: 'h', text: 'O que você ouve antes de atenderem' },
@@ -769,159 +763,6 @@ export const GUIDE: GuideSection[] = [
         ]
     },
     {
-        id: 'cenarios',
-        title: 'Cenários',
-        summary: 'Roteiros de teste que a Íris executa sozinha, passo a passo, quantas vezes você quiser.',
-        blocks: [
-            { type: 'image', name: 'cenarios', alt: 'Aba Cenários com o exemplo de URA executado' },
-            {
-                type: 'p',
-                text: 'Um cenário é uma lista de passos. A Íris executa um por um, marca cada um como passou (✓) ou falhou (✗) e mostra quanto tempo levou. Use para repetir o mesmo teste depois de cada mudança na central.'
-            },
-            { type: 'h', text: 'Começar pelo exemplo' },
-            {
-                type: 'steps',
-                items: [
-                    'Abra a aba **Cenários**, ao lado de **Telefone**.',
-                    'Clique em **+ Exemplo de URA**. Ele cria: registrar, discar 8000, aguardar "em chamada", esperar 2 s, mandar 1234 e desligar.',
-                    'Escolha a **Conta de origem** e clique em **Executar**.'
-                ]
-            },
-            { type: 'h', text: 'Tipos de passo' },
-            {
-                type: 'table',
-                head: ['Passo', 'O que faz'],
-                rows: [
-                    ['Registrar', 'Registra a conta (a de origem ou outra) e espera ficar registrada'],
-                    ['Discar', 'Liga para um número e dá um apelido à chamada, como `c1`'],
-                    ['Atender', 'Atende uma chamada que está tocando numa conta e dá um apelido a ela'],
-                    ['Esperar', 'Espera um tempo fixo, em segundos'],
-                    [
-                        'Aguardar estado',
-                        'Espera a chamada chegar a um estado (chamando, early media, em chamada, em espera, encerrada) até um limite. Falha se a chamada terminar antes, mostrando o código'
-                    ],
-                    ['DTMF', 'Manda uma sequência de dígitos, com a mesma sintaxe do cartão de chamada'],
-                    ['Transferir', 'Transfere a chamada para um destino'],
-                    ['Desligar', 'Encerra a chamada'],
-                    ['Verificar', 'Confere um código SIP, o DTMF recebido ou um texto no log'],
-                    ['Tocar tom', 'Toca um tom (frequência e duração) na chamada, no lugar do microfone'],
-                    ['Tocar arquivo WAV', 'Toca um arquivo WAV de PCM de 16 bits, de até 2 minutos'],
-                    [
-                        'Esperar áudio',
-                        'Passa quando chega áudio na chamada; falha se ela ficar muda até o tempo limite'
-                    ],
-                    ['Esperar silêncio', 'Passa quando o áudio para; falha se continuar chegando até o tempo limite']
-                ]
-            },
-            { type: 'h', text: 'Monitor: deixar um cenário de vigia' },
-            {
-                type: 'p',
-                text: 'Marque **Monitorar** no alto do cenário e diga o intervalo em minutos: a Íris passa a rodá-lo sozinha, com o app aberto ou na bandeja. Ela avisa só quando o resultado **muda**: uma notificação do sistema e uma linha no log quando o cenário passa a falhar, e outra quando volta a passar. Enquanto continua falhando, não repete o aviso.'
-            },
-            {
-                type: 'list',
-                items: [
-                    'No campo **webhook** você pode pôr um endereço `http://` ou `https://`. A cada mudança, a Íris manda um `POST` com JSON: `event` (`failed` ou `recovered`), `scenario`, `failedStep`, `message`, `durationMs` e `at`. Serve para avisar num canal de chat ou abrir um chamado.',
-                    'Ao lado aparece a hora da última execução e da próxima.',
-                    'Se você estiver rodando outro cenário na hora, o monitor espera terminar.',
-                    'O monitor só roda com a Íris aberta. Para vigiar sem ninguém logado, use a linha de comando num agendador (cron).'
-                ]
-            },
-            { type: 'h', text: 'O mesmo roteiro para várias contas' },
-            {
-                type: 'p',
-                text: 'Nos campos de número, dígitos e valor esperado você pode escrever `{ramal}`, `{dominio}` e `{nome}`: na hora de rodar, eles viram os dados da **conta de origem** do cenário. Assim um roteiro como "discar `*97`, mandar `{ramal}#`" serve para qualquer ramal: troque a conta de origem no alto do cenário ou, na linha de comando, use `--conta`.'
-            },
-            { type: 'h', text: 'Conferir o áudio' },
-            {
-                type: 'p',
-                text: 'Código SIP certo não garante que há som: a chamada muda, ou com áudio só de um lado, completa do mesmo jeito. Os passos de áudio pegam isso. Um roteiro típico contra um número de eco: **Discar**, **Aguardar estado** em chamada, **Tocar tom** de 1 s e **Esperar áudio**. Se o tom não voltar, o passo falha e mostra o volume medido.'
-            },
-            {
-                type: 'list',
-                items: [
-                    '**Esperar áudio** e **Esperar silêncio** funcionam em qualquer conta. O limite entre os dois é −50 dBFS, e o passo exige três medidas seguidas, para um estalo não contar como áudio.',
-                    '**Tocar tom** e **Tocar arquivo** só funcionam em contas de **SIP puro** e no **PBX simulado**: em WebRTC a Íris não troca o que o microfone manda, e o passo falha dizendo isso.',
-                    'Enquanto um tom ou arquivo toca, o microfone não vai para a chamada.',
-                    'O arquivo WAV fica onde está no disco; o cenário guarda só o caminho. Ao levar o cenário para outra máquina, leve o arquivo junto.'
-                ]
-            },
-            {
-                type: 'p',
-                text: 'Os **apelidos** ligam os passos: "Discar … como c1" cria a chamada c1, e os passos seguintes escolhem c1 para agir sobre ela. Com dois apelidos você testa uma chamada entre dois ramais seus: um passo disca, outro atende.'
-            },
-            { type: 'h', text: 'Editar' },
-            {
-                type: 'list',
-                items: [
-                    '**+ Passo** adiciona um passo do tipo escolhido ao lado.',
-                    'As setas **↑ ↓** mudam a ordem e o **✕** remove o passo.',
-                    'Cada passo pode usar a conta de origem ou outra conta.',
-                    '**+ Novo**, **Duplicar** e **Excluir** cuidam dos cenários. Tudo é salvo sozinho a cada edição.'
-                ]
-            },
-            { type: 'h', text: 'Repetir e medir' },
-            {
-                type: 'p',
-                text: 'Digite um número ao lado de **Executar** e clique em **Repetir N×**. No fim aparece o relatório: taxa de sucesso, quantas passaram, tempo médio e p95 (o tempo que 95% das execuções não ultrapassaram). **Relatório .txt** e **Relatório .json** salvam o resultado. **Parar** interrompe.'
-            },
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'Um cenário que passa 20 vezes seguidas é um bom critério para dizer que uma URA ou uma rota está estável.'
-            }
-        ]
-    },
-    {
-        id: 'linha-de-comando',
-        title: 'Linha de comando',
-        summary: 'Rodar cenários sem abrir a janela, para testes automáticos e CI.',
-        blocks: [
-            {
-                type: 'p',
-                text: 'O mesmo app executa cenários pelo terminal. Ele escreve o resultado de cada passo, salva o relatório se você pedir e sai com um código que o seu script pode conferir.'
-            },
-            {
-                type: 'code',
-                text: 'iris --cenario "URA 8000" --vezes 20 --relatorio resultado.json'
-            },
-            {
-                type: 'table',
-                head: ['Opção', 'O que faz'],
-                rows: [
-                    ['--cenario <nome|id>', 'Cenário a executar. Pode repetir a opção para rodar vários'],
-                    ['--todos', 'Executa todos os cenários'],
-                    ['--vezes <n>', 'Repete cada cenário n vezes (padrão 1)'],
-                    [
-                        '--relatorio <arquivo>',
-                        'Salva o relatório em `.json`, `.txt` ou `.xml`. O `.xml` sai no formato JUnit, que os sistemas de CI mostram como lista de testes'
-                    ],
-                    [
-                        '--conta <conta>',
-                        'Roda o cenário com esta conta de origem (id, nome ou `ramal@domínio`) no lugar da que está nele. Repita a opção para rodar uma vez com cada conta'
-                    ],
-                    [
-                        '--contas <arquivo>',
-                        'Usa contas de um arquivo exportado pela Íris, com senhas. Não lê nem altera os seus dados'
-                    ],
-                    ['--cenarios <arquivo>', 'Usa um arquivo de cenários em vez dos salvos no app'],
-                    ['--confiar-host <host>', 'Aceita o certificado autoassinado desse host. Pode repetir'],
-                    ['--midia-falsa', 'Usa um microfone falso, para máquinas sem placa de som'],
-                    ['--ajuda', 'Mostra a ajuda']
-                ]
-            },
-            {
-                type: 'p',
-                text: 'Códigos de saída: **0** tudo passou, **1** algum passo falhou, **2** erro de uso ou de configuração. Os nomes em inglês também valem (`--scenario`, `--all`, `--runs`, `--report`, `--account`, `--accounts`, `--scenarios`, `--trust-host`, `--fake-media`, `--help`).'
-            },
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'No Linux sem tela, rode com `xvfb-run -a`. O modo de linha de comando pode rodar com o app aberto e não procura atualização.'
-            }
-        ]
-    },
-    {
         id: 'importar',
         title: 'Importar e exportar contas',
         summary: 'Levar as contas para outra máquina ou passar para um colega.',
@@ -931,7 +772,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'Exportar' },
             {
                 type: 'p',
-                text: 'Salva todas as contas num arquivo JSON. Por padrão as **senhas não vão** no arquivo: quem importar digita a senha de cada conta. Marque **Incluir senhas em texto puro no arquivo** só quando precisar, por exemplo para usar com `--contas` na linha de comando.'
+                text: 'Salva todas as contas num arquivo JSON. Por padrão as **senhas não vão** no arquivo: quem importar digita a senha de cada conta. Marque **Incluir senhas em texto puro no arquivo** só quando precisar.'
             },
             {
                 type: 'note',
@@ -1094,7 +935,7 @@ export const GUIDE: GuideSection[] = [
                     'A **cor do ícone** diz o estado geral: cinza sem conta registrada, verde com contas registradas, amarelo com chamada tocando, azul em chamada e vermelho quando alguma conta está em erro. Parar o mouse em cima mostra os números.',
                     '**Sair** encerra o app de verdade: os ramais saem do ar e as chamadas caem.',
                     'Uma **chamada recebida** gera uma notificação do sistema, com **Atender** e **Recusar** no próprio aviso (no macOS); clicar nela abre a janela. Na Bancada, ela também aparece numa faixa colorida no alto da coluna do meio.',
-                    'Também avisam: **chamada perdida**, **conta que caiu**, **correio de voz** novo e **cenário monitorado** que falhou ou voltou a passar. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
+                    'Também avisam: **chamada perdida**, **conta que caiu** e **correio de voz** novo. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
                     'Não aparece nada? No macOS, confira em **Ajustes do Sistema → Notificações → Iris** se os avisos estão permitidos e se o **Não Perturbe** está desligado. Contas com auto-atender não avisam de chamada recebida.'
                 ]
             },
@@ -1122,7 +963,7 @@ export const GUIDE: GuideSection[] = [
                     ['Ctrl/Cmd + 1 a 9', 'Seleciona a conta nessa posição da lista'],
                     [
                         'Ctrl/Cmd + K',
-                        'Abre a paleta de comandos: digite um número, um contato, uma conta, um cenário ou uma ação e tecle Enter'
+                        'Abre a paleta de comandos: digite um número, um contato, uma conta ou uma ação e tecle Enter'
                     ],
                     ['F1', 'Abre este guia'],
                     ['Esc', 'Fecha a janela que estiver aberta por cima']
@@ -1168,7 +1009,6 @@ export const GUIDE: GuideSection[] = [
                         'Senhas dos ramais e chave da IA',
                         '`senhas.json`, cifrado com uma chave própria (`chave-local.bin`); os dois só podem ser lidos pela sua conta do sistema'
                     ],
-                    ['Cenários', '`scenarios.json`'],
                     ['Contatos e servidores', '`contacts.json` e `servers.json`'],
                     [
                         'Gravações de chamadas',
@@ -1191,7 +1031,7 @@ export const GUIDE: GuideSection[] = [
                 type: 'list',
                 items: [
                     'Não grava senha em texto puro: o arquivo de senhas é cifrado. Quem tiver a pasta de dados inteira, porém, consegue ler as senhas; trate essa pasta como confidencial.',
-                    'Não apaga um arquivo estragado. Senhas, contas, cenários ou preferências que não dão para ler são guardados ao lado, com a data no nome, e a tela avisa. O app abre mesmo assim.',
+                    'Não apaga um arquivo estragado. Senhas, contas ou preferências que não dão para ler são guardados ao lado, com a data no nome, e a tela avisa. O app abre mesmo assim.',
                     'Não põe senha, hash nem nonce no log, nem na tela nem nos arquivos salvos.',
                     'Não manda nada para fora além do que você pede: o registro e as chamadas com a sua central, a busca por atualização no GitHub e, se você usar, o texto da prévia para a OpenRouter.',
                     'Não aceita certificado inválido sem você mandar, e só para o host escolhido.'

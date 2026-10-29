@@ -113,7 +113,7 @@ export class SipCall {
     private retransmit?: ReturnType<typeof setTimeout>
     private lastAck?: SipRequest
     private canceled = false
-    /** Volume dos últimos blocos recebidos, para os cenários saberem se há áudio (RF-41). */
+    /** Volume dos últimos blocos recebidos. */
     private levels: { at: number; db: number }[] = []
     private mic = new Downsampler()
     private speaker = new Upsampler()
@@ -557,7 +557,7 @@ export class SipCall {
 
     /**
      * 20 ms do microfone, a 16000 Hz (320 amostras). O G.722 manda assim; para os outros codecs, e
-     * para a gravação e os cenários, vale a versão de 8 kHz.
+     * para a gravação, vale a versão de 8 kHz.
      */
     sendMic(wide: Int16Array): void {
         if (this.state === 'ended' || this.playing) return

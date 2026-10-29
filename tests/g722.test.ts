@@ -92,7 +92,7 @@ describe('troca de taxa entre 16 kHz e 8 kHz', () => {
 })
 
 describe('G.722 como codec de uma chamada', () => {
-    it('aceita áudio a 8 kHz (tom de cenário) e a 16 kHz (microfone), com o relógio do RTP a 8000', () => {
+    it('aceita áudio a 8 kHz (tom de teste) e a 16 kHz (microfone), com o relógio do RTP a 8000', () => {
         const codec = createCodec('G722')
         expect(codec.clockScale).toBe(1)
         expect(codec.encode(tone(1000, 8000, 160)).length).toBe(160)

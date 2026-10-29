@@ -98,7 +98,7 @@ export class RtpSession {
     private rtcp!: Socket
     private remote?: RtpRemote
     private codec?: CodecInstance
-    /** O áudio de banda larga que chega, reduzido a 8 kHz para a gravação, o medidor e os cenários. */
+    /** O áudio de banda larga que chega, reduzido a 8 kHz para a gravação, o medidor. */
     private narrow?: Downsampler
     private rtcpRemote?: { address: string; port: number }
     private srtpOut?: SrtpContext

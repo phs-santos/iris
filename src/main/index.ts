@@ -5,7 +5,6 @@ import {
     globalShortcut,
     Menu,
     nativeImage,
-    net,
     Notification,
     session,
     shell,
@@ -14,7 +13,7 @@ import {
 import { promises as fs } from 'node:fs'
 import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
-import { IPC, type Account, type Scenario, type SettingsPatch, type WindowMode } from '@shared/types'
+import { IPC, type Account, type SettingsPatch, type WindowMode } from '@shared/types'
 import {
     getSecret,
     loadAccounts,
@@ -22,22 +21,18 @@ import {
     saveContacts,
     loadServers,
     saveServers,
-    loadScenarios,
     loadSettings,
     saveAccounts,
-    saveScenarios,
     secretsStatus,
     setSecret,
     updateSettings
 } from './storage'
-import { cliOptions, createCliWindow, prepareCli, registerCliIpc } from './cli'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
 import { setupUpdater } from './updater'
 import { AI_SECRET_PREFIX, registerAiIpc } from './ai'
 import { isAppearance, isProfile } from '@shared/appearance'
 import { isReconnect } from '@shared/reconnect'
 import { parseWav, SAMPLE_RATE } from '@shared/audio'
-import { isWebhookPayload, isWebhookUrl, type WebhookPayload } from '@shared/monitor'
 import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
@@ -86,19 +81,16 @@ app.on('child-process-gone', (_e, details) =>
 app.commandLine.appendSwitch('use-mock-keychain')
 app.commandLine.appendSwitch('password-store', 'basic')
 
-// Linha de comando (RF-31): sem janela visível, sem bandeja e sem trava de instância única.
-const cli = prepareCli()
-
-if (!cli && !app.requestSingleInstanceLock()) {
+if (!app.requestSingleInstanceLock()) {
     app.quit()
 }
 
 // Links de telefone (RF-53). No Windows e no Linux o link chega como argumento; no macOS, pelo evento
 // `open-url`, que pode vir antes do app ficar pronto. O número espera aqui até a interface buscar.
-let pendingLink: string | null = cli ? null : findCallLink(process.argv.slice(1))
+let pendingLink: string | null = findCallLink(process.argv.slice(1))
 
 function receiveLink(number: string | null): void {
-    if (!number || cli) return
+    if (!number) return
     pendingLink = number
     appLog('info', `Link de telefone recebido: ${number}`)
     if (!app.isReady()) return
@@ -146,7 +138,7 @@ let mediaKeyFailed = false
 let callsNow = { ringing: 0, calls: 0 }
 
 function syncMediaKey(): void {
-    const wanted = mediaKeyOn && !cli && callsNow.ringing + callsNow.calls > 0
+    const wanted = mediaKeyOn && callsNow.ringing + callsNow.calls > 0
     const has = globalShortcut.isRegistered(MEDIA_KEY)
     if (wanted && !has) {
         let ok = false
@@ -289,11 +281,6 @@ function registerIpc(): void {
         check(isList(accounts) && accounts.every((a) => isPlainObject(a) && isId(a.id)), 'lista de contas')
         return saveAccounts(accounts)
     })
-    handle(IPC.scenariosLoad, () => loadScenarios())
-    handle(IPC.scenariosSave, (_e, scenarios: Scenario[]) => {
-        check(isList(scenarios) && scenarios.every((s) => isPlainObject(s) && isId(s.id)), 'lista de cenários')
-        return saveScenarios(scenarios)
-    })
     handle(IPC.contactsLoad, () => loadContacts())
     handle(IPC.contactsSave, (_e, contacts: Contact[]) => {
         check(isList(contacts, CONTACTS_LIMIT) && contacts.every(isContact), 'lista de contatos')
@@ -308,12 +295,10 @@ function registerIpc(): void {
         check(isAccountId(id), 'id da conta')
         return getSecret(id)
     })
-    // Com --contas, as senhas do arquivo ficam só na memória desta execução.
     handle(IPC.secretsSet, (_e, id: string, password: string | null) => {
         check(isAccountId(id) && (password === null || isString(password, 1000)), 'senha')
-        return setSecret(id, password, !cliOptions?.accountsFile)
+        return setSecret(id, password)
     })
-    if (!cli) handle(IPC.cliConfig, () => null)
     handle(IPC.secretsStatus, () => secretsStatus())
     // IRIS_MODES=all liga todos os modos, para os testes de ponta a ponta; o app empacotado ignora.
     const allModes = process.env['IRIS_MODES'] === 'all' && !app.isPackaged
@@ -358,13 +343,13 @@ function registerIpc(): void {
             'preferências'
         )
         const settings = await updateSettings(patch)
-        if ('shortcuts' in patch && !cli) applyShortcuts(settings.shortcuts)
+        if ('shortcuts' in patch) applyShortcuts(settings.shortcuts)
         if ('mediaKey' in patch) {
             mediaKeyOn = Boolean(settings.mediaKey)
             mediaKeyFailed = false
             syncMediaKey()
         }
-        trustedHosts = new Set([...settings.trustedHosts, ...(cliOptions?.trustHosts ?? [])])
+        trustedHosts = new Set(settings.trustedHosts)
         return settings
     })
 
@@ -416,7 +401,7 @@ function registerIpc(): void {
         return fs.readFile(result.filePaths[0], 'utf8')
     })
 
-    // WAV dos cenários (RF-41): só arquivos .wav, até 20 MB e 2 minutos de áudio.
+    // WAV do áudio de atendimento (RF-57): só arquivos .wav, até 20 MB e 2 minutos de áudio.
     handle(IPC.audioPickWav, async () => {
         if (!mainWindow) return null
         const result = await dialog.showOpenDialog(mainWindow, {
@@ -489,13 +474,6 @@ function registerIpc(): void {
         mainWindow?.moveTop()
     })
 
-    // Webhook do monitor (RF-43): só http e https, com o corpo conferido e prazo de 10 s. A interface
-    // não abre conexões por conta própria (CSP), então o POST sai daqui.
-    handle(IPC.monitorWebhook, async (_e, url: string, payload: WebhookPayload) => {
-        check(isString(url, 2000) && isWebhookUrl(url) && isWebhookPayload(payload), 'webhook do monitor')
-        return postJson(url, payload)
-    })
-
     handle(IPC.netDiagnose, (_e, request: NetDiagRequest) => {
         check(isNetDiagRequest(request), 'diagnóstico de rede')
         return diagnoseNetwork(request)
@@ -542,23 +520,6 @@ function registerIpc(): void {
     })
 }
 
-/** POST de JSON com prazo de 10 s, para os webhooks do monitor; devolve o código HTTP. */
-async function postJson(url: string, payload: unknown): Promise<number> {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 10_000)
-    try {
-        const response = await net.fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'User-Agent': `Iris/${app.getVersion()}` },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-        })
-        return response.status
-    } finally {
-        clearTimeout(timer)
-    }
-}
-
 function setWindowMode(mode: WindowMode): void {
     if (!mainWindow) return
     const win = mainWindow
@@ -592,14 +553,9 @@ app.whenReady().then(async () => {
         appLog('error', `Preferências não carregadas: ${describeError(error)}`)
         return null
     })
-    trustedHosts = new Set([...(saved?.trustedHosts ?? []), ...(cliOptions?.trustHosts ?? [])])
+    trustedHosts = new Set(saved?.trustedHosts ?? [])
     setupSecurity()
     registerIpc()
-    if (cli) {
-        registerCliIpc()
-        createCliWindow(join(__dirname, '../preload/index.js'))
-        return
-    }
     // Empacotado, o macOS usa o .icns do bundle; em dev o Dock mostraria o ícone do Electron.
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(appIcon)
     registerAiIpc()

@@ -15,7 +15,6 @@ import SettingsDialog from './components/settings/SettingsDialog.vue'
 import AiDialog from './components/AiDialog.vue'
 import GuideDialog from './components/GuideDialog.vue'
 import { useAiStore } from './stores/ai'
-import ScenariosPane from './components/ScenariosPane.vue'
 import PhoneView from './components/PhoneView.vue'
 import PhoneIcon from './components/PhoneIcon.vue'
 import ToastStack from './components/ToastStack.vue'
@@ -24,8 +23,6 @@ import CommandPalette, { type PaletteAction } from './components/CommandPalette.
 import ContactsPane from './components/ContactsPane.vue'
 import { useContactsStore } from './stores/contacts'
 import { useServersStore } from './stores/servers'
-import { useMonitorStore } from './stores/monitor'
-import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
 import { useToastsStore } from './stores/toasts'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
@@ -38,11 +35,10 @@ const accounts = useAccountsStore()
 const calls = useCallsStore()
 const log = useLogStore()
 const devices = useDevicesStore()
-const scenarios = useScenariosStore()
 const ai = useAiStore()
 const prefs = usePreferencesStore()
 const toasts = useToastsStore()
-const centerTab = ref<'phone' | 'contacts' | 'scenarios'>('phone')
+const centerTab = ref<'phone' | 'contacts'>('phone')
 /** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
 const mode = ref<WindowMode>('bench')
 const phone = ref<InstanceType<typeof PhoneView> | null>(null)
@@ -64,9 +60,6 @@ const paletteActions = computed<PaletteAction[]>(() => [
     { label: t('app.acao_registrar_todas'), run: () => void accounts.registerAll() },
     { label: t('app.acao_desregistrar_todas'), run: () => void accounts.unregisterAll() },
     { label: t('app.acao_aba', { name: t('app.contatos') }), run: () => (centerTab.value = 'contacts') },
-    ...(prefs.isOn('scenarios')
-        ? [{ label: t('app.acao_aba', { name: t('app.cenarios') }), run: () => (centerTab.value = 'scenarios') }]
-        : []),
     { label: t('app.configuracoes'), hint: t('app.atalho_configuracoes'), run: () => (settingsAt.value = 'profile') },
     { label: t('app.acao_servidores'), run: () => (settingsAt.value = 'servers') },
     { label: t('app.acao_notificacoes'), run: () => (settingsAt.value = 'notifications') },
@@ -113,14 +106,6 @@ function tapLogo(): void {
     logoTaps = taps
     if (open) void openModes()
 }
-
-// Aba de um modo que foi desligado volta para o Telefone; o monitor só roda com os cenários ligados.
-watch(
-    () => prefs.isOn('scenarios'),
-    (scenariosOn) => {
-        if (centerTab.value === 'scenarios' && !scenariosOn) centerTab.value = 'phone'
-    }
-)
 
 // Trocar o idioma refaz as telas; as Configurações voltam abertas onde a pessoa estava.
 watch(currentLocale, () => {
@@ -279,13 +264,6 @@ onMounted(async () => {
     await accounts.load()
     const main = prefs.profile.mainAccountId
     if (main && accounts.accounts.some((a) => a.id === main)) accounts.selectedId = main
-    await scenarios.load()
-    // O monitor de cenários só roda com o modo Cenários ligado.
-    watch(
-        () => prefs.isOn('scenarios'),
-        (on) => (on ? useMonitorStore().start() : useMonitorStore().stop()),
-        { immediate: true }
-    )
     await useContactsStore().load()
     await useServersStore().load()
     await accounts.refreshProblems()
@@ -382,17 +360,6 @@ onUnmounted(() => {
                     >
                         {{ $t('app.contatos') }}
                     </button>
-                    <button
-                        v-if="prefs.isOn('scenarios')"
-                        role="tab"
-                        class="ctab"
-                        :class="{ on: centerTab === 'scenarios' }"
-                        :aria-selected="centerTab === 'scenarios'"
-                        @click="centerTab = 'scenarios'"
-                    >
-                        {{ $t('app.cenarios') }}
-                        <span v-if="scenarios.running" class="count run">{{ $t('app.rodando') }}</span>
-                    </button>
                 </div>
                 <!-- Chamada recebida em destaque, acima de tudo, em qualquer aba (RF-10). -->
                 <div
@@ -433,7 +400,6 @@ onUnmounted(() => {
                     </div>
                 </template>
                 <ContactsPane v-else-if="centerTab === 'contacts'" @dialed="centerTab = 'phone'" />
-                <ScenariosPane v-else-if="centerTab === 'scenarios'" />
             </section>
 
             <LogPane v-if="prefs.isOn('log')" />
@@ -598,9 +564,6 @@ onUnmounted(() => {
     border-radius: 8px;
     background: var(--raise);
     color: var(--fg);
-}
-.count.run {
-    background: color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .calls-head {
     display: flex;

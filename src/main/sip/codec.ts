@@ -1,4 +1,4 @@
-// Codecs de áudio do motor próprio (RF-47): G.711, G.722 e Opus. O áudio dos cenários, da gravação e
+// Codecs de áudio do motor próprio (RF-47): G.711, G.722 e Opus. O áudio da gravação e
 // do medidor é sempre PCM de 16 bits a 8000 Hz, em blocos de 20 ms; o Opus aceita essa taxa e manda em
 // banda estreita, o que basta para falar com um PBX que só oferece Opus. O G.722 é de banda larga:
 // além dessa via de 8 kHz, tem a de 16 kHz, por onde passam o microfone e o alto-falante. O relógio do
@@ -57,7 +57,7 @@ class G722Codec implements CodecInstance {
     private up = new Upsampler()
     private down = new Downsampler()
 
-    /** Áudio que já nasce a 8 kHz (tom e arquivo dos cenários): sobe para 16 kHz antes de codificar. */
+    /** Áudio que já nasce a 8 kHz (tom e arquivo do áudio de atendimento): sobe para 16 kHz antes de codificar. */
     encode(pcm: Int16Array): Buffer {
         return this.encoder.encode(this.up.process(pcm))
     }

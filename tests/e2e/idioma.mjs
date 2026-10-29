@@ -33,7 +33,7 @@ const screenText = () =>
     })
 /** Palavras que só existem no português da interface. */
 const PORTUGUESE =
-    /\b(Configurações|Telefone|Contatos|Cenários|Contas|Ligar|Guia|Registrar|Fechar|Aparência|Idioma|Notificações|Servidores|Atalhos|Nenhum|Número|chamadas|registradas)\b/
+    /\b(Configurações|Telefone|Contatos|Contas|Ligar|Guia|Registrar|Fechar|Aparência|Idioma|Notificações|Servidores|Atalhos|Nenhum|Número|chamadas|registradas)\b/
 async function expectEnglish(where) {
     const text = await screenText()
     const found = PORTUGUESE.exec(text)
@@ -71,12 +71,12 @@ try {
     await dialog.getByRole('button', { name: 'Close', exact: true }).click()
     step('trocar para inglês refaz as telas na hora; todas as seções das Configurações em inglês')
 
-    for (const name of ['Phone', 'Contacts', 'Scenarios']) {
+    for (const name of ['Phone', 'Contacts']) {
         await page.getByRole('tab', { name, exact: true }).click()
         await expectEnglish(`aba ${name}`)
     }
     await page.getByRole('tab', { name: 'Phone', exact: true }).click()
-    step('abas Phone, Contacts e Scenarios em inglês')
+    step('abas Phone e Contacts em inglês')
 
     // Uma chamada: os botões e o estado do cartão em inglês.
     await page.locator('.chip', { hasText: '1002' }).click()

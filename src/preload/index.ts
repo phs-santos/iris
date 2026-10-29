@@ -10,10 +10,6 @@ const api: IrisApi = {
         load: () => ipcRenderer.invoke(IPC.accountsLoad),
         save: (accounts) => ipcRenderer.invoke(IPC.accountsSave, accounts)
     },
-    scenarios: {
-        load: () => ipcRenderer.invoke(IPC.scenariosLoad),
-        save: (scenarios) => ipcRenderer.invoke(IPC.scenariosSave, scenarios)
-    },
     contacts: {
         load: () => ipcRenderer.invoke(IPC.contactsLoad),
         save: (contacts) => ipcRenderer.invoke(IPC.contactsSave, contacts)
@@ -71,17 +67,8 @@ const api: IrisApi = {
     net: {
         diagnose: (request) => ipcRenderer.invoke(IPC.netDiagnose, request)
     },
-    monitor: {
-        webhook: (url, payload) => ipcRenderer.invoke(IPC.monitorWebhook, url, payload)
-    },
     setTray: (counts) => ipcRenderer.send(IPC.tray, counts),
     logError: (text) => ipcRenderer.send(IPC.logError, text),
-    cli: {
-        config: () => ipcRenderer.invoke(IPC.cliConfig),
-        print: (line, error) => ipcRenderer.send(IPC.cliPrint, line, Boolean(error)),
-        writeReport: (content) => ipcRenderer.invoke(IPC.cliReport, content),
-        finish: (code) => ipcRenderer.send(IPC.cliFinish, code)
-    },
     setWindowMode: (mode) => ipcRenderer.invoke(IPC.windowMode, mode),
     onCertificateError: (listener) => {
         const handler = (_e: Electron.IpcRendererEvent, event: CertificateErrorEvent): void => listener(event)

@@ -35,8 +35,6 @@ export interface CallView {
     endCode?: number
     failed: boolean
     transfer?: string
-    /** Último retorno da transferência, para quem precisa do código (cenários). */
-    transferResult?: { code: number; reason: string; final: boolean }
     quality?: CallQuality | null
     /** O que quem ligou ouve antes do atendimento: o toque do app ou o áudio do PBX (RF-20). */
     ringback?: Ringback
@@ -214,10 +212,7 @@ export const useCallsStore = defineStore('calls', () => {
         })
         call.on('transfer', (code, reason, final) => {
             const c = v()
-            if (c) {
-                c.transfer = `${code} ${reason}`.trim()
-                c.transferResult = { code, reason, final }
-            }
+            if (c) c.transfer = `${code} ${reason}`.trim()
             // Concluída a assistida, o PBX costuma derrubar as duas pernas; se não derrubar, o app desliga.
             if (c?.consultId && final && code >= 200 && code < 300) {
                 const consultId = c.consultId
@@ -347,10 +342,6 @@ export const useCallsStore = defineStore('calls', () => {
             log.add(c.accountId, 'error', 'event', `Gravação falhou: ${(error as Error).message}`)
         }
     }
-
-    /** Volume do áudio recebido, para os cenários (RF-41). */
-    const audioLevel = (id: string): Promise<number | null> =>
-        engineCalls.get(id)?.audioLevel() ?? Promise.resolve(null)
 
     /** Áudio de atendimento (RF-57): o WAV da conta toca para quem ligou, logo depois de atender. */
     async function playAnswerAudio(accountId: string, id: string): Promise<void> {
@@ -530,7 +521,6 @@ export const useCallsStore = defineStore('calls', () => {
         shortcut,
         toggleHold,
         toggleRecording,
-        audioLevel,
         playAudio,
         canPlay,
         sendDtmf,

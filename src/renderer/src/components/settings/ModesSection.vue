@@ -10,7 +10,6 @@ const prefs = usePreferencesStore()
 const label = (mode: ModeId): { name: string; hint: string } =>
     ({
         log: { name: t('modesSection.log'), hint: t('modesSection.log_dica') },
-        scenarios: { name: t('modesSection.cenarios'), hint: t('modesSection.cenarios_dica') },
         video: { name: t('modesSection.video'), hint: t('modesSection.video_dica') }
     })[mode]
 
