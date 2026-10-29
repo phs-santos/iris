@@ -12,9 +12,7 @@ import { GUIDE_EN } from '@renderer/i18n/guide.en'
 const SECTION_MODE: Record<string, ModeId> = {
     log: 'log',
     saude: 'log',
-    cenarios: 'scenarios',
-    mensagens: 'messages',
-    sdr: 'sdr'
+    cenarios: 'scenarios'
 }
 const prefs = usePreferencesStore()
 const GUIDE = (currentLocale() === 'en' ? GUIDE_EN : GUIDE_PT).filter(

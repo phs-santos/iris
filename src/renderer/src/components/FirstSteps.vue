@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import { t } from '@renderer/i18n'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
-import { useHistoryStore } from '@renderer/stores/history'
 import { usePreferencesStore } from '@renderer/stores/preferences'
 import { useServersStore } from '@renderer/stores/servers'
 
@@ -15,14 +14,13 @@ import { useServersStore } from '@renderer/stores/servers'
 const emit = defineEmits<{ servers: []; account: [] }>()
 const accounts = useAccountsStore()
 const calls = useCallsStore()
-const history = useHistoryStore()
 const prefs = usePreferencesStore()
 const servers = useServersStore()
 
 const real = computed(() => accounts.accounts.filter((a) => !a.simulated))
 const steps = computed(() => [
     {
-        done: history.entries.some((e) => e.answered),
+        done: calls.calls.some((c) => c.establishedAt),
         title: t('firstSteps.passo1'),
         text: t('firstSteps.passo1_texto'),
         action: t('firstSteps.passo1_acao'),

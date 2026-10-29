@@ -2,9 +2,6 @@ import { app } from 'electron'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { isHistoryEntry, type HistoryEntry, type HistoryFile } from '@shared/history'
-import { isChatMessage, type ChatMessage, type MessagesFile } from '@shared/messages'
-import { emptySdr, isSdrData, type SdrData } from '@shared/sdr'
 import { isContact, type Contact, type ContactsFile } from '@shared/contacts'
 import { isSipServer, type ServersFile, type SipServer } from '@shared/servers'
 import type {
@@ -146,45 +143,6 @@ export async function saveServers(servers: SipServer[]): Promise<void> {
     await writeJson('servers.json', { schemaVersion: 1, servers } satisfies ServersFile)
 }
 
-export async function loadHistory(): Promise<HistoryEntry[]> {
-    const data = await readDataFile<HistoryFile>(
-        'history.json',
-        'histórico de chamadas',
-        (d) => isObject(d) && Array.isArray(d.entries)
-    )
-    return (data?.entries ?? []).filter(isHistoryEntry)
-}
-
-export async function saveHistory(entries: HistoryEntry[]): Promise<void> {
-    const data: HistoryFile = { schemaVersion: 1, entries }
-    await writeJson('history.json', data)
-}
-
-/** Conversas por mensagem de texto (RF-54). */
-export async function loadMessages(): Promise<ChatMessage[]> {
-    const data = await readDataFile<MessagesFile>(
-        'messages.json',
-        'mensagens de texto',
-        (d) => isObject(d) && Array.isArray(d.messages)
-    )
-    return (data?.messages ?? []).filter(isChatMessage)
-}
-
-export async function saveMessages(messages: ChatMessage[]): Promise<void> {
-    const data: MessagesFile = { schemaVersion: 1, messages }
-    await writeJson('messages.json', data)
-}
-
-/** Fila do modo SDR: as pessoas, as ligações feitas e as opções da campanha. */
-export async function loadSdr(): Promise<SdrData> {
-    const data = await readDataFile<SdrData>('sdr.json', 'fila do modo SDR', (d) => isSdrData(d))
-    return data ?? emptySdr()
-}
-
-export async function saveSdr(data: SdrData): Promise<void> {
-    await writeJson('sdr.json', data)
-}
-
 const defaultSettings: Settings = { schemaVersion: 1, trustedHosts: [] }
 
 export async function loadSettings(): Promise<Settings> {
@@ -193,7 +151,26 @@ export async function loadSettings(): Promise<Settings> {
         'preferências',
         (d) => isObject(d) && (d.trustedHosts === undefined || Array.isArray(d.trustedHosts))
     )
-    return { ...defaultSettings, ...(data ?? {}) }
+    return dropRemovedKeys({ ...defaultSettings, ...(data ?? {}) })
+}
+
+/**
+ * Tira das preferências as chaves de recursos que deixaram de existir na 2.0 (modos SDR e Mensagens, aviso de
+ * mensagem de texto): arquivos antigos continuam valendo, e a validação dos canais não recusa o que a tela devolve (RNF-19).
+ */
+function dropRemovedKeys(settings: Settings): Settings {
+    const clean = (enabled: object | undefined, removed: string[]): Record<string, boolean> | undefined =>
+        enabled
+            ? (Object.fromEntries(Object.entries(enabled).filter(([k]) => !removed.includes(k))) as Record<
+                  string,
+                  boolean
+              >)
+            : undefined
+    const out = { ...settings } as Settings & { modes?: { enabled?: object }; notifications?: { enabled?: object } }
+    if (out.modes?.enabled) out.modes = { ...out.modes, enabled: clean(out.modes.enabled, ['sdr', 'messages']) }
+    if (out.notifications?.enabled)
+        out.notifications = { ...out.notifications, enabled: clean(out.notifications.enabled, ['message']) }
+    return out
 }
 
 let settingsQueue: Promise<unknown> = Promise.resolve()

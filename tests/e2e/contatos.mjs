@@ -63,17 +63,6 @@ try {
     await call.getByRole('button', { name: 'Desligar' }).click()
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
 
-    // Salvar contato a partir do histórico: a chamada recebida pelo 1002 veio do 1001, que não está na agenda.
-    await page.getByRole('tab', { name: 'Histórico' }).click()
-    await page.getByRole('button', { name: 'Salvar 1001 nos contatos' }).first().click()
-    form = page.getByRole('dialog')
-    if ((await form.getByLabel('Número ou ramal').inputValue()) !== '1001')
-        throw new Error('o número não veio do histórico')
-    await form.getByLabel('Nome').fill('Suporte da Matriz')
-    await form.getByRole('button', { name: 'Salvar' }).click()
-    await page.locator('.history .entry .name', { hasText: 'Suporte da Matriz' }).first().waitFor()
-    step('salvar contato a partir do histórico, e o histórico passa a mostrar o nome')
-
     // ─── Servidores ───
     await page.getByRole('button', { name: 'Configurações' }).click()
     const settings = page.getByRole('dialog')

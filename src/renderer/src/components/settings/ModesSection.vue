@@ -11,9 +11,7 @@ const label = (mode: ModeId): { name: string; hint: string } =>
     ({
         log: { name: t('modesSection.log'), hint: t('modesSection.log_dica') },
         scenarios: { name: t('modesSection.cenarios'), hint: t('modesSection.cenarios_dica') },
-        messages: { name: t('modesSection.mensagens'), hint: t('modesSection.mensagens_dica') },
-        video: { name: t('modesSection.video'), hint: t('modesSection.video_dica') },
-        sdr: { name: t('modesSection.sdr'), hint: t('modesSection.sdr_dica') }
+        video: { name: t('modesSection.video'), hint: t('modesSection.video_dica') }
     })[mode]
 
 async function hide(): Promise<void> {

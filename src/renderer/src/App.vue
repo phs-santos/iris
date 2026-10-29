@@ -18,16 +18,12 @@ import { useAiStore } from './stores/ai'
 import ScenariosPane from './components/ScenariosPane.vue'
 import PhoneView from './components/PhoneView.vue'
 import PhoneIcon from './components/PhoneIcon.vue'
-import HistoryPane from './components/HistoryPane.vue'
 import ToastStack from './components/ToastStack.vue'
 import FirstSteps from './components/FirstSteps.vue'
 import CommandPalette, { type PaletteAction } from './components/CommandPalette.vue'
 import ContactsPane from './components/ContactsPane.vue'
-import MessagesPane from './components/MessagesPane.vue'
-import { useMessagesStore } from './stores/messages'
 import { useContactsStore } from './stores/contacts'
 import { useServersStore } from './stores/servers'
-import { useHistoryStore } from './stores/history'
 import { useMonitorStore } from './stores/monitor'
 import { useScenariosStore } from './stores/scenarios'
 import { useDevicesStore } from './stores/devices'
@@ -37,8 +33,6 @@ import logoMarkDark from './assets/logo-mark.svg'
 import logoMarkLight from './assets/logo-mark-light.svg'
 import { accountHost } from './lib/accounts'
 import { secretTap } from '@shared/modes'
-import SdrView from './components/sdr/SdrView.vue'
-import { useSdrStore } from './stores/sdr'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
@@ -47,10 +41,8 @@ const devices = useDevicesStore()
 const scenarios = useScenariosStore()
 const ai = useAiStore()
 const prefs = usePreferencesStore()
-const history = useHistoryStore()
 const toasts = useToastsStore()
-const centerTab = ref<'phone' | 'contacts' | 'messages' | 'scenarios' | 'history' | 'sdr'>('phone')
-const messages = useMessagesStore()
+const centerTab = ref<'phone' | 'contacts' | 'scenarios'>('phone')
 /** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
 const mode = ref<WindowMode>('bench')
 const phone = ref<InstanceType<typeof PhoneView> | null>(null)
@@ -72,13 +64,6 @@ const paletteActions = computed<PaletteAction[]>(() => [
     { label: t('app.acao_registrar_todas'), run: () => void accounts.registerAll() },
     { label: t('app.acao_desregistrar_todas'), run: () => void accounts.unregisterAll() },
     { label: t('app.acao_aba', { name: t('app.contatos') }), run: () => (centerTab.value = 'contacts') },
-    ...(prefs.isOn('messages')
-        ? [{ label: t('app.acao_aba', { name: t('app.mensagens') }), run: () => (centerTab.value = 'messages') }]
-        : []),
-    ...(prefs.isOn('sdr')
-        ? [{ label: t('app.acao_aba', { name: t('app.sdr') }), run: () => (centerTab.value = 'sdr') }]
-        : []),
-    { label: t('app.acao_aba', { name: t('app.historico') }), run: () => (centerTab.value = 'history') },
     ...(prefs.isOn('scenarios')
         ? [{ label: t('app.acao_aba', { name: t('app.cenarios') }), run: () => (centerTab.value = 'scenarios') }]
         : []),
@@ -131,11 +116,9 @@ function tapLogo(): void {
 
 // Aba de um modo que foi desligado volta para o Telefone; o monitor só roda com os cenários ligados.
 watch(
-    () => [prefs.isOn('messages'), prefs.isOn('scenarios'), prefs.isOn('sdr')],
-    ([messagesOn, scenariosOn, sdrOn]) => {
-        const tab = centerTab.value
-        if ((tab === 'messages' && !messagesOn) || (tab === 'scenarios' && !scenariosOn) || (tab === 'sdr' && !sdrOn))
-            centerTab.value = 'phone'
+    () => prefs.isOn('scenarios'),
+    (scenariosOn) => {
+        if (centerTab.value === 'scenarios' && !scenariosOn) centerTab.value = 'phone'
     }
 )
 
@@ -303,11 +286,7 @@ onMounted(async () => {
         (on) => (on ? useMonitorStore().start() : useMonitorStore().stop()),
         { immediate: true }
     )
-    await history.load()
     await useContactsStore().load()
-    await messages.load()
-    // A fila do SDR é lida sempre, mesmo com o modo desligado: senão a primeira gravação apagaria a salva.
-    await useSdrStore().load()
     await useServersStore().load()
     await accounts.refreshProblems()
     offLink = window.iris.links.onArrived(() => void takeLink())
@@ -404,27 +383,6 @@ onUnmounted(() => {
                         {{ $t('app.contatos') }}
                     </button>
                     <button
-                        v-if="prefs.isOn('messages')"
-                        role="tab"
-                        class="ctab"
-                        :class="{ on: centerTab === 'messages' }"
-                        :aria-selected="centerTab === 'messages'"
-                        @click="centerTab = 'messages'"
-                    >
-                        {{ $t('app.mensagens') }}
-                        <span v-if="messages.unread" class="count run tabular">{{ messages.unread }}</span>
-                    </button>
-                    <button
-                        v-if="prefs.isOn('sdr')"
-                        role="tab"
-                        class="ctab"
-                        :class="{ on: centerTab === 'sdr' }"
-                        :aria-selected="centerTab === 'sdr'"
-                        @click="centerTab = 'sdr'"
-                    >
-                        {{ $t('app.sdr') }}
-                    </button>
-                    <button
                         v-if="prefs.isOn('scenarios')"
                         role="tab"
                         class="ctab"
@@ -434,15 +392,6 @@ onUnmounted(() => {
                     >
                         {{ $t('app.cenarios') }}
                         <span v-if="scenarios.running" class="count run">{{ $t('app.rodando') }}</span>
-                    </button>
-                    <button
-                        role="tab"
-                        class="ctab"
-                        :class="{ on: centerTab === 'history' }"
-                        :aria-selected="centerTab === 'history'"
-                        @click="centerTab = 'history'"
-                    >
-                        {{ $t('app.historico') }}
                     </button>
                 </div>
                 <!-- Chamada recebida em destaque, acima de tudo, em qualquer aba (RF-10). -->
@@ -483,10 +432,7 @@ onUnmounted(() => {
                         </p>
                     </div>
                 </template>
-                <HistoryPane v-else-if="centerTab === 'history'" @dialed="centerTab = 'phone'" />
                 <ContactsPane v-else-if="centerTab === 'contacts'" @dialed="centerTab = 'phone'" />
-                <MessagesPane v-else-if="centerTab === 'messages'" @dialed="centerTab = 'phone'" />
-                <SdrView v-else-if="centerTab === 'sdr'" />
                 <ScenariosPane v-else-if="centerTab === 'scenarios'" />
             </section>
 

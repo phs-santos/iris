@@ -44,7 +44,6 @@
 
 /* Densidade compacta: menos espaço vertical nas listas. */
 :root[data-density='compact'] .acc .row,
-:root[data-density='compact'] .history .entry,
 :root[data-density='compact'] .contact {
     padding-top: 3px;
     padding-bottom: 3px;

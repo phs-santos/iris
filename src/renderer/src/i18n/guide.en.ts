@@ -191,7 +191,7 @@ export const GUIDE_EN: GuideSection[] = [
                     '**⋯ → Health**: runs the checks of the account. See "Health and diagnostics".',
                     '**⋯ → Duplicate**: creates a copy, to add several similar extensions without retyping everything.',
                     '**⋯ → SIP request…** (registered plain SIP accounts and simulated ones): sends a single request, such as `OPTIONS`, `MESSAGE` or `SUBSCRIBE`, with the headers and body you write, and shows the whole reply from the PBX and how long it took.',
-                    '**⋯ → Load test…** (registered plain SIP accounts): places several calls at once through the account, each one playing a tone, to a destination that answers on its own (an echo number, an IVR). At the end it shows how many were answered, how many had audio, the time to answer, the packet loss and the jitter, and lets you save the report. It goes up to 200 calls. They do not show up as cards or in the history, and closing the screen ends them all.',
+                    '**⋯ → Load test…** (registered plain SIP accounts): places several calls at once through the account, each one playing a tone, to a destination that answers on its own (an echo number, an IVR). At the end it shows how many were answered, how many had audio, the time to answer, the packet loss and the jitter, and lets you save the report. It goes up to 200 calls. They do not show up as cards, and closing the screen ends them all.',
                     '**⋯ → Export PCAP** (registered plain SIP accounts): saves what went through the network for that account since registration, to open in Wireshark. "SIP only" takes the signaling; "with audio" also takes the RTP packets. The capture keeps the most recent 30 MB.',
                     '**⋯ → Delete**: asks for confirmation and deletes the account and its stored password.'
                 ]
@@ -480,73 +480,10 @@ export const GUIDE_EN: GuideSection[] = [
                 items: [
                     "**Call** dials from the contact's account; if it is not registered, from the account selected in the dialer. The button is greyed out when neither is online.",
                     'The **star** marks the contact as a favorite: it shows first in the list and becomes a shortcut in the dialer.',
-                    'When a contact calls, or when you call them, the call shows the **name** from the address book. So does the history.',
-                    'In **History**, **Save contact** creates the contact with the number of the call already filled in.',
+                    'When a contact calls, or when you call them, the call shows the **name** from the address book.',
                     'While you type in the dialer, the numbers of the address book show up as suggestions.',
                     '**Import CSV** and **Export CSV** take the address book to and from a spreadsheet, with the columns `nome;numero;empresa;observacao;favorito`. Contacts with a number that already exists are not added again.'
                 ]
-            }
-        ]
-    },
-    {
-        id: 'mensagens',
-        title: 'Messages',
-        summary: 'Text conversation between extensions, through the PBX itself.',
-        blocks: [
-            {
-                type: 'p',
-                text: 'The **Messages** tab sends and receives text by SIP MESSAGE, the messaging feature of the protocol itself. It works on WebRTC, plain SIP and simulated accounts, as long as the PBX relays messages between extensions.'
-            },
-            {
-                type: 'steps',
-                items: [
-                    'Pick the source account in the accounts list.',
-                    'On the Messages tab, type the extension under **New conversation** and click the button.',
-                    'Write and press **Enter**. Shift+Enter adds a line break.'
-                ]
-            },
-            {
-                type: 'list',
-                items: [
-                    'Each conversation belongs to one account with one extension. The number next to the tab name is the count of unread messages.',
-                    'A message that arrives with the conversation closed becomes an on-screen notice and a system notification (you can turn that off in Settings → Notifications).',
-                    'If the PBX refuses, the message is marked **not delivered**, with its reply (for example, 404 Not Found).',
-                    '**Call** rings the extension of the conversation; **Delete conversation** removes the messages from this machine.'
-                ]
-            },
-            {
-                type: 'note',
-                kind: 'atenção',
-                text: 'On WebRTC accounts Íris does not get the confirmation from the PBX: with no error, the message went out, but it may not have arrived. On plain SIP, "not delivered" is what the PBX replied. Messages are kept in messages.json in the data folder, unencrypted, and the text shows in the event log.'
-            },
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'On the simulated PBX, send a message to **8000**: the IVR replies on its own, so you can see the conversation working with a single account. On Asterisk, the extension needs `message_context` pointing to a context with `MessageSend`.'
-            }
-        ]
-    },
-    {
-        id: 'historico',
-        title: 'Call history',
-        summary: 'What happened to each call, after its card left the screen.',
-        blocks: [
-            {
-                type: 'p',
-                text: 'The **History** tab, next to Phone and Scenarios, lists the ended calls, newest first: the number, the account, the time, how long the conversation lasted and how it ended, with the SIP code when there was a failure (for example `486 Busy Here`).'
-            },
-            {
-                type: 'list',
-                items: [
-                    '**Call again** dials the same number from the same account and goes back to the Phone tab. It is greyed out if the account is not registered.',
-                    '**SIP flow** opens the diagram of the calls of that account. The diagram comes from the log, which only exists while the app is open: for calls from before the app was closed, the list stays, but the diagram does not.',
-                    '**Clear history** deletes everything, after confirming.'
-                ]
-            },
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'The history keeps the 500 most recent calls in `history.json`, in the data folder. Calls made by scenarios are included too.'
             }
         ]
     },
@@ -728,69 +665,6 @@ export const GUIDE_EN: GuideSection[] = [
         ]
     },
     {
-        id: 'sdr',
-        title: 'SDR mode',
-        summary: 'A call queue for the day, with the same opening on every call and the result in one click.',
-        blocks: [
-            {
-                type: 'p',
-                text: 'The **SDR** tab is for people who make many prospecting calls a day. You import the list, press **Start the queue** and Íris calls one person after another: it shows the script with their details, plays your recorded opening when they answer, handles voicemail on its own and, at the end, asks only for the result.'
-            },
-            {
-                type: 'steps',
-                items: [
-                    '**Add numbers**: paste the list right into the panel, one person per line: just the number, "name number" or "name; number; company". Or **Import spreadsheet**: a CSV with the columns `nome;numero;empresa;segmento` (name, number, company, segment). Other columns become script variables: a `cargo` column becomes `{cargo}`. Repeated numbers are not added again.',
-                    'In **Options**, pick the account, write the script and record the opening (or choose a WAV). The recording goes to the **Downloads** folder, with a name starting with `iris-`. You can have one opening per segment.',
-                    'Still in Options, set the hours and days when the queue may call, how many attempts each person gets and the daily goal.',
-                    'Click **Start the queue**. To call just one person, use **Call** next to them in the list: that click calls even outside the queue hours. Extensions (such as `2425`) and PBX codes (such as `*97`) work too.'
-                ]
-            },
-            { type: 'h', text: 'During the call' },
-            {
-                type: 'list',
-                items: [
-                    'The **script** shows in large type, with `{nome}`, `{primeiro_nome}`, `{empresa}`, `{segmento}`, `{sdr}` (your name from Profile) and the spreadsheet columns filled in. A variable with no value stays visible, so you notice it.',
-                    'With the **recorded opening** on, it plays when the person answers, after their "Hello?". You hear it too. To talk over it, press **Esc** or **Stop the opening**: the microphone comes back right away. The recording only plays on plain SIP accounts; on WebRTC, read the script.',
-                    '**Voicemail**: from the sound right after the answer (a person says "Hello?" and waits; voicemail talks without stopping), Íris hangs up and moves on, or waits for the tone and leaves your recorded message. You can also leave the decision to yourself. Detection gets most cases right, not all.',
-                    'Busy, no answer and numbers that do not exist close on their own, with no click.'
-                ]
-            },
-            { type: 'h', text: 'After the call' },
-            {
-                type: 'table',
-                head: ['Key', 'Result', 'What happens'],
-                rows: [
-                    ['1', 'Interested', 'Leaves the queue and counts as a conversion'],
-                    ['2', 'Meeting booked', 'Leaves the queue and counts as a conversion'],
-                    ['3', 'Not interested', 'Leaves the queue'],
-                    ['4', 'Call back later', 'Comes back at the time you set'],
-                    ['5', 'No answer', 'Comes back after the interval, up to the attempt limit'],
-                    ['6', 'Voicemail', 'Comes back after the interval, up to the attempt limit'],
-                    ['7', 'Wrong number', 'Leaves the queue'],
-                    ['8', 'Asked not to be called', 'Leaves the queue and is never called again']
-                ]
-            },
-            {
-                type: 'p',
-                text: "The **note** goes along. After the result, the next call goes out on its own in a few seconds (you can pause or call right away). The **panel** at the top shows the day's calls against the goal, answered calls, talks of 30 s or more, conversions, voicemails and talk time."
-            },
-            { type: 'h', text: 'CRM and summary' },
-            {
-                type: 'list',
-                items: [
-                    '**Export results** saves the queue as CSV, with the result, attempts, next call and note for each person.',
-                    'With a **webhook** in Options, every result goes to the CRM right away, as a `POST` with JSON.',
-                    'With **Record answered calls** (plain SIP), **Summarize with AI** shows up after the call: the audio goes to the model chosen in Settings → AI help, which must understand audio, and a three-line summary comes back, which also goes in the webhook.'
-                ]
-            },
-            {
-                type: 'note',
-                kind: 'atenção',
-                text: 'Sales calls have rules: do-not-call lists, allowed calling hours and data protection laws for recording and keeping data. The queue only calls during the configured hours and never calls again someone who asked not to be called, but following the rules is up to whoever uses it. Tell people when the call is recorded.'
-            }
-        ]
-    },
-    {
         id: 'configuracoes',
         title: 'Settings',
         summary: 'Your profile, the colors of Íris and the general preferences, on a single screen.',
@@ -837,7 +711,7 @@ export const GUIDE_EN: GuideSection[] = [
             { type: 'h', text: 'Theme and density' },
             {
                 type: 'p',
-                text: "In **Appearance**, the **Theme** can be Dark (the default), Light or **System**, which follows your computer's light or dark mode and switches on its own. **Compact lists** makes the rows of accounts, history and contacts shorter, to fit more on screen."
+                text: "In **Appearance**, the **Theme** can be Dark (the default), Light or **System**, which follows your computer's light or dark mode and switches on its own. **Compact lists** makes the rows of accounts and contacts shorter, to fit more on screen."
             },
             { type: 'h', text: 'Accent color' },
             {
@@ -1204,7 +1078,7 @@ export const GUIDE_EN: GuideSection[] = [
                     'The **icon color** tells the overall state: grey with no account registered, green with registered accounts, yellow with a call ringing, blue in a call and red when some account is in error. Hovering over it shows the numbers.',
                     '**Sair** (quit) really closes the app: the extensions go offline and the calls drop.',
                     'An **incoming call** raises a system notification, with **Atender** (answer) and **Recusar** (decline) on the notification itself (on macOS); clicking it opens the window. In the Bench, it also shows on a colored strip at the top of the middle column.',
-                    'These also notify: **missed call**, **account dropped**, new **voicemail**, **text message** and a **monitored scenario** that failed or passed again. In **Settings → Notifications** you choose which ones you want, can make an incoming call bring the window to the front and have the **Test notification** button.',
+                    'These also notify: **missed call**, **account dropped**, new **voicemail** and a **monitored scenario** that failed or passed again. In **Settings → Notifications** you choose which ones you want, can make an incoming call bring the window to the front and have the **Test notification** button.',
                     'Nothing shows? On macOS, check in **System Settings → Notifications → Iris** whether notifications are allowed and **Do Not Disturb** is off. Auto-answer accounts do not notify of incoming calls.'
                 ]
             },
@@ -1279,7 +1153,6 @@ export const GUIDE_EN: GuideSection[] = [
                         '`senhas.json`, encrypted with its own key (`chave-local.bin`); both can only be read by your system account'
                     ],
                     ['Scenarios', '`scenarios.json`'],
-                    ['Call history', '`history.json`, with the 500 most recent'],
                     ['Contacts and servers', '`contacts.json` and `servers.json`'],
                     [
                         'Call recordings',

@@ -4,7 +4,6 @@ import type { AiModel, AiRequest, AiResult, AiSettings, AiStatus } from './ai'
 import type { CliConfig } from './cli'
 import type { Appearance, Profile } from './appearance'
 import type { TrayCounts } from './tray'
-import type { HistoryEntry } from './history'
 import type { Contact } from './contacts'
 import type { SipServer } from './servers'
 import type { MonitorSettings, WebhookPayload } from './monitor'
@@ -16,9 +15,7 @@ import type { AccountTransport, SipTransportKind } from './sip-target'
 import type { LinkSettings, LinkStatus } from './links'
 import type { ShortcutAction, ShortcutSettings } from './shortcuts'
 import type { RingtoneId } from './ringtones'
-import type { ChatMessage } from './messages'
 import type { ModeSettings } from './modes'
-import type { SdrData, SdrWebhookPayload } from './sdr'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
@@ -218,7 +215,6 @@ export type NativeSipEventBody =
     | { type: 'call'; callId: string; event: NativeCallEvent }
     | { type: 'presence'; extension: string; state: PresenceState }
     | { type: 'mwi'; info: MwiInfo }
-    | { type: 'message'; from: string; fromName?: string; text: string }
     /** 20 ms de áudio recebido: 320 amostras de 16 bits a 16000 Hz. */
     | { type: 'audio'; callId: string; pcm: Int16Array }
 
@@ -330,25 +326,6 @@ export interface IrisApi {
         load(): Promise<SipServer[]>
         save(servers: SipServer[]): Promise<void>
     }
-    /** Modo SDR: a fila, a gravação da abertura e o webhook para o CRM. */
-    sdr: {
-        load(): Promise<SdrData>
-        save(data: SdrData): Promise<void>
-        /** Grava o PCM (16 bits, 8000 Hz) como WAV na pasta Downloads e devolve o caminho. */
-        saveWav(name: string, pcm: Int16Array): Promise<string>
-        /** POST do resultado; devolve o código HTTP da resposta. */
-        webhook(url: string, payload: SdrWebhookPayload): Promise<number>
-    }
-    /** Conversas por mensagem de texto (RF-54). */
-    messages: {
-        load(): Promise<ChatMessage[]>
-        save(messages: ChatMessage[]): Promise<void>
-    }
-    /** Histórico de chamadas (RF-40). */
-    history: {
-        load(): Promise<HistoryEntry[]>
-        save(entries: HistoryEntry[]): Promise<void>
-    }
     secrets: {
         get(accountId: string): Promise<string | null>
         set(accountId: string, password: string | null): Promise<void>
@@ -438,8 +415,6 @@ export interface IrisApi {
         setOptions(options: AiSettings): Promise<void>
         models(): Promise<AiModel[]>
         explain(request: AiRequest): Promise<AiResult>
-        /** Resumo de uma chamada gravada (modo SDR): o áudio vai para um modelo que entende áudio. */
-        summarize(model: string, recording: string): Promise<AiResult>
     }
     /** Motor próprio (RF-39): os sockets ficam no processo principal. */
     sip: {
@@ -454,8 +429,6 @@ export interface IrisApi {
         callLevel(engineId: string, callId: string): Promise<number | null>
         /** Liga ou desliga a gravação (RF-36). Devolve o caminho do arquivo, ou null se a chamada não existe. */
         record(engineId: string, callId: string, on: boolean): Promise<string | null>
-        /** Mensagem de texto para um ramal (RF-54); rejeita com a resposta do PBX se ele recusar. */
-        message(engineId: string, to: string, text: string): Promise<void>
         /** Pedido SIP manual (RF-45). */
         request(engineId: string, request: SipManualRequest): Promise<SipManualResponse>
         /** Salva a captura da conta em PCAP (RF-44); devolve o caminho, ou null se o usuário cancelou. */
@@ -481,19 +454,10 @@ export const IPC = {
     accountsSave: 'accounts:save',
     scenariosLoad: 'scenarios:load',
     scenariosSave: 'scenarios:save',
-    historyLoad: 'history:load',
     contactsLoad: 'contacts:load',
     contactsSave: 'contacts:save',
     serversLoad: 'servers:load',
     serversSave: 'servers:save',
-    historySave: 'history:save',
-    sdrLoad: 'sdr:load',
-    sdrSave: 'sdr:save',
-    sdrSaveWav: 'sdr:save-wav',
-    sdrWebhook: 'sdr:webhook',
-    aiSummarize: 'ai:summarize',
-    messagesLoad: 'messages:load',
-    messagesSave: 'messages:save',
     secretsGet: 'secrets:get',
     secretsSet: 'secrets:set',
     secretsStatus: 'secrets:status',
@@ -538,7 +502,6 @@ export const IPC = {
     sipCallLevel: 'sip:call-level',
     sipRecord: 'sip:record',
     sipRequest: 'sip:request',
-    sipMessage: 'sip:message',
     sipPcap: 'sip:pcap',
     sipLoadStart: 'sip:load-start',
     sipLoadStop: 'sip:load-stop',

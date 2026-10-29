@@ -128,10 +128,6 @@ class NativeSipCall implements EngineCall {
         return this.action({ type: 'play', pcm })
     }
 
-    stopAudio(): Promise<void> {
-        return this.action({ type: 'stopPlay' })
-    }
-
     setRecording(on: boolean): Promise<string | null> {
         return window.iris.sip.record(this.engineId, this.id, on)
     }
@@ -176,7 +172,6 @@ export class NativeSipEngine implements SipEngine {
         if (event.type === 'audio') return this.calls.get(event.callId)?.play(event.pcm)
         if (event.type === 'presence') return this.emitter.emit('presence', event.extension, event.state)
         if (event.type === 'mwi') return this.emitter.emit('mwi', event.info)
-        if (event.type === 'message') return this.emitter.emit('message', event.from, event.text, event.fromName)
         if (event.type === 'log') {
             // Sem "Mostrar SIP bruto no log", ficam só os eventos.
             if (event.kind !== 'sip' || this.account.rawSipLog)
@@ -240,10 +235,6 @@ export class NativeSipEngine implements SipEngine {
         this.early.delete(callId)
         if (pending.length) setTimeout(() => pending.forEach((event) => this.deliver(call, event)), 0)
         return call
-    }
-
-    sendMessage(to: string, text: string): Promise<void> {
-        return window.iris.sip.message(this.id, to, text)
     }
 
     request(spec: SipManualRequest): Promise<SipManualResponse> {

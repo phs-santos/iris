@@ -83,9 +83,6 @@ jobs:
             - name: Contatos e servidores cadastrados (RF-50, RF-51)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/contatos.mjs
-            - name: Mensagens de texto no simulado (RF-54)
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/mensagens.mjs
             - name: Links de telefone, atalhos globais e toque por conta (RF-53, RF-34, RF-55)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/atalhos.mjs
@@ -101,9 +98,6 @@ jobs:
             - name: Modos e área secreta
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/modos.mjs
-            - name: Modo SDR no simulado
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/sdr.mjs
             - name: Monitor com webhook num servidor local (RF-43)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/monitor.mjs

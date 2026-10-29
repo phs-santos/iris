@@ -74,26 +74,6 @@ try {
     await firstSteps.waitFor({ state: 'detached' })
     step('primeiros passos: a chamada de teste marca o passo 1, e Fechar tira o quadro')
 
-    // Histórico (RF-40): as duas pontas da chamada ficam na lista e no arquivo.
-    await page.getByRole('tab', { name: 'Histórico' }).click()
-    const history = page.locator('.history .entry')
-    await history.filter({ hasText: '1002' }).filter({ hasText: 'Suporte 1001' }).first().waitFor()
-    await history.filter({ hasText: '1001' }).filter({ hasText: 'Vendas 1002' }).first().waitFor()
-    const calls = JSON.parse(readFileSync(join(userData, 'history.json'), 'utf8')).entries
-    if (calls.length !== 2 || !calls.every((e) => e.answered && e.durationMs > 0))
-        throw new Error(`histórico gravado errado: ${JSON.stringify(calls)}`)
-    await page.getByRole('button', { name: 'Ligar de novo para 1002' }).click()
-    await page
-        .locator('.call', { hasText: /1001\s*→\s*1002/ })
-        .locator('.pill', { hasText: 'em chamada' })
-        .waitFor({ timeout: 8000 })
-    await page
-        .locator('.call', { hasText: /1001\s*→\s*1002/ })
-        .getByRole('button', { name: 'Desligar' })
-        .click()
-    await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
-    step('histórico lista a chamada, grava em history.json e liga de novo')
-
     // Paleta de comandos (Ctrl/Cmd+K): acha conta e liga para um número digitado.
     await page.keyboard.press('ControlOrMeta+k')
     const palette = page.getByRole('dialog', { name: 'Paleta de comandos' })

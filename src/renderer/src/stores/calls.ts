@@ -6,7 +6,6 @@ import { ringbackOf, type Ringback } from '@shared/ringback'
 import { parseDtmfSequence, runDtmfSequence } from '@renderer/lib/dtmf'
 import { useAccountsStore } from './accounts'
 import { useLogStore } from './log'
-import { useHistoryStore } from './history'
 import { useContactsStore } from './contacts'
 import { usePreferencesStore } from './preferences'
 import { notify } from '@renderer/lib/notify'
@@ -175,19 +174,6 @@ export const useCallsStore = defineStore('calls', () => {
                 end.by === 'local' ? 'Encerrada por você' : end.by === 'remote' ? 'Encerrada pelo outro lado' : 'Falhou'
             c.endText = code ? `${who} · ${code}` : who
             log.add(accountId, c.failed ? 'warn' : 'info', 'event', `Chamada ${label()}: ${c.endText}`)
-            useHistoryStore().add({
-                id: `${c.startedAt}-${call.id}`,
-                startedAt: c.startedAt,
-                accountId,
-                accountName: useAccountsStore().nameOf(accountId),
-                direction: c.direction,
-                remote: c.remote,
-                remoteName: c.remoteName,
-                durationMs: c.establishedAt ? c.endedAt - c.establishedAt : 0,
-                answered: Boolean(c.establishedAt),
-                failed: c.failed,
-                result: c.endText
-            })
             setTimeout(() => {
                 calls.value = calls.value.filter((x) => x.id !== call.id)
                 if (selectedId.value === call.id) selectedId.value = active.value[0]?.id ?? null
@@ -396,11 +382,6 @@ export const useCallsStore = defineStore('calls', () => {
         await call.playAudio(pcm)
     }
 
-    /** Para o áudio tocado na chamada; o microfone volta (modo SDR: interromper a abertura). */
-    async function stopAudio(id: string): Promise<void> {
-        await engineCalls.get(id)?.stopAudio?.()
-    }
-
     /** A chamada consegue tocar um áudio no lugar do microfone (SIP puro e simulado). */
     const canPlay = (id: string): boolean => typeof engineCalls.get(id)?.playAudio === 'function'
 
@@ -551,7 +532,6 @@ export const useCallsStore = defineStore('calls', () => {
         toggleRecording,
         audioLevel,
         playAudio,
-        stopAudio,
         canPlay,
         sendDtmf,
         stopDtmf,

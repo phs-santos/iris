@@ -45,16 +45,13 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-53 | Links de telefone: a Íris abre `tel:`, `callto:`, `sip:` e `sips:` e põe o número no discador; ligar direto é opção, desligada por padrão |
 | RF-34 | Atalhos globais para atender, desligar e mudo, definidos em Configurações → Atalhos e links |
 | RF-55 | Toque de chamada por conta (clássico, digital, suave, sino ou nenhum), volume do toque em Configurações → Áudio e o botão do fone (tecla Tocar/Pausar) para atender e desligar |
-| RF-54 | Mensagens de texto por SIP MESSAGE entre ramais, em WebRTC, SIP puro e no simulado: conversas por conta, não lidas, aviso e "não entregue" com a resposta do PBX |
 | RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, os passos dos cenários, as notificações do sistema e a linha de comando continuam em português |
 | RF-20 | Early media: o cartão diz se o som antes do atendimento é o toque local ou o áudio do PBX (183), e toca esse áudio. Em SIP puro sempre; em WebRTC por opção da conta |
 | RF-52 | Chamada de vídeo em contas WebRTC e no simulado: botão Vídeo no discador, Atender com vídeo, a imagem do outro lado e a própria câmera no cartão, câmera ligável durante a chamada e escolhida em Configurações. SIP puro, modo Telefone, gravação e cenários ainda sem vídeo |
-| RF-58 | Modos: o app abre só com o padrão de chamada; log e diagnóstico, cenários, mensagens, vídeo e modo SDR ligam numa área escondida das Configurações |
-| RF-59 | Modo SDR: fila de ligações por CSV, roteiro com variáveis, abertura gravada, caixa postal com recado, resultado com um clique, retornos, horário permitido, painel com meta, CSV, webhook e resumo pela IA |
+| RF-58 | Modos: o app abre só com o padrão de chamada; log e diagnóstico, cenários e vídeo ligam numa área escondida das Configurações |
 | RF-57 | Áudio de atendimento: um WAV da conta toca para quem ligou logo depois de atender (SIP puro e simulado) |
-| RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, salvar a partir do histórico, CSV, e o nome do contato nas chamadas e no histórico |
+| RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, CSV, e o nome do contato nas chamadas |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
-| RF-40 | Histórico de chamadas: aba com hora, conta, número, duração e resultado de cada chamada, guardado em `history.json`, com Ligar de novo e Fluxo SIP |
 | RF-39 | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde, liga e recebe chamadas com áudio G.711, DTMF por RTP ou SIP INFO, mudo, espera, transferência cega e assistida, SRTP (SDES, AES_CM_128_HMAC_SHA1_80) e qualidade com perda, jitter e tempo de ida e volta (RTCP). Não tem: RTCP cifrado (com SRTP o RTT fica em 0), INVITE sem SDP, temporizador de sessão e DNS SRV |
 | RNF-13 | Textos da interface em arquivos de tradução (`src/renderer/src/i18n`), em português e prontos para inglês |
 | RNF-14 | Log interno do app em arquivo rotativo (5 × 10 MB) em `logs/` na pasta de dados |
@@ -166,10 +163,8 @@ npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Gui
 npm run test:pbx    # integração com o Asterisk do docker compose
 npm run test:atalhos       # links tel: e sip:, atalhos globais, botão do fone e toque por conta, no simulado
 npm run test:modos         # modos escondidos por padrão e a área secreta
-npm run test:sdr           # fila do modo SDR no simulado: abertura, caixa postal, ocupado, número inexistente, painel e CSV
 npm run test:video         # chamada de vídeo no simulado (com o Asterisk e VP8, entra no test:pbx)
 npm run test:idioma        # interface e guia em inglês: troca na hora, grava e volta ao português
-npm run test:mensagens     # mensagens de texto no simulado (com o Asterisk, entram no test:sip e no test:pbx)
 npm run test:notificacoes  # notificações no simulado: chamada recebida, Atender pelo aviso, chamada perdida e a escolha em Configurações
 npm run test:contatos   # agenda de contatos e servidores cadastrados pela tela, no simulado (RF-50, RF-51)
 npm run test:monitor    # monitor: cenário que falha sozinho, aviso no log e webhook num servidor local (RF-43)
@@ -265,7 +260,7 @@ O easy-sipjs 2.7.6 registra com `transport=wss` no Contact. O Asterisk responde 
 
 ## Dados e segurança
 
-- Contas em `accounts.json`, preferências em `settings.json` e histórico de chamadas em `history.json`, contatos em `contacts.json` e servidores em `servers.json`, na pasta de dados do usuário.
+- Contas em `accounts.json`, preferências em `settings.json`, contatos em `contacts.json` e servidores em `servers.json`, na pasta de dados do usuário.
 - Senhas em `senhas.json`, cifradas com AES-256-GCM por uma chave própria (`chave-local.bin`), os dois legíveis só pela sua conta. O cofre do sistema (Chaves do macOS, Secret Service do Linux) não é usado de jeito nenhum, nem pelo Chromium, para o sistema não pedir a senha de login. O `secrets.json` de versões até a 1.0.5 é ignorado. Trate a pasta de dados como confidencial.
 - Um arquivo de dados estragado nunca é sobrescrito: vai para o lado (`accounts.json.corrompido-<data>`), a tela avisa e o app abre.
 - O log interno do app fica em `logs/iris.log` na pasta de dados (5 arquivos de 10 MB). Guarda só falhas do próprio app, sem SIP e sem senha; é o primeiro lugar para olhar quando algo não abre.

@@ -27,7 +27,6 @@ export const MOCK_NUMBERS = [
     { number: '8000', description: 'URA: atende com early media e registra o DTMF recebido' },
     { number: '486', description: 'Ocupado (486 Busy Here)' },
     { number: '408', description: 'Ninguém atende (408 Request Timeout após 5 s)' },
-    { number: '7000', description: 'Caixa postal: atende, fala a saudação por 4,5 s e espera o recado' },
     { number: 'outro', description: 'Ramal de outra conta simulada do mesmo domínio, ou 404 Not Found' }
 ]
 
@@ -180,8 +179,6 @@ class MockCall implements EngineCall {
             this.peer.respond('in', '200 OK', ['Content-Type: application/sdp'])
             this.peer.ack('out')
             this.peer.engine.log('info', `${this.peer.remote} atendeu`)
-            const now = Date.now()
-            this.peer.greeting = { voiceUntil: now + 800, silentUntil: now + 2500 }
             this.peer.establish()
         }
     }
@@ -227,12 +224,6 @@ class MockCall implements EngineCall {
     }
 
     /** O outro lado tocou um áudio: por `ms`, é esse o volume que esta ponta ouve. */
-    /**
-     * O que esta ponta ouve logo depois de atenderem: quem atende diz "Alô?" e espera; a caixa postal
-     * fala a saudação e fica em silêncio. Serve para o modo SDR saber se atendeu gente ou máquina.
-     */
-    greeting?: { voiceUntil: number; silentUntil: number }
-    private playing?: () => void
 
     hears(db: number, ms: number): void {
         this.heard = { db, until: Date.now() + ms }
@@ -246,9 +237,6 @@ class MockCall implements EngineCall {
         if (this.state !== 'established' || this.held || this.peer?.held) return SILENCE_DB
         if (this.heard && Date.now() < this.heard.until) return this.heard.db
         if (this.peer?.muted) return SILENCE_DB
-        const now = Date.now()
-        if (this.greeting && now < this.greeting.voiceUntil) return MOCK_VOICE_DB
-        if (this.greeting && now < this.greeting.silentUntil) return SILENCE_DB
         return MOCK_VOICE_DB
     }
 
@@ -257,16 +245,7 @@ class MockCall implements EngineCall {
         const ms = Math.round((pcm.length / SAMPLE_RATE) * 1000)
         this.engine.log('info', `Tocando áudio de ${ms} ms na chamada`)
         this.peer?.hears(levelDb(pcm), ms)
-        await new Promise<void>((done) => {
-            this.playing = done
-            this.later(ms, done)
-        })
-        this.playing = undefined
-    }
-
-    async stopAudio(): Promise<void> {
-        if (this.peer?.heard) this.peer.heard = undefined
-        this.playing?.()
+        await new Promise<void>((done) => this.later(ms, done))
     }
 
     async setHeld(held: boolean): Promise<void> {
@@ -530,23 +509,6 @@ export class MockEngine implements SipEngine {
             return
         }
         if (destination === '486') return fail(486, 'Busy Here')
-        if (destination === '7000') {
-            call.later(MOCK_TIMING.ringing, () => {
-                call.respond('in', '180 Ringing')
-                call.emit('progress', 180, 'Ringing', false)
-            })
-            call.later(MOCK_TIMING.ivrAnswer, () => {
-                call.respond('in', '200 OK', ['Content-Type: application/sdp'])
-                call.ack('out')
-                this.log('info', 'Caixa postal atendeu: "Deixe o seu recado após o sinal"')
-                const now = Date.now()
-                call.greeting = { voiceUntil: now + 4500, silentUntil: Number.POSITIVE_INFINITY }
-                call.establish()
-                // A caixa postal desliga sozinha depois de um tempo.
-                call.later(30_000, () => call.end({ by: 'remote', code: 200, reason: 'Caixa postal encerrou' }))
-            })
-            return
-        }
         if (destination === '408') {
             call.later(MOCK_TIMING.ringing, () => {
                 call.respond('in', '180 Ringing')
@@ -590,31 +552,6 @@ export class MockEngine implements SipEngine {
         call.respond('out', '180 Ringing')
         this.emitter.emit('incoming', call)
         return call
-    }
-
-    /**
-     * Mensagem de texto no PBX simulado (RF-54): chega à outra conta registrada do mesmo domínio. A URA
-     * (números começados em 8) responde sozinha, para dar para testar com uma conta só.
-     */
-    async sendMessage(to: string, text: string): Promise<void> {
-        if (!this.registered) throw new Error('Registre a conta antes de mandar mensagem')
-        const uri = `sip:${to}@${this.domain}`
-        this.log(
-            'info',
-            `MESSAGE ${uri} SIP/2.0\nFrom: <sip:${this.extension}@${this.domain}>\nTo: <${uri}>\nContent-Type: text/plain\n\n${text}`,
-            'sip'
-        )
-        const target = [...registry].find((e) => e.domain === this.domain && e.extension === to && e.registered)
-        if (target) {
-            const name = this.account.displayName || this.account.name
-            setTimeout(() => target.emitter.emit('message', this.extension, text, name), MOCK_TIMING.trying)
-        } else if (to.startsWith('8')) {
-            setTimeout(() => this.emitter.emit('message', to, `URA recebeu: ${text}`, 'URA'), MOCK_TIMING.ringing)
-        } else {
-            this.log('info', `SIP/2.0 404 Not Found\nTo: <${uri}>`, 'sip')
-            throw new Error('404 Not Found')
-        }
-        this.log('info', `SIP/2.0 200 OK\nTo: <${uri}>`, 'sip')
     }
 
     /** Pedido manual no PBX simulado (RF-45): responde 200 ao que conhece e 489 a assinaturas. */

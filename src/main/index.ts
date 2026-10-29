@@ -18,16 +18,10 @@ import { IPC, type Account, type Scenario, type SettingsPatch, type WindowMode }
 import {
     getSecret,
     loadAccounts,
-    loadHistory,
     loadContacts,
     saveContacts,
     loadServers,
     saveServers,
-    saveHistory,
-    loadMessages,
-    loadSdr,
-    saveSdr,
-    saveMessages,
     loadScenarios,
     loadSettings,
     saveAccounts,
@@ -45,15 +39,11 @@ import { isReconnect } from '@shared/reconnect'
 import { parseWav, SAMPLE_RATE } from '@shared/audio'
 import { isWebhookPayload, isWebhookUrl, type WebhookPayload } from '@shared/monitor'
 import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
-import { HISTORY_LIMIT, isHistoryEntry, type HistoryEntry } from '@shared/history'
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { isRingVolume } from '@shared/ringtones'
-import { isChatMessage, MESSAGES_LIMIT, type ChatMessage } from '@shared/messages'
 import { ALL_MODES, isModeSettings } from '@shared/modes'
-import { isSdrData, isSdrWebhookPayload, type SdrData, type SdrWebhookPayload } from '@shared/sdr'
-import { wavHeader } from '@shared/audio'
 import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
 import { diagnoseNetwork } from './net-diag'
@@ -314,69 +304,6 @@ function registerIpc(): void {
         check(isList(servers, 500) && servers.every(isSipServer), 'lista de servidores')
         return saveServers(servers)
     })
-    handle(IPC.historyLoad, () => loadHistory())
-    handle(IPC.historySave, (_e, entries: HistoryEntry[]) => {
-        check(isList(entries, HISTORY_LIMIT) && entries.every(isHistoryEntry), 'histórico de chamadas')
-        return saveHistory(entries)
-    })
-    // As gravações do SDR (abertura e recado) ficam em Downloads, onde a pessoa acha (pedido do usuário
-    // em 05/10/2026). As de antes, na pasta sdr dos dados, são movidas para lá ao abrir a fila.
-    // IRIS_DOWNLOADS troca a pasta nos testes, para não encher o Downloads de quem roda; o app empacotado ignora.
-    const sdrAudioDir = (): string => (!app.isPackaged && process.env['IRIS_DOWNLOADS']) || app.getPath('downloads')
-    handle(IPC.sdrLoad, async () => {
-        const data = await loadSdr()
-        const old = join(app.getPath('userData'), 'sdr')
-        const moved = new Map<string, string>()
-        for (const name of await fs.readdir(old).catch(() => [] as string[])) {
-            if (!name.endsWith('.wav')) continue
-            const target = join(sdrAudioDir(), `iris-${name}`)
-            try {
-                await fs.rename(join(old, name), target)
-            } catch {
-                // Outro disco: copia e apaga.
-                await fs.copyFile(join(old, name), target)
-                await fs.rm(join(old, name), { force: true })
-            }
-            moved.set(join(old, name), target)
-        }
-        if (!moved.size) return data
-        const relink = (path?: string): string | undefined => (path && moved.get(path)) ?? path
-        data.settings.openings = data.settings.openings.map((o) => ({ ...o, audio: relink(o.audio) }))
-        data.settings.voicemail = { ...data.settings.voicemail, audio: relink(data.settings.voicemail.audio) }
-        await saveSdr(data)
-        appLog('info', `Gravações do SDR movidas para ${sdrAudioDir()}: ${moved.size}`)
-        return data
-    })
-    handle(IPC.sdrSave, (_e, data: SdrData) => {
-        check(isSdrData(data), 'fila do modo SDR')
-        return saveSdr(data)
-    })
-    // Gravação da abertura: o nome vira um arquivo da pasta sdr; a interface não escolhe a pasta.
-    handle(IPC.sdrSaveWav, async (_e, name: string, pcm: Int16Array) => {
-        check(
-            isString(name, 80) &&
-                /^[\w-]+$/.test(name) &&
-                pcm instanceof Int16Array &&
-                pcm.length > 0 &&
-                pcm.length <= 8000 * 120,
-            'gravação da abertura'
-        )
-        const dir = sdrAudioDir()
-        await fs.mkdir(dir, { recursive: true })
-        const path = join(dir, `iris-${name}.wav`)
-        const body = Buffer.from(pcm.buffer, pcm.byteOffset, pcm.byteLength)
-        await fs.writeFile(path, Buffer.concat([Buffer.from(wavHeader(body.length, 1)), body]))
-        return path
-    })
-    handle(IPC.sdrWebhook, async (_e, url: string, payload: SdrWebhookPayload) => {
-        check(isString(url, 2000) && isWebhookUrl(url) && isSdrWebhookPayload(payload), 'webhook do modo SDR')
-        return postJson(url, payload)
-    })
-    handle(IPC.messagesLoad, () => loadMessages())
-    handle(IPC.messagesSave, (_e, messages: ChatMessage[]) => {
-        check(isList(messages, MESSAGES_LIMIT) && messages.every(isChatMessage), 'mensagens de texto')
-        return saveMessages(messages)
-    })
     handle(IPC.secretsGet, (_e, id: string) => {
         check(isAccountId(id), 'id da conta')
         return getSecret(id)
@@ -615,7 +542,7 @@ function registerIpc(): void {
     })
 }
 
-/** POST de JSON com prazo de 10 s, para os webhooks do monitor e do modo SDR; devolve o código HTTP. */
+/** POST de JSON com prazo de 10 s, para os webhooks do monitor; devolve o código HTTP. */
 async function postJson(url: string, payload: unknown): Promise<number> {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 10_000)

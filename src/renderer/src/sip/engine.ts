@@ -102,8 +102,6 @@ export interface EngineCall {
     audioLevel(): Promise<number | null>
     /** Toca um áudio (PCM de 16 bits a 8000 Hz) no lugar do microfone. Só nos motores que conseguem. */
     playAudio?(pcm: Int16Array): Promise<void>
-    /** Para o áudio que está tocando; o microfone volta na hora (a promessa de playAudio resolve). */
-    stopAudio?(): Promise<void>
     /** Liga ou desliga a gravação da chamada e devolve o arquivo (RF-36). Só nos motores que gravam. */
     setRecording?(on: boolean): Promise<string | null>
 }
@@ -115,8 +113,6 @@ export type EngineEvents = {
     /** Estado de um ramal acompanhado (BLF) e aviso de correio de voz (RF-27). */
     presence: [extension: string, state: PresenceState]
     mwi: [info: MwiInfo]
-    /** Mensagem de texto recebida (SIP MESSAGE, RF-54). */
-    message: [from: string, text: string, fromName?: string]
 }
 
 export interface DialOptions {
@@ -133,8 +129,6 @@ export interface SipEngine {
     disconnect(): Promise<void>
     dial(destination: string, options?: DialOptions): Promise<EngineCall>
     health(): Promise<HealthReport>
-    /** Manda uma mensagem de texto a um ramal (RF-54). Rejeita com a resposta do PBX se ele recusar. */
-    sendMessage(to: string, text: string): Promise<void>
     /** Pedido SIP manual, fora de chamada (RF-45). Só nos motores que conseguem. */
     request?(spec: SipManualRequest): Promise<SipManualResponse>
     /** Teste de carga com várias chamadas ao mesmo tempo (RF-42). Só no motor próprio. */

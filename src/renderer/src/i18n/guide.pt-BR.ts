@@ -216,7 +216,7 @@ export const GUIDE: GuideSection[] = [
                     '**⋯ → Saúde**: roda as verificações da conta. Veja "Saúde e diagnóstico".',
                     '**⋯ → Duplicar**: cria uma cópia, para cadastrar vários ramais parecidos sem redigitar tudo.',
                     '**⋯ → Requisição SIP…** (contas de SIP puro registradas e simuladas): manda um pedido avulso, como `OPTIONS`, `MESSAGE` ou `SUBSCRIBE`, com os cabeçalhos e o corpo que você escrever, e mostra a resposta inteira do PBX e o tempo que levou.',
-                    '**⋯ → Teste de carga…** (contas de SIP puro registradas): faz várias chamadas ao mesmo tempo pela conta, cada uma tocando um tom, para um destino que atenda sozinho (um número de eco, uma URA). No fim mostra quantas foram atendidas, em quantas chegou áudio, o tempo até atender, a perda de pacotes e o jitter, e deixa salvar o relatório. Vai até 200 chamadas. Elas não aparecem nos cartões nem no histórico, e fechar a tela encerra todas.',
+                    '**⋯ → Teste de carga…** (contas de SIP puro registradas): faz várias chamadas ao mesmo tempo pela conta, cada uma tocando um tom, para um destino que atenda sozinho (um número de eco, uma URA). No fim mostra quantas foram atendidas, em quantas chegou áudio, o tempo até atender, a perda de pacotes e o jitter, e deixa salvar o relatório. Vai até 200 chamadas. Elas não aparecem nos cartões, e fechar a tela encerra todas.',
                     '**⋯ → Exportar PCAP** (contas de SIP puro registradas): salva o que passou pela rede daquela conta desde o registro, para abrir no Wireshark. "Só SIP" leva a sinalização; "com áudio" leva também os pacotes RTP. A captura guarda os 30 MB mais recentes.',
                     '**⋯ → Excluir**: pede confirmação e apaga a conta e a senha guardada.'
                 ]
@@ -505,73 +505,10 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     '**Ligar** disca pela conta do contato; se ela não estiver registrada, pela conta escolhida no discador. O botão fica apagado quando nenhuma das duas está no ar.',
                     'A **estrela** marca o contato como favorito: ele aparece primeiro na lista e vira atalho no discador.',
-                    'Quando um contato liga, ou quando você liga para ele, a chamada mostra o **nome** da agenda. O histórico também.',
-                    'No **Histórico**, **Salvar contato** cria o contato com o número da chamada já preenchido.',
+                    'Quando um contato liga, ou quando você liga para ele, a chamada mostra o **nome** da agenda.',
                     'Ao digitar no discador, os números da agenda aparecem como sugestão.',
                     '**Importar CSV** e **Exportar CSV** levam a agenda de e para uma planilha, com as colunas `nome;numero;empresa;observacao;favorito`. Contatos com um número que já existe não entram de novo.'
                 ]
-            }
-        ]
-    },
-    {
-        id: 'mensagens',
-        title: 'Mensagens',
-        summary: 'Conversa por texto entre ramais, pelo próprio PBX.',
-        blocks: [
-            {
-                type: 'p',
-                text: 'A aba **Mensagens** manda e recebe texto por SIP MESSAGE, o recurso de mensagem do próprio protocolo. Funciona nas contas WebRTC, de SIP puro e simuladas, desde que o PBX repasse mensagens entre ramais.'
-            },
-            {
-                type: 'steps',
-                items: [
-                    'Escolha a conta de origem na lista de contas.',
-                    'Na aba Mensagens, digite o ramal em **Nova conversa** e clique no botão.',
-                    'Escreva e tecle **Enter**. Shift+Enter quebra a linha.'
-                ]
-            },
-            {
-                type: 'list',
-                items: [
-                    'Cada conversa é de uma conta com um ramal. O número ao lado do nome da aba são as mensagens ainda não lidas.',
-                    'Mensagem que chega com a conversa fechada vira aviso na tela e notificação do sistema (dá para desligar em Configurações → Notificações).',
-                    'Se o PBX recusar, a mensagem fica marcada como **não entregue**, com a resposta dele (por exemplo, 404 Not Found).',
-                    '**Ligar** chama o ramal da conversa; **Apagar conversa** tira as mensagens desta máquina.'
-                ]
-            },
-            {
-                type: 'note',
-                kind: 'atenção',
-                text: 'Em contas WebRTC a Íris não recebe a confirmação do PBX: sem erro, a mensagem saiu, mas pode não ter chegado. Em SIP puro o "não entregue" é o que o PBX respondeu. As mensagens ficam em messages.json na pasta de dados, sem cifra, e o texto aparece no log de eventos.'
-            },
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'No PBX simulado, mande uma mensagem para **8000**: a URA responde sozinha, e dá para ver a conversa funcionando com uma conta só. No Asterisk, o ramal precisa de `message_context` apontando para um contexto com `MessageSend`.'
-            }
-        ]
-    },
-    {
-        id: 'historico',
-        title: 'Histórico de chamadas',
-        summary: 'O que aconteceu com cada chamada, depois que o cartão dela sumiu da tela.',
-        blocks: [
-            {
-                type: 'p',
-                text: 'A aba **Histórico**, ao lado de Telefone e Cenários, lista as chamadas encerradas, da mais nova para a mais antiga: o número, a conta, a hora, quanto tempo durou a conversa e como terminou, com o código SIP quando houve falha (por exemplo `486 Busy Here`).'
-            },
-            {
-                type: 'list',
-                items: [
-                    '**Ligar de novo** disca o mesmo número pela mesma conta e volta para a aba Telefone. Fica apagado se a conta não está registrada.',
-                    '**Fluxo SIP** abre o diagrama das chamadas daquela conta. O diagrama vem do log, que só existe enquanto o app está aberto: para chamadas de antes de fechar o app, a lista continua, mas o diagrama não.',
-                    '**Limpar histórico** apaga tudo, depois de confirmar.'
-                ]
-            },
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'O histórico guarda as 500 chamadas mais recentes em `history.json`, na pasta de dados. Chamadas feitas por cenários também entram.'
             }
         ]
     },
@@ -750,69 +687,6 @@ export const GUIDE: GuideSection[] = [
         ]
     },
     {
-        id: 'sdr',
-        title: 'Modo SDR',
-        summary: 'Uma fila de ligações para o dia, com a mesma abertura em todas e o resultado com um clique.',
-        blocks: [
-            {
-                type: 'p',
-                text: 'A aba **SDR** é para quem faz muitas ligações de prospecção por dia. Você importa a lista, aperta **Começar a fila** e a Íris liga para uma pessoa depois da outra: mostra o roteiro com os dados dela, toca a sua abertura gravada quando ela atende, trata a caixa postal sozinha e, no fim, pede só o resultado.'
-            },
-            {
-                type: 'steps',
-                items: [
-                    '**Adicionar números**: cole a lista direto no painel, uma pessoa por linha: só o número, "nome número" ou "nome; número; empresa". Ou **Importar planilha**: um CSV com as colunas `nome;numero;empresa;segmento`. As outras colunas viram variáveis do roteiro: uma coluna `cargo` vira `{cargo}`. Números repetidos não entram de novo.',
-                    'Em **Opções**, escolha a conta, escreva o roteiro e grave a abertura (ou escolha um WAV). A gravação vai para a pasta **Downloads**, com nome começando por `iris-`. Dá para ter uma abertura por segmento.',
-                    'Ainda em Opções, defina o horário e os dias em que a fila pode ligar, quantas tentativas cada pessoa recebe e a meta do dia.',
-                    'Clique em **Começar a fila**. Para ligar para uma pessoa só, use **Ligar** ao lado dela na lista: esse clique liga mesmo fora do horário da fila. Ramais (como `2425`) e códigos do PBX (como `*97`) também entram.'
-                ]
-            },
-            { type: 'h', text: 'Durante a chamada' },
-            {
-                type: 'list',
-                items: [
-                    'O **roteiro** aparece grande, com `{nome}`, `{primeiro_nome}`, `{empresa}`, `{segmento}`, `{sdr}` (o seu nome do Perfil) e as colunas da planilha já trocados. Variável sem valor fica à vista, para você notar.',
-                    'Com a **abertura gravada** ligada, ela toca quando a pessoa atende, depois do "Alô?". Você ouve junto. Para falar por cima, aperte **Esc** ou **Interromper a abertura**: o microfone volta na hora. A gravação só toca em contas de SIP puro; em WebRTC, leia o roteiro.',
-                    '**Caixa postal**: pelo som logo depois de atender (uma pessoa diz "Alô?" e espera; a caixa postal fala sem parar), a Íris desliga e passa para a próxima, ou espera o sinal e deixa o seu recado gravado. Também dá para deixar a decisão com você. A detecção acerta a maioria dos casos, não todos.',
-                    'Ocupado, não atendeu e número que não existe fecham sozinhos, sem você clicar.'
-                ]
-            },
-            { type: 'h', text: 'Depois da chamada' },
-            {
-                type: 'table',
-                head: ['Tecla', 'Resultado', 'O que acontece'],
-                rows: [
-                    ['1', 'Interessado', 'Sai da fila e conta como conversão'],
-                    ['2', 'Reunião marcada', 'Sai da fila e conta como conversão'],
-                    ['3', 'Sem interesse', 'Sai da fila'],
-                    ['4', 'Ligar depois', 'Volta na hora que você marcar'],
-                    ['5', 'Não atendeu', 'Volta depois do intervalo, até o limite de tentativas'],
-                    ['6', 'Caixa postal', 'Volta depois do intervalo, até o limite de tentativas'],
-                    ['7', 'Número errado', 'Sai da fila'],
-                    ['8', 'Pediu para não ligar', 'Sai da fila e não é chamado de novo']
-                ]
-            },
-            {
-                type: 'p',
-                text: 'A **nota** vai junto. Depois do resultado, a próxima ligação sai sozinha em alguns segundos (dá para pausar ou ligar na hora). O **painel** no alto mostra as ligações do dia contra a meta, as atendidas, as conversas de 30 s ou mais, as conversões, as caixas postais e o tempo falando.'
-            },
-            { type: 'h', text: 'CRM e resumo' },
-            {
-                type: 'list',
-                items: [
-                    '**Exportar resultados** salva a fila em CSV, com o resultado, as tentativas, a próxima ligação e a nota de cada pessoa.',
-                    'Com um **webhook** em Opções, cada resultado sai na hora para o CRM, como `POST` com JSON.',
-                    'Com **Gravar as chamadas atendidas** (SIP puro), aparece **Resumir com IA** depois da chamada: o áudio vai para o modelo escolhido em Configurações → Ajuda da IA, que precisa entender áudio, e volta um resumo de três linhas, que segue no webhook.'
-                ]
-            },
-            {
-                type: 'note',
-                kind: 'atenção',
-                text: 'Ligação de venda tem regras: no Brasil, o cadastro Não Me Perturbe, os horários permitidos pelo Procon e a LGPD para gravar e guardar dados. A fila só liga no horário configurado e nunca liga de novo para quem pediu para não ligar, mas cumprir as regras é responsabilidade de quem usa. Avise quando a ligação for gravada.'
-            }
-        ]
-    },
-    {
         id: 'configuracoes',
         title: 'Configurações',
         summary: 'Seu perfil, as cores da Íris e as preferências gerais, numa tela só.',
@@ -853,7 +727,7 @@ export const GUIDE: GuideSection[] = [
             { type: 'h', text: 'Tema e densidade' },
             {
                 type: 'p',
-                text: 'Em **Aparência**, o **Tema** pode ser Escuro (o padrão), Claro ou **Sistema**, que acompanha o modo claro ou escuro do computador e troca sozinho. **Listas compactas** deixa as linhas das contas, do histórico e dos contatos mais baixas, para caber mais na tela.'
+                text: 'Em **Aparência**, o **Tema** pode ser Escuro (o padrão), Claro ou **Sistema**, que acompanha o modo claro ou escuro do computador e troca sozinho. **Listas compactas** deixa as linhas das contas e dos contatos mais baixas, para caber mais na tela.'
             },
             { type: 'h', text: 'Cor de destaque' },
             {
@@ -1220,7 +1094,7 @@ export const GUIDE: GuideSection[] = [
                     'A **cor do ícone** diz o estado geral: cinza sem conta registrada, verde com contas registradas, amarelo com chamada tocando, azul em chamada e vermelho quando alguma conta está em erro. Parar o mouse em cima mostra os números.',
                     '**Sair** encerra o app de verdade: os ramais saem do ar e as chamadas caem.',
                     'Uma **chamada recebida** gera uma notificação do sistema, com **Atender** e **Recusar** no próprio aviso (no macOS); clicar nela abre a janela. Na Bancada, ela também aparece numa faixa colorida no alto da coluna do meio.',
-                    'Também avisam: **chamada perdida**, **conta que caiu**, **correio de voz** novo, **mensagem de texto** e **cenário monitorado** que falhou ou voltou a passar. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
+                    'Também avisam: **chamada perdida**, **conta que caiu**, **correio de voz** novo e **cenário monitorado** que falhou ou voltou a passar. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
                     'Não aparece nada? No macOS, confira em **Ajustes do Sistema → Notificações → Iris** se os avisos estão permitidos e se o **Não Perturbe** está desligado. Contas com auto-atender não avisam de chamada recebida.'
                 ]
             },
@@ -1295,7 +1169,6 @@ export const GUIDE: GuideSection[] = [
                         '`senhas.json`, cifrado com uma chave própria (`chave-local.bin`); os dois só podem ser lidos pela sua conta do sistema'
                     ],
                     ['Cenários', '`scenarios.json`'],
-                    ['Histórico de chamadas', '`history.json`, com as 500 mais recentes'],
                     ['Contatos e servidores', '`contacts.json` e `servers.json`'],
                     [
                         'Gravações de chamadas',
