@@ -1,0 +1,153 @@
+<h2>Claro e denso: assim?</h2>
+<p class="subtitle">Tema claro, sem sobra de espaço: tudo compacto e a tela inteira usada. Duas formas de ocupar o espaço livre.</p>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="mic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="pause" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="grid" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></g></symbol>
+  <symbol id="xfer" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="rec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/></symbol>
+  <symbol id="hang" viewBox="0 0 24 24"><path fill="currentColor" d="M12 9c-3.6 0-6.9 1.2-9 3.2-.4.4-.4 1 0 1.4l2 2c.3.3.9.4 1.3.1l2.2-1.5c.3-.2.5-.5.5-.9v-2.1c1-.3 2-.4 3-.4s2 .1 3 .4v2.1c0 .4.2.7.5.9l2.2 1.5c.4.3 1 .2 1.3-.1l2-2c.4-.4.4-1 0-1.4C18.9 10.2 15.6 9 12 9z"/></symbol>
+  <symbol id="phone" viewBox="0 0 24 24"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></symbol>
+</defs></svg>
+
+<style>
+  .w { --fg:#1d2129; --mut:#6b7280; --line:#e4e7ec; --soft:#f3f5f8; --acc:#2563eb; --ok:#16a34a; --bad:#dc2626;
+       background:#fff; color:var(--fg); border:1px solid var(--line); border-radius:10px; overflow:hidden; height:470px; display:grid;
+       font:12.5px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif }
+  .w * { box-sizing:border-box }
+  .w svg.i { width:15px; height:15px }
+  .p { border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow:hidden }
+  .h { height:32px; padding:0 10px; display:flex; align-items:center; justify-content:space-between; background:var(--soft); border-bottom:1px solid var(--line); font-size:11px; font-weight:600; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; flex:none }
+  .h .b { text-transform:none; letter-spacing:0; font-weight:500; color:var(--acc) }
+  .r { display:flex; align-items:center; gap:8px; padding:5px 10px; border-bottom:1px solid #f0f2f5 }
+  .r.sel { background:#eaf1ff }
+  .g { padding:4px 10px; font-size:10.5px; color:var(--mut); background:#fafbfc; border-bottom:1px solid #f0f2f5 }
+  .dot { width:7px; height:7px; border-radius:50%; flex:none }
+  .m { color:var(--mut); font-size:11px }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace }
+  .grow { flex:1 }
+  .in { margin:8px; display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden }
+  .in span { padding:7px 9px; font-size:16px } .in .call { background:var(--ok); color:#fff; display:flex; align-items:center; gap:5px; font-size:12.5px; font-weight:600; padding:0 12px }
+  .keys { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; padding:0 8px 8px }
+  .keys span { border:1px solid var(--line); border-radius:6px; text-align:center; padding:6px 0; font-size:14px }
+  .keys small { display:block; font-size:8.5px; color:var(--mut); letter-spacing:.08em }
+  .cl { border-bottom:1px solid var(--line); padding:8px 10px }
+  .cl.on { background:#f0fdf4; box-shadow:inset 3px 0 0 var(--ok) }
+  .cl.hold { background:#fffbeb; box-shadow:inset 3px 0 0 #d97706 }
+  .acts { display:flex; gap:4px; margin-top:6px; flex-wrap:wrap }
+  .acts span { display:flex; align-items:center; gap:4px; border:1px solid var(--line); background:#fff; border-radius:6px; padding:3px 7px; font-size:11.5px }
+  .acts .x { background:var(--bad); border-color:var(--bad); color:#fff }
+  .q { display:inline-flex; gap:2px; align-items:flex-end; height:10px } .q i { width:3px; background:var(--ok); border-radius:1px }
+  .log { font:11px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; padding:4px 10px; overflow:hidden }
+  .tx { color:#b45309 } .rx { color:#1d4ed8 }
+  .tabs { display:flex; gap:2px } .tabs span { padding:3px 8px; border-radius:5px; text-transform:none; letter-spacing:0; font-weight:500 } .tabs .on { background:#fff; color:var(--fg); box-shadow:0 0 0 1px var(--line) }
+</style>
+
+<div class="options">
+
+<div class="option" data-choice="d1" onclick="toggleSelect(this)" style="display:block">
+  <div class="letter">1</div>
+  <div class="content" style="width:100%">
+    <h3>1 · Quatro painéis fixos (contas · discador e contatos · chamadas · SIP)</h3>
+    <p>Tudo à vista ao mesmo tempo, estilo ferramenta profissional. A coluna de SIP pode ser recolhida, mas por padrão aparece.</p>
+    <div class="w" style="grid-template-columns:190px 210px 1fr 300px">
+      <div class="p">
+        <div class="h">Contas <span class="b">+ Nova</span></div>
+        <div class="g">pbx.empresa.com · UDP</div>
+        <div class="r sel"><span class="dot" style="background:var(--ok)"></span><div class="grow">Suporte 1001</div><span class="m mono">1001</span></div>
+        <div class="r"><span class="dot" style="background:var(--ok)"></span><div class="grow">Vendas 1002</div><span class="m mono">1002</span></div>
+        <div class="r"><span class="dot" style="background:var(--ok)"></span><div class="grow">Recepção 1003</div><span class="m mono">1003</span></div>
+        <div class="g">lab.local · UDP</div>
+        <div class="r"><span class="dot" style="background:var(--bad)"></span><div class="grow">Lab 2001<div class="m" style="color:var(--bad)">403 senha recusada</div></div></div>
+        <div class="r"><span class="dot" style="background:#9ca3af"></span><div class="grow">Lab 2002<div class="m">desligada</div></div></div>
+        <div class="grow"></div>
+        <div class="r" style="border-top:1px solid var(--line); border-bottom:0"><span class="m">⚙ Configurações</span></div>
+      </div>
+      <div class="p">
+        <div class="h">Discar de Suporte 1001</div>
+        <div class="in"><span class="grow mono">1002</span><span class="call"><svg class="i"><use href="#phone"/></svg>Ligar</span></div>
+        <div class="keys"><span>1</span><span>2<small>ABC</small></span><span>3<small>DEF</small></span><span>4<small>GHI</small></span><span>5<small>JKL</small></span><span>6<small>MNO</small></span><span>7<small>PQRS</small></span><span>8<small>TUV</small></span><span>9<small>WXYZ</small></span><span>*</span><span>0</span><span>#</span></div>
+        <div class="h" style="border-top:1px solid var(--line)">Contatos <span class="b">+</span></div>
+        <div class="r"><div class="grow">Ana Paula</div><span class="m mono">1005</span></div>
+        <div class="r"><div class="grow">URA principal</div><span class="m mono">8000</span></div>
+        <div class="r"><div class="grow">Fila suporte</div><span class="m mono">7001</span></div>
+      </div>
+      <div class="p">
+        <div class="h">Chamadas <span class="m" style="text-transform:none">2 ativas</span></div>
+        <div class="cl on">
+          <div style="display:flex; justify-content:space-between"><b>Vendas 1002</b><span class="mono" style="color:var(--ok)">00:42</span></div>
+          <div class="m">saindo de Suporte 1001 · PCMA · <span class="q"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span> perda 0,1% · jitter 7 ms</div>
+          <div class="acts"><span><svg class="i"><use href="#mic"/></svg>Mudo</span><span><svg class="i"><use href="#pause"/></svg>Espera</span><span><svg class="i"><use href="#grid"/></svg>DTMF</span><span><svg class="i"><use href="#xfer"/></svg>Transferir</span><span><svg class="i"><use href="#rec"/></svg>Gravar</span><span class="x"><svg class="i"><use href="#hang"/></svg>Desligar</span></div>
+        </div>
+        <div class="cl hold">
+          <div style="display:flex; justify-content:space-between"><b>Ana Paula 1005</b><span class="mono" style="color:#b45309">em espera · 02:10</span></div>
+          <div class="m">saindo de Vendas 1002 · PCMU</div>
+          <div class="acts"><span><svg class="i"><use href="#pause"/></svg>Retomar</span><span><svg class="i"><use href="#xfer"/></svg>Juntar</span><span class="x"><svg class="i"><use href="#hang"/></svg>Desligar</span></div>
+        </div>
+      </div>
+      <div class="p" style="border-right:0">
+        <div class="h"><span class="tabs"><span class="on">SIP</span><span>Fluxo</span><span>Log</span><span>Saúde</span></span><span class="b">⤢</span></div>
+        <div class="log">
+          <div><span class="m">00:41.20</span> <span class="tx">→ INVITE 1002</span></div>
+          <div><span class="m">00:41.23</span> <span class="rx">← 100 Trying</span></div>
+          <div><span class="m">00:41.31</span> <span class="rx">← 180 Ringing</span></div>
+          <div><span class="m">00:43.02</span> <span class="rx">← 200 OK</span> <span class="m">PCMA</span></div>
+          <div><span class="m">00:43.03</span> <span class="tx">→ ACK</span></div>
+          <div><span class="m">01:20.11</span> <span class="tx">→ INVITE 1005</span> <span class="m">(Vendas)</span></div>
+          <div><span class="m">01:20.40</span> <span class="rx">← 200 OK</span></div>
+          <div><span class="m">01:31.00</span> <span class="tx">→ re-INVITE sendonly</span></div>
+          <div><span class="m">01:31.04</span> <span class="rx">← 200 OK</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="option" data-choice="d2" onclick="toggleSelect(this)" style="display:block">
+  <div class="letter">2</div>
+  <div class="content" style="width:100%">
+    <h3>2 · Três colunas + SIP numa faixa embaixo</h3>
+    <p>Contas e contatos juntos à esquerda, discador e chamadas lado a lado, SIP numa faixa que ocupa a largura toda e pode subir ou descer.</p>
+    <div class="w" style="grid-template-columns:200px 220px 1fr; grid-template-rows:1fr 150px">
+      <div class="p" style="grid-row:1 / span 2">
+        <div class="h">Contas <span class="b">+ Nova</span></div>
+        <div class="g">pbx.empresa.com · UDP</div>
+        <div class="r sel"><span class="dot" style="background:var(--ok)"></span><div class="grow">Suporte 1001</div><span class="m mono">1001</span></div>
+        <div class="r"><span class="dot" style="background:var(--ok)"></span><div class="grow">Vendas 1002</div><span class="m mono">1002</span></div>
+        <div class="g">lab.local · UDP</div>
+        <div class="r"><span class="dot" style="background:var(--bad)"></span><div class="grow">Lab 2001<div class="m" style="color:var(--bad)">403 senha recusada</div></div></div>
+        <div class="h" style="border-top:1px solid var(--line)">Contatos <span class="b">+</span></div>
+        <div class="r"><div class="grow">Ana Paula</div><span class="m mono">1005</span></div>
+        <div class="r"><div class="grow">URA principal</div><span class="m mono">8000</span></div>
+        <div class="r"><div class="grow">Fila suporte</div><span class="m mono">7001</span></div>
+        <div class="grow"></div>
+        <div class="r" style="border-top:1px solid var(--line); border-bottom:0"><span class="m">⚙ Configurações</span></div>
+      </div>
+      <div class="p">
+        <div class="h">Discar de Suporte 1001</div>
+        <div class="in"><span class="grow mono">1002</span><span class="call"><svg class="i"><use href="#phone"/></svg>Ligar</span></div>
+        <div class="keys"><span>1</span><span>2<small>ABC</small></span><span>3<small>DEF</small></span><span>4<small>GHI</small></span><span>5<small>JKL</small></span><span>6<small>MNO</small></span><span>7<small>PQRS</small></span><span>8<small>TUV</small></span><span>9<small>WXYZ</small></span><span>*</span><span>0</span><span>#</span></div>
+      </div>
+      <div class="p" style="border-right:0">
+        <div class="h">Chamadas <span class="m" style="text-transform:none">1 ativa</span></div>
+        <div class="cl on">
+          <div style="display:flex; justify-content:space-between"><b>Vendas 1002</b><span class="mono" style="color:var(--ok)">00:42</span></div>
+          <div class="m">saindo de Suporte 1001 · PCMA · perda 0,1% · jitter 7 ms</div>
+          <div class="acts"><span><svg class="i"><use href="#mic"/></svg>Mudo</span><span><svg class="i"><use href="#pause"/></svg>Espera</span><span><svg class="i"><use href="#grid"/></svg>DTMF</span><span><svg class="i"><use href="#xfer"/></svg>Transferir</span><span><svg class="i"><use href="#rec"/></svg>Gravar</span><span class="x"><svg class="i"><use href="#hang"/></svg>Desligar</span></div>
+        </div>
+      </div>
+      <div class="p" style="grid-column:2 / span 2; border-top:1px solid var(--line); border-right:0">
+        <div class="h"><span class="tabs"><span class="on">SIP</span><span>Fluxo</span><span>Log</span><span>Saúde</span></span><span class="b">▾ recolher</span></div>
+        <div class="log">
+          <div><span class="m">00:41.20</span> <span class="tx">→ INVITE sip:1002@pbx.empresa.com SIP/2.0</span></div>
+          <div><span class="m">00:41.23</span> <span class="rx">← SIP/2.0 100 Trying</span></div>
+          <div><span class="m">00:41.31</span> <span class="rx">← SIP/2.0 180 Ringing</span></div>
+          <div><span class="m">00:43.02</span> <span class="rx">← SIP/2.0 200 OK</span> <span class="m">m=audio 10042 RTP/AVP 8 101</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>

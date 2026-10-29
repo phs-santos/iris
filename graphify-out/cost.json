@@ -1,0 +1,12 @@
+{
+  "runs": [
+    {
+      "files": 253,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "note": "subagente: ~128k tokens"
+    }
+  ],
+  "total_input_tokens": 0,
+  "total_output_tokens": 0
+}

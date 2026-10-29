@@ -1,0 +1,83 @@
+<h2>Cadastro de conta e Ajustes</h2>
+<p class="subtitle">Mesmo visual claro e compacto. O cadastro pede só 4 coisas; o resto fica em “Avançado”, fechado por padrão.</p>
+
+<style>
+  .w { --fg:#1d2129; --mut:#6b7280; --line:#e4e7ec; --soft:#f3f5f8; --acc:#2563eb; --ok:#16a34a; --bad:#dc2626;
+       background:#fff; color:var(--fg); border:1px solid var(--line); border-radius:10px; overflow:hidden;
+       font:12.5px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif }
+  .w * { box-sizing:border-box }
+  .hd { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); font-weight:600 }
+  .hd span { color:var(--mut); font-weight:400 }
+  .f { display:grid; grid-template-columns:130px 1fr; align-items:center; gap:8px 12px; padding:12px 14px }
+  .f label { color:var(--mut); text-align:right }
+  .inp { border:1px solid var(--line); border-radius:6px; padding:6px 8px; background:#fff; display:flex; justify-content:space-between }
+  .inp.ph { color:#9ca3af }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden }
+  .seg span { padding:5px 10px; border-right:1px solid var(--line) } .seg span:last-child { border-right:0 }
+  .seg .on { background:#eaf1ff; color:var(--acc); font-weight:600 }
+  .sec { padding:6px 14px; background:var(--soft); border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-size:11px; font-weight:600; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; display:flex; justify-content:space-between }
+  .chk { display:flex; align-items:center; gap:6px } .chk i { width:13px; height:13px; border:1px solid #c3c9d3; border-radius:3px; display:inline-block } .chk i.on { background:var(--acc); border-color:var(--acc) }
+  .m { color:var(--mut); font-size:11px }
+  .ft { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-top:1px solid var(--line); background:#fafbfc }
+  .btn { border:1px solid var(--line); border-radius:6px; padding:5px 12px; background:#fff }
+  .btn.p { background:var(--acc); border-color:var(--acc); color:#fff; font-weight:600 }
+  .ok { color:var(--ok) }
+  .nav { width:170px; border-right:1px solid var(--line); background:var(--soft); padding:8px 0 }
+  .nav div { padding:6px 14px; color:#374151 } .nav .on { background:#eaf1ff; color:var(--acc); font-weight:600; box-shadow:inset 3px 0 0 var(--acc) }
+  .row { display:flex; justify-content:space-between; align-items:center; padding:8px 14px; border-bottom:1px solid #f0f2f5 }
+  .meter { width:140px; height:6px; border-radius:3px; background:#e5e7eb; overflow:hidden } .meter i { display:block; width:45%; height:100%; background:var(--ok) }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start }
+</style>
+
+<div class="cols">
+<div>
+  <h3 style="margin:0 0 6px">Nova conta</h3>
+  <div class="w">
+    <div class="hd">Nova conta <span>✕</span></div>
+    <div class="f">
+      <label>Servidor</label><div class="inp">pbx.empresa.com · UDP <span>▾</span></div>
+      <label>Ramal</label><div class="inp">1004</div>
+      <label>Senha</label><div class="inp">••••••••</div>
+      <label>Nome</label><div class="inp ph">Suporte 1004 (opcional)</div>
+    </div>
+    <div class="sec"><span>▾ Avançado</span><span style="text-transform:none; font-weight:400">aberto aqui só para mostrar</span></div>
+    <div class="f">
+      <label>Transporte</label><div><span class="seg"><span class="on">UDP</span><span>TCP</span><span>TLS</span><span>WebSocket</span></span></div>
+      <label>Usuário de auth.</label><div class="inp ph">igual ao ramal</div>
+      <label>Endereço:porta</label><div class="inp ph">igual ao servidor (5060)</div>
+      <label>DTMF</label><div><span class="seg"><span class="on">RTP</span><span>SIP INFO</span></span></div>
+      <label></label><div class="chk"><i class="on"></i>Registrar ao abrir a Íris</div>
+      <label></label><div class="chk"><i></i>Exigir áudio cifrado (SRTP)</div>
+      <label></label><div class="chk"><i></i>Atender sozinho após <span class="inp" style="display:inline-block; padding:1px 6px">2 s</span></div>
+      <label>Toque</label><div class="inp">Clássico <span>▾</span></div>
+      <label>Cor</label><div style="display:flex; gap:5px"><i style="width:16px;height:16px;border-radius:50%;background:#2f6e4f;outline:2px solid #2563eb;outline-offset:1px"></i><i style="width:16px;height:16px;border-radius:50%;background:#4b4f9c"></i><i style="width:16px;height:16px;border-radius:50%;background:#b45309"></i><i style="width:16px;height:16px;border-radius:50%;background:#be185d"></i></div>
+    </div>
+    <div class="m" style="padding:0 14px 10px 156px">Só com WebSocket: endereço WSS, STUN/TURN e áudio antes de atender.</div>
+    <div class="ft"><span class="m">Testar: <span class="ok">● registrou em 84 ms</span></span><span style="display:flex; gap:6px"><span class="btn">Testar</span><span class="btn p">Salvar</span></span></div>
+  </div>
+  <p class="m" style="margin-top:8px">Servidor novo? A última opção do menu é “+ Novo servidor” (nome, domínio, endereço, transporte). O servidor guarda o que é comum a todas as contas dele.</p>
+</div>
+
+<div>
+  <h3 style="margin:0 0 6px">Ajustes</h3>
+  <div class="w" style="display:flex; height:440px">
+    <div class="nav">
+      <div class="on">Áudio</div><div>Aparência</div><div>Servidores</div><div>Conexão</div><div>Notificações</div><div>Certificados</div><div>Importar e exportar</div><div>Atualização</div><div style="margin-top:14px; color:var(--mut)">Sobre · Guia</div>
+    </div>
+    <div style="flex:1">
+      <div class="sec" style="border-top:0">Dispositivos</div>
+      <div class="row"><span>Microfone</span><span class="inp" style="width:200px">MacBook Pro (padrão) <span>▾</span></span></div>
+      <div class="row"><span>Nível</span><span class="meter"><i></i></span></div>
+      <div class="row"><span>Alto-falante</span><span class="inp" style="width:200px">AirPods <span>▾</span></span></div>
+      <div class="row"><span>Toque sai em</span><span class="inp" style="width:200px">Alto-falante do Mac <span>▾</span></span></div>
+      <div class="sec">Toque</div>
+      <div class="row"><span>Volume do toque</span><span class="meter"><i style="width:70%; background:var(--acc)"></i></span></div>
+      <div class="sec">Gravações</div>
+      <div class="row"><span>Pasta</span><span style="display:flex; gap:6px; align-items:center"><span class="m">~/Downloads/Iris</span><span class="btn">Abrir</span><span class="btn">Trocar</span></span></div>
+      <div class="sec">Codecs (ordem de preferência)</div>
+      <div class="row"><span>G.722 · PCMA · PCMU · Opus</span><span class="m">arraste para ordenar</span></div>
+    </div>
+  </div>
+  <p class="m" style="margin-top:8px">Sai de Ajustes: Perfil, Ajuda da IA, Atalhos e links, Modos, Idioma. Aparência fica só com Claro / Escuro / Sistema e uma cor de destaque.</p>
+</div>
+</div>

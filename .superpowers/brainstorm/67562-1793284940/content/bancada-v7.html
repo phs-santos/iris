@@ -1,0 +1,114 @@
+<h2>Contatos que aparecem enquanto você digita</h2>
+<p class="subtitle">A coluna de contas sai da tela. No topo da barra fica a conta atual (avatar + bolinha de estado); clicar abre o seletor de contas. O espaço liberado vai para contatos e chamadas.</p>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="phone" viewBox="0 0 24 24"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z"/></symbol>
+  <symbol id="flow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 5h5v5H5zM14 14h5v5h-5zM7.5 10v4a2 2 0 0 0 2 2H14"/></symbol>
+  <symbol id="gear" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM19.4 13a7.6 7.6 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7 7 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.6 7.6 0 0 0 0 2l-2 1.6 2 3.4 2.4-1c.5.4 1.1.7 1.7 1l.4 2.5h4l.4-2.5c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.4z"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M11 4a7 7 0 1 1 0 14 7 7 0 0 1 0-14zM20 20l-4-4"/></symbol>
+  <symbol id="mic" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v3"/></symbol>
+  <symbol id="pause" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M9 5v14M15 5v14"/></symbol>
+  <symbol id="grid" viewBox="0 0 24 24"><g fill="currentColor"><circle cx="6" cy="6" r="1.6"/><circle cx="12" cy="6" r="1.6"/><circle cx="18" cy="6" r="1.6"/><circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/><circle cx="6" cy="18" r="1.6"/><circle cx="12" cy="18" r="1.6"/><circle cx="18" cy="18" r="1.6"/></g></symbol>
+  <symbol id="xfer" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="rec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/></symbol>
+  <symbol id="hang" viewBox="0 0 24 24"><path fill="currentColor" d="M12 9c-3.6 0-6.9 1.2-9 3.2-.4.4-.4 1 0 1.4l2 2c.3.3.9.4 1.3.1l2.2-1.5c.3-.2.5-.5.5-.9v-2.1c1-.3 2-.4 3-.4s2 .1 3 .4v2.1c0 .4.2.7.5.9l2.2 1.5c.4.3 1 .2 1.3-.1l2-2c.4-.4.4-1 0-1.4C18.9 10.2 15.6 9 12 9z"/></symbol>
+</defs></svg>
+
+<style>
+  .w { --fg:#1d2129; --mut:#6b7280; --line:#e4e7ec; --soft:#f3f5f8; --acc:#2563eb; --ok:#16a34a; --bad:#dc2626; --warn:#d97706;
+       background:#fff; color:var(--fg); border:1px solid var(--line); border-radius:10px; overflow:hidden; height:460px; display:grid; position:relative;
+       font:12.5px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif; grid-template-columns:60px 260px 1fr 30px }
+  .w * { box-sizing:border-box }
+  .w svg.i { width:14px; height:14px }
+  .p { border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; overflow:hidden }
+  .h { height:32px; padding:0 10px; display:flex; align-items:center; justify-content:space-between; background:var(--soft); border-bottom:1px solid var(--line); font-size:11px; font-weight:600; color:var(--mut); text-transform:uppercase; letter-spacing:.04em; flex:none }
+  .h .b { text-transform:none; letter-spacing:0; font-weight:500; color:var(--acc) }
+  .r { display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid #f0f2f5 }
+  .r.sel { background:#eaf1ff }
+  .g { padding:4px 12px; font-size:10.5px; color:var(--mut); background:#fafbfc; border-bottom:1px solid #f0f2f5; display:flex; justify-content:space-between }
+  .dot { width:7px; height:7px; border-radius:50%; flex:none }
+  .m { color:var(--mut); font-size:11px }
+  .mono { font-family:ui-monospace,SFMono-Regular,Menlo,monospace }
+  .grow { flex:1; min-width:0 }
+  .in { margin:8px; display:flex; border:1px solid var(--line); border-radius:7px; overflow:hidden }
+  .in span { padding:7px 9px; font-size:14px; display:flex; align-items:center; gap:6px } .in .call { background:var(--ok); color:#fff; font-size:12.5px; font-weight:600; padding:0 12px }
+  .keys { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; padding:0 8px 8px }
+  .keys span { border:1px solid var(--line); border-radius:6px; text-align:center; padding:5px 0; font-size:14px }
+  .kv { display:grid; grid-template-columns:120px 1fr } .kv div { padding:5px 10px; border-bottom:1px solid #f0f2f5 } .kv div:nth-child(odd) { color:var(--mut) }
+  .strip { background:var(--soft); border-left:1px solid var(--line); display:flex; justify-content:center; padding-top:8px; color:var(--mut); font-size:11px }
+  .strip span { writing-mode:vertical-rl; transform:rotate(180deg) }
+  .rail { background:var(--soft); border-right:1px solid var(--line); display:flex; flex-direction:column; align-items:center; padding:8px 0; gap:4px }
+  .rail > span { width:46px; padding:6px 0; border-radius:8px; display:flex; flex-direction:column; align-items:center; gap:2px; font-size:9.5px; color:var(--mut) }
+  .rail > span svg { width:17px; height:17px }
+  .rail .on { background:#eaf1ff; color:var(--acc) }
+  .me { position:relative; width:36px; height:36px; border-radius:50%; background:#2f6e4f; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px }
+  .me i { position:absolute; right:-1px; bottom:-1px; width:11px; height:11px; border-radius:50%; background:var(--ok); border:2px solid var(--soft) }
+  .me b { position:absolute; top:-4px; right:-6px; background:var(--bad); color:#fff; font-size:9px; border-radius:8px; padding:0 4px; border:2px solid var(--soft) }
+  .sep { width:30px; height:1px; background:var(--line); margin:4px 0 }
+  .cl { border-bottom:1px solid var(--line); padding:8px 10px }
+  .cl.on { background:#f0fdf4; box-shadow:inset 3px 0 0 var(--ok) }
+  .cl.ring { background:#eff6ff; box-shadow:inset 3px 0 0 var(--acc) }
+  .acts { display:flex; gap:4px; margin-top:6px; flex-wrap:wrap }
+  .acts span { display:flex; align-items:center; gap:4px; border:1px solid var(--line); background:#fff; border-radius:6px; padding:3px 7px; font-size:11.5px }
+  .acts .x { background:var(--bad); border-color:var(--bad); color:#fff } .acts .y { background:var(--ok); border-color:var(--ok); color:#fff }
+  .tag { font-size:10px; padding:1px 6px; border-radius:999px; background:#eef2f7; color:#374151 }
+  /* seletor */
+  .pop { position:absolute; left:64px; top:6px; width:340px; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:0 12px 32px rgba(15,23,42,.18); z-index:3; overflow:hidden }
+  .pop .r:hover { background:#f6f8fb }
+  .pop .act { display:flex; gap:4px }
+  .pop .act span { font-size:10.5px; border:1px solid var(--line); border-radius:4px; padding:1px 6px; color:var(--mut) }
+  .pop .ft { display:flex; justify-content:space-between; padding:8px 10px; background:#fafbfc; font-size:11.5px }
+  .pop .ft span { color:var(--acc) }
+  .shade { position:absolute; inset:0; background:rgba(15,23,42,.06); z-index:2 }
+</style>
+
+<div class="options"><div class="option" data-choice="fechado" onclick="toggleSelect(this)" style="display:block">
+  <div class="letter">A</div>
+  <div class="content" style="width:100%">
+    <h3>Contatos como sugestão</h3>
+    <p>Sem lista de contatos. Digitar no campo ou no teclado (número ou nome) abre sugestões só dos contatos da conta atual. ↑↓ escolhe, Enter liga. Número novo: “Salvar como contato”.</p>
+    <div class="w">
+      <div class="rail">
+        <div class="me">SU<i></i><b>1</b></div>
+        <div class="m" style="font-size:9.5px">1001</div>
+        <div class="sep"></div>
+        <span class="on"><svg><use href="#phone"/></svg>Telefone</span>
+        <span style="margin-top:auto"><svg><use href="#gear"/></svg>Ajustes</span>
+      </div>
+      <div class="p">
+        <div class="h">Discar de Suporte 1001</div>
+        <div style="position:relative">
+          <div class="in" style="border-color:var(--acc); box-shadow:0 0 0 3px #dbe7ff"><span class="grow mono">70</span><span class="call"><svg class="i"><use href="#phone"/></svg>Ligar</span></div>
+          <div style="position:absolute; left:8px; right:8px; top:44px; background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 20px rgba(15,23,42,.12); z-index:2">
+            <div class="r sel"><div class="grow">Fila suporte</div><span class="m mono"><b>70</b>01</span></div>
+            <div class="r"><div class="grow">Fila vendas</div><span class="m mono"><b>70</b>02</span></div>
+            <div class="r" style="border-bottom:0"><div class="grow m">+ Salvar “70…” como contato</div></div>
+          </div>
+        </div>
+        <div style="height:118px"></div>
+        <div class="keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>*</span><span>0</span><span>#</span></div>
+      </div>
+      <div class="p">
+        <div class="h">Chamadas <span class="m" style="text-transform:none">1 ativa · 1 entrando</span></div>
+        <div class="cl ring">
+          <div style="display:flex; justify-content:space-between"><b>Recepção 1003</b><span class="m" style="color:var(--acc)">tocando · 0:04</span></div>
+          <div class="m">para <span class="tag">Vendas 1002</span></div>
+          <div class="acts"><span class="y"><svg class="i"><use href="#phone"/></svg>Atender</span><span class="x"><svg class="i"><use href="#hang"/></svg>Recusar</span></div>
+        </div>
+        <div class="cl on">
+          <div style="display:flex; justify-content:space-between"><b>URA principal 8000</b><span class="mono" style="color:var(--ok)">00:42</span></div>
+          <div class="m">de <span class="tag">Suporte 1001</span> · G.722 · perda 0,1% · jitter 7 ms</div>
+          <div class="acts"><span><svg class="i"><use href="#mic"/></svg>Mudo</span><span><svg class="i"><use href="#pause"/></svg>Espera</span><span><svg class="i"><use href="#grid"/></svg>DTMF</span><span><svg class="i"><use href="#xfer"/></svg>Transferir</span><span><svg class="i"><use href="#rec"/></svg>Gravar</span><span class="x"><svg class="i"><use href="#hang"/></svg>Desligar</span></div>
+        </div>
+        <div class="h" style="border-top:0">Suporte 1001</div>
+        <div class="kv">
+          <div>Estado</div><div><span style="color:var(--ok)">● registrada</span> · renova em 2:41</div>
+          <div>Servidor</div><div class="mono">pbx.empresa.com:5060 · UDP</div>
+        </div>
+      </div>
+      <div class="strip"><span>SIP · Fluxo · Log</span></div>
+    </div>
+  </div>
+</div>
+
+</div>

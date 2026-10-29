@@ -1,0 +1,126 @@
+<h2>Nova Bancada: qual direção?</h2>
+<p class="subtitle">Uma tela só. Contas à esquerda, chamada no centro, depuração numa gaveta. Contatos entram no discador: digitar já procura nome ou número.</p>
+
+<style>
+  .app { --bg:#0f1217; --pane:#161a21; --card:#1d222b; --line:#262c36; --fg:#e6eaf0; --mut:#8b94a3; --acc:#4f8cff; --ok:#3ecf8e; --bad:#ef5d4f;
+    background:var(--bg); color:var(--fg); font:13px/1.35 Inter,system-ui,sans-serif; border-radius:12px; overflow:hidden; display:flex; height:520px; border:1px solid var(--line) }
+  .app * { box-sizing:border-box }
+  .col { background:var(--pane); border-right:1px solid var(--line); display:flex; flex-direction:column }
+  .hd { padding:12px 14px; display:flex; align-items:center; justify-content:space-between; color:var(--mut); font-size:11px; letter-spacing:.06em; text-transform:uppercase }
+  .acc { margin:2px 8px; padding:9px 10px; border-radius:9px; display:flex; gap:10px; align-items:center; cursor:default }
+  .acc:hover { background:var(--card) }
+  .acc.sel { background:var(--card); box-shadow:inset 3px 0 0 var(--acc) }
+  .av { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:12px; position:relative; flex:none }
+  .av i { position:absolute; right:-1px; bottom:-1px; width:10px; height:10px; border-radius:50%; border:2px solid var(--pane) }
+  .nm { font-weight:550 } .sub { color:var(--mut); font-size:11.5px }
+  .bad { color:var(--bad) }
+  .grp { padding:10px 18px 4px; color:var(--mut); font-size:11px }
+  .main { flex:1; display:flex; flex-direction:column; min-width:0 }
+  .top { height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid var(--line) }
+  .btn { background:var(--card); border:1px solid var(--line); color:var(--fg); border-radius:8px; padding:6px 10px; font-size:12px }
+  .btn.p { background:var(--acc); border-color:var(--acc); color:#fff }
+  .search { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; font-size:22px; font-family:ui-monospace,monospace; display:flex; justify-content:space-between; align-items:center }
+  .sugg { margin-top:6px; background:var(--card); border-radius:10px; border:1px solid var(--line) }
+  .sugg div { padding:8px 12px; display:flex; justify-content:space-between } .sugg div + div { border-top:1px solid var(--line) }
+  .call { background:linear-gradient(180deg,#1b2433,#161a21); border:1px solid var(--line); border-radius:14px; padding:18px; text-align:center }
+  .big { font-size:20px; font-weight:600 }
+  .tm { color:var(--ok); font-family:ui-monospace,monospace; margin-top:4px }
+  .acts { display:flex; justify-content:center; gap:10px; margin-top:14px; flex-wrap:wrap }
+  .ic { width:52px; text-align:center; font-size:11px; color:var(--mut) }
+  .ic b { display:flex; width:42px; height:42px; margin:0 auto 4px; border-radius:50%; background:var(--card); border:1px solid var(--line); align-items:center; justify-content:center; color:var(--fg); font-size:15px }
+  .hang b { background:var(--bad); border-color:var(--bad); color:#fff }
+  .drawer { width:34%; background:#0c0f13; border-left:1px solid var(--line); font:11.5px/1.5 ui-monospace,monospace; padding:10px 12px; color:#b7c0cc }
+  .drawer .t { display:flex; gap:8px; font:12px Inter,system-ui; margin-bottom:8px } .drawer .t span { padding:3px 8px; border-radius:6px } .drawer .t .on { background:var(--card) }
+  .rx { color:#7cc4ff } .tx { color:#ffcf6a }
+  .rail { width:56px; background:var(--pane); border-right:1px solid var(--line); display:flex; flex-direction:column; align-items:center; padding-top:12px; gap:8px }
+  .rail span { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--mut); font-size:16px }
+  .rail .on { background:var(--card); color:var(--fg) }
+  .q { display:flex; gap:3px; align-items:flex-end; height:14px; justify-content:center; margin-top:6px } .q i { width:4px; background:var(--ok); border-radius:2px }
+</style>
+
+<div class="options">
+<div class="option" data-choice="a" onclick="toggleSelect(this)" style="display:block">
+  <div class="letter">A</div>
+  <div class="content" style="width:100%">
+    <h3>A · Três colunas, gaveta de depuração aberta sob demanda</h3>
+    <p>Mostrado com a gaveta aberta. Fechada, o centro ocupa o espaço todo.</p>
+    <div class="app">
+      <div class="col" style="width:230px">
+        <div class="hd"><span>Contas</span><span class="btn">+ Nova</span></div>
+        <div class="grp">pbx.empresa.com · UDP</div>
+        <div class="acc sel"><div class="av" style="background:#2f6e4f">SU<i style="background:var(--ok)"></i></div><div><div class="nm">Suporte 1001</div><div class="sub">registrada</div></div></div>
+        <div class="acc"><div class="av" style="background:#4b4f9c">VE<i style="background:var(--ok)"></i></div><div><div class="nm">Vendas 1002</div><div class="sub">registrada</div></div></div>
+        <div class="grp">lab.local · UDP</div>
+        <div class="acc"><div class="av" style="background:#7a3d3d">LA<i style="background:var(--bad)"></i></div><div><div class="nm">Lab 2001</div><div class="sub bad">senha recusada (403)</div></div></div>
+        <div style="margin-top:auto; padding:10px 14px; display:flex; gap:6px"><span class="btn">⚙ Configurações</span></div>
+      </div>
+      <div class="main">
+        <div class="top"><span class="sub">Ligando de <b style="color:var(--fg)">Suporte 1001</b></span><span class="btn">⌁ Depurar</span></div>
+        <div style="padding:16px; display:flex; flex-direction:column; gap:14px; overflow:hidden">
+          <div>
+            <div class="search"><span>ana</span><span class="btn p" style="font:600 13px Inter">Ligar</span></div>
+            <div class="sugg"><div><span>Ana Paula · Financeiro</span><span class="sub">1005</span></div><div><span>Ana Ribeiro</span><span class="sub">+55 11 9 8877-1100</span></div></div>
+          </div>
+          <div class="call">
+            <div class="sub">em chamada · via Suporte 1001</div>
+            <div class="big">Vendas 1002</div>
+            <div class="tm">00:42</div>
+            <div class="q"><i style="height:5px"></i><i style="height:8px"></i><i style="height:11px"></i><i style="height:14px"></i></div>
+            <div class="acts">
+              <div class="ic"><b>🎙</b>Mudo</div><div class="ic"><b>⏸</b>Espera</div><div class="ic"><b>⌗</b>Teclado</div><div class="ic"><b>⇄</b>Transferir</div><div class="ic"><b>●</b>Gravar</div><div class="ic hang"><b>✕</b>Desligar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="drawer">
+        <div class="t"><span class="on">SIP</span><span>Fluxo</span><span>Log</span><span>Saúde</span></div>
+        <div class="tx">→ INVITE sip:1002@pbx.empresa.com</div>
+        <div class="rx">← 100 Trying</div>
+        <div class="rx">← 180 Ringing</div>
+        <div class="rx">← 200 OK  (PCMA/8000)</div>
+        <div class="tx">→ ACK</div>
+        <div style="margin-top:8px; color:var(--mut)">clique numa linha para ver a mensagem inteira</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="option" data-choice="b" onclick="toggleSelect(this)" style="display:block">
+  <div class="letter">B</div>
+  <div class="content" style="width:100%">
+    <h3>B · Barra de ícones + contas como “perfis” no topo do discador</h3>
+    <p>Barra fina à esquerda (Telefone, Contatos, Contas, Configurações). As contas aparecem como fichas acima do discador; a lista completa fica na página Contas.</p>
+    <div class="app">
+      <div class="rail"><span class="on">☎</span><span>👤</span><span>⧉</span><span style="margin-top:auto; margin-bottom:12px">⚙</span></div>
+      <div class="main">
+        <div class="top">
+          <div style="display:flex; gap:6px">
+            <span class="btn" style="box-shadow:inset 0 0 0 1px var(--acc)">● Suporte 1001</span><span class="btn">● Vendas 1002</span><span class="btn"><span class="bad">●</span> Lab 2001</span>
+          </div>
+          <span class="btn">⌁ Depurar</span>
+        </div>
+        <div style="display:flex; gap:16px; padding:16px; flex:1; min-height:0">
+          <div style="width:44%; display:flex; flex-direction:column; gap:10px">
+            <div class="search"><span>1002</span><span class="btn p" style="font:600 13px Inter">Ligar</span></div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px">
+              <span class="btn" style="padding:12px; text-align:center">1</span><span class="btn" style="padding:12px; text-align:center">2</span><span class="btn" style="padding:12px; text-align:center">3</span>
+              <span class="btn" style="padding:12px; text-align:center">4</span><span class="btn" style="padding:12px; text-align:center">5</span><span class="btn" style="padding:12px; text-align:center">6</span>
+              <span class="btn" style="padding:12px; text-align:center">7</span><span class="btn" style="padding:12px; text-align:center">8</span><span class="btn" style="padding:12px; text-align:center">9</span>
+            </div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:10px">
+            <div class="call" style="text-align:left; display:flex; align-items:center; gap:14px">
+              <div class="av" style="width:46px; height:46px; background:#4b4f9c; font-size:15px">VE</div>
+              <div style="flex:1"><div class="big">Vendas 1002</div><div class="sub">via Suporte 1001 · <span style="color:var(--ok)">00:42</span> · qualidade boa</div></div>
+            </div>
+            <div class="acts" style="justify-content:flex-start; margin:0">
+              <div class="ic"><b>🎙</b>Mudo</div><div class="ic"><b>⏸</b>Espera</div><div class="ic"><b>⌗</b>Teclado</div><div class="ic"><b>⇄</b>Transferir</div><div class="ic"><b>●</b>Gravar</div><div class="ic hang"><b>✕</b>Desligar</div>
+            </div>
+            <div class="call" style="text-align:left; padding:10px 14px; opacity:.75"><span class="sub">em espera</span> · Ana Paula 1005 · 02:10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>

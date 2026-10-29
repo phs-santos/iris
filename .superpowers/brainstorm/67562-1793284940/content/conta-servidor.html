@@ -1,0 +1,80 @@
+<h2>Conta com nome e etiquetas · janela de servidor</h2>
+<p class="subtitle">O nome passa a ser obrigatório e vem primeiro. Etiquetas são livres (ex.: “cliente X”, “lab”, “produção”). O servidor tem a própria janela.</p>
+
+<style>
+  .w { --fg:#1d2129; --mut:#6b7280; --line:#e4e7ec; --soft:#f3f5f8; --acc:#2563eb; --ok:#16a34a; --bad:#dc2626;
+       background:#fff; color:var(--fg); border:1px solid var(--line); border-radius:10px; overflow:hidden;
+       font:12.5px/1.35 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif }
+  .w * { box-sizing:border-box }
+  .hd { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-bottom:1px solid var(--line); font-weight:600 }
+  .hd span { color:var(--mut); font-weight:400 }
+  .f { display:grid; grid-template-columns:130px 1fr; align-items:center; gap:8px 12px; padding:12px 14px }
+  .f label { color:var(--mut); text-align:right }
+  .f label b { color:var(--bad); font-weight:400 }
+  .inp { border:1px solid var(--line); border-radius:6px; padding:6px 8px; background:#fff; display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap }
+  .inp.ph { color:#9ca3af }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden }
+  .seg span { padding:5px 10px; border-right:1px solid var(--line) } .seg span:last-child { border-right:0 }
+  .seg .on { background:#eaf1ff; color:var(--acc); font-weight:600 }
+  .sec { padding:6px 14px; background:var(--soft); border-top:1px solid var(--line); border-bottom:1px solid var(--line); font-size:11px; font-weight:600; color:var(--mut); text-transform:uppercase; letter-spacing:.04em }
+  .m { color:var(--mut); font-size:11px }
+  .ft { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-top:1px solid var(--line); background:#fafbfc }
+  .btn { border:1px solid var(--line); border-radius:6px; padding:5px 12px; background:#fff }
+  .btn.p { background:var(--acc); border-color:var(--acc); color:#fff; font-weight:600 }
+  .tag { font-size:11px; padding:1px 7px; border-radius:999px; background:#eef2f7; color:#374151 }
+  .tag.c1 { background:#e0f2fe; color:#075985 } .tag.c2 { background:#fef3c7; color:#92400e } .tag.c3 { background:#ede9fe; color:#5b21b6 }
+  .dd { border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 20px rgba(15,23,42,.12); margin-top:4px; background:#fff }
+  .dd div { padding:6px 10px; border-bottom:1px solid #f0f2f5 } .dd div:last-child { border-bottom:0; color:var(--acc) }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start }
+  .r { display:flex; align-items:center; gap:8px; padding:6px 10px; border-bottom:1px solid #f0f2f5 }
+  .dot { width:7px; height:7px; border-radius:50%; flex:none }
+  .ok { color:var(--ok) }
+</style>
+
+<div class="cols">
+<div>
+  <h3 style="margin:0 0 6px">Nova conta</h3>
+  <div class="w">
+    <div class="hd">Nova conta <span>✕</span></div>
+    <div class="f">
+      <label>Nome <b>*</b></label><div class="inp">Suporte cliente Acme</div>
+      <label>Etiquetas</label><div class="inp"><span style="display:flex; gap:4px"><span class="tag c1">acme ✕</span><span class="tag c2">produção ✕</span></span><span class="m">+ etiqueta</span></div>
+      <label>Servidor <b>*</b></label>
+      <div>
+        <div class="inp">pbx.acme.com.br · UDP <span>▾</span></div>
+        <div class="dd"><div>pbx.empresa.com · UDP</div><div style="background:#eaf1ff">pbx.acme.com.br · UDP</div><div>lab.local · UDP</div><div>+ Novo servidor…</div></div>
+      </div>
+      <label>Ramal <b>*</b></label><div class="inp">1004</div>
+      <label>Senha <b>*</b></label><div class="inp">••••••••</div>
+    </div>
+    <div class="sec">▸ Avançado</div>
+    <div class="ft"><span class="m">Testar: <span class="ok">● registrou em 84 ms</span></span><span style="display:flex; gap:6px"><span class="btn">Testar</span><span class="btn p">Salvar</span></span></div>
+  </div>
+
+  <h3 style="margin:16px 0 6px">No seletor de contas</h3>
+  <div class="w">
+    <div style="padding:8px"><div class="inp ph">procurar por nome, ramal ou etiqueta</div></div>
+    <div style="display:flex; gap:4px; padding:0 8px 8px"><span class="tag">todas</span><span class="tag c1">acme</span><span class="tag c2">produção</span><span class="tag c3">lab</span></div>
+    <div class="r" style="background:#eaf1ff"><span class="dot" style="background:var(--ok)"></span><div style="flex:1"><b>Suporte cliente Acme</b><div class="m">1004 · pbx.acme.com.br</div></div><span class="tag c1">acme</span><span class="tag c2">produção</span></div>
+    <div class="r"><span class="dot" style="background:var(--ok)"></span><div style="flex:1">Vendas<div class="m">1002 · pbx.empresa.com</div></div><span class="tag c2">produção</span></div>
+    <div class="r"><span class="dot" style="background:var(--bad)"></span><div style="flex:1">Teste de URA<div class="m">2001 · lab.local</div></div><span class="tag c3">lab</span></div>
+  </div>
+</div>
+
+<div>
+  <h3 style="margin:0 0 6px">Novo servidor (janela própria)</h3>
+  <div class="w">
+    <div class="hd">Novo servidor <span>✕</span></div>
+    <div class="f">
+      <label>Nome <b>*</b></label><div class="inp">PBX Acme</div>
+      <label>Domínio SIP <b>*</b></label><div class="inp">pbx.acme.com.br</div>
+      <label>Transporte</label><div><span class="seg"><span class="on">UDP</span><span>TCP</span><span>TLS</span><span>WebSocket</span></span></div>
+      <label>Endereço:porta</label><div class="inp ph">igual ao domínio (5060)</div>
+    </div>
+    <div class="sec">▸ Avançado</div>
+    <div class="m" style="padding:8px 14px">Proxy de saída, SRTP padrão, DTMF padrão. Com WebSocket: endereço WSS e STUN/TURN.</div>
+    <div class="ft"><span class="m">Testar: <span class="ok">● responde a OPTIONS · 18 ms</span></span><span style="display:flex; gap:6px"><span class="btn">Testar</span><span class="btn p">Salvar</span></span></div>
+  </div>
+  <p class="m" style="margin-top:8px">Abre de dois lugares: “+ Novo servidor…” no cadastro da conta (e já volta com ele escolhido) e Ajustes → Servidores (lista para editar e apagar). Editar o servidor vale para todas as contas dele.</p>
+</div>
+</div>

@@ -1,0 +1,93 @@
+<h2>Onde as contas devem ficar?</h2>
+<p class="subtitle">Esboços de uma Íris mais simples: uma tela para ligar, contas fáceis de trocar, depuração escondida. Clique no que parecer mais certo (pode marcar mais de um).</p>
+
+<style>
+  .ph { background:#1c2028; color:#dde3ea; border-radius:10px; padding:12px; font:13px system-ui; min-height:330px; display:flex; flex-direction:column; gap:8px }
+  .row { display:flex; gap:8px; align-items:center }
+  .acc { background:#262b35; border-radius:8px; padding:8px 10px; display:flex; gap:8px; align-items:center }
+  .acc.sel { outline:2px solid #5aa9ff }
+  .dot { width:9px; height:9px; border-radius:50%; background:#5ccf7a; flex:none }
+  .dot.err { background:#e5604f }
+  .dot.off { background:#6b7280 }
+  .muted { color:#8a93a3; font-size:11px }
+  .num { background:#11141a; border-radius:8px; padding:10px; font:20px ui-monospace; letter-spacing:1px }
+  .keys { display:grid; grid-template-columns:repeat(3,1fr); gap:6px }
+  .keys span { background:#262b35; border-radius:50%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; max-width:46px; margin:auto; width:100% }
+  .call { background:#3f9a57; color:#fff; border-radius:999px; padding:9px; text-align:center; font-weight:600 }
+  .chip { background:#262b35; border-radius:999px; padding:5px 10px; display:flex; gap:6px; align-items:center; white-space:nowrap }
+  .chip.sel { outline:2px solid #5aa9ff }
+  .side { width:38%; display:flex; flex-direction:column; gap:6px; border-right:1px solid #2d333f; padding-right:8px }
+  .tiny { font-size:11px; color:#8a93a3; text-align:right }
+</style>
+
+<div class="cards" data-multiselect>
+  <div class="card" data-choice="a-lateral" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="ph">
+        <div class="row" style="align-items:stretch; gap:10px; flex:1">
+          <div class="side">
+            <div class="muted">CONTAS</div>
+            <div class="acc sel"><span class="dot"></span><div>Suporte 1001<div class="muted">registrada</div></div></div>
+            <div class="acc"><span class="dot"></span><div>Vendas 1002<div class="muted">registrada</div></div></div>
+            <div class="acc"><span class="dot err"></span><div>Lab 2001<div class="muted">403 senha?</div></div></div>
+            <div class="muted" style="margin-top:auto">+ Nova conta</div>
+          </div>
+          <div style="flex:1; display:flex; flex-direction:column; gap:8px">
+            <div class="num">1002</div>
+            <div class="keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
+            <div class="call">Ligar de Suporte 1001</div>
+          </div>
+        </div>
+        <div class="tiny">Ver SIP ▸</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Contas na lateral</h3>
+      <p>Lista sempre à vista à esquerda; clicar numa conta escolhe de onde a ligação sai. Discador ao lado. Janela média.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b-topo" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="ph">
+        <div class="row" style="overflow:hidden">
+          <div class="chip sel"><span class="dot"></span>Suporte 1001</div>
+          <div class="chip"><span class="dot"></span>Vendas 1002</div>
+          <div class="chip"><span class="dot err"></span>Lab 2001</div>
+          <div class="chip">+</div>
+        </div>
+        <div class="num">1002</div>
+        <div class="keys"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
+        <div class="call">Ligar</div>
+        <div class="tiny">Ver SIP ▸</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Contas em botões no topo</h3>
+      <p>Uma tela só, tamanho de telefone. As contas viram botões com a bolinha de estado; o selecionado é de onde sai a ligação.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c-menu" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="ph">
+        <div class="acc sel" style="justify-content:space-between"><span class="row"><span class="dot"></span>Ligar de: <b>Suporte 1001</b></span><span>▾</span></div>
+        <div style="background:#262b35; border-radius:8px; padding:6px; display:flex; flex-direction:column; gap:4px">
+          <div class="row"><span class="dot"></span>Suporte 1001 <span class="muted">✓</span></div>
+          <div class="row"><span class="dot"></span>Vendas 1002</div>
+          <div class="row"><span class="dot err"></span>Lab 2001 <span class="muted">403</span></div>
+          <div class="muted">Gerenciar contas…</div>
+        </div>
+        <div class="num">1002</div>
+        <div class="call">Ligar</div>
+        <div class="tiny">Ver SIP ▸</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Conta num menu</h3>
+      <p>Como o seletor de chip no celular: o topo mostra a conta atual; tocar abre a lista. Cadastro de contas fica numa tela separada.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Nos três: um só modo (sem Bancada × Telefone), e "Ver SIP" abre a depuração da chamada só quando você precisa.</p>
