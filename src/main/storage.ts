@@ -133,10 +133,10 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 /**
- * Tira das preferências as chaves de recursos que deixaram de existir na 2.0 (modos SDR e Mensagens, aviso de
- * mensagem de texto): arquivos antigos continuam valendo, e a validação dos canais não recusa o que a tela devolve (RNF-19).
+ * Tira das preferências as chaves de recursos que deixaram de existir na 2.0 (modos SDR, Mensagens e Cenários, avisos de
+ * mensagem de texto e de monitor): arquivos antigos continuam valendo, e a validação dos canais não recusa o que a tela devolve (RNF-19).
  */
-function dropRemovedKeys(settings: Settings): Settings {
+export function dropRemovedKeys(settings: Settings): Settings {
     const clean = (enabled: object | undefined, removed: string[]): Record<string, boolean> | undefined =>
         enabled
             ? (Object.fromEntries(Object.entries(enabled).filter(([k]) => !removed.includes(k))) as Record<
@@ -145,9 +145,10 @@ function dropRemovedKeys(settings: Settings): Settings {
               >)
             : undefined
     const out = { ...settings } as Settings & { modes?: { enabled?: object }; notifications?: { enabled?: object } }
-    if (out.modes?.enabled) out.modes = { ...out.modes, enabled: clean(out.modes.enabled, ['sdr', 'messages']) }
+    if (out.modes?.enabled)
+        out.modes = { ...out.modes, enabled: clean(out.modes.enabled, ['sdr', 'messages', 'scenarios']) }
     if (out.notifications?.enabled)
-        out.notifications = { ...out.notifications, enabled: clean(out.notifications.enabled, ['message']) }
+        out.notifications = { ...out.notifications, enabled: clean(out.notifications.enabled, ['message', 'monitor']) }
     return out
 }
 

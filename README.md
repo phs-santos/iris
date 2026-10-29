@@ -27,7 +27,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
 | RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
-| RF-47 | G.722 e Opus em SIP puro, além do G.711. O G.722 é oferecido primeiro e leva a voz em alta definição (16 kHz); o codec e a troca de taxa são próprios, em TypeScript, conferidos contra o Asterisk. O Opus sai em banda estreita, com o DTMF no relógio de 48 kHz. A gravação e os tons dos cenários continuam a 8 kHz |
+| RF-47 | G.722 e Opus em SIP puro, além do G.711. O G.722 é oferecido primeiro e leva a voz em alta definição (16 kHz); o codec e a troca de taxa são próprios, em TypeScript, conferidos contra o Asterisk. O Opus sai em banda estreita, com o DTMF no relógio de 48 kHz. A gravação continua a 8 kHz |
 | RF-27 | BLF em SIP puro e no simulado: a conta acompanha o estado (livre, tocando, em chamada) dos ramais escolhidos; e aviso de correio de voz (MWI) |
 | RF-42 | Teste de carga por SIP puro: até 200 chamadas simultâneas por uma conta, cada uma tocando um tom, com relatório de atendidas, áudio, tempo até atender, perda e jitter |
 | RF-46 | Diagnóstico de rede na Saúde: registros DNS SRV do domínio, certificado TLS do PBX (emissor, validade, nomes) e endereço público pelo servidor STUN da conta |
@@ -42,7 +42,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-55 | Toque de chamada por conta (clássico, digital, suave, sino ou nenhum), volume do toque em Configurações → Áudio e o botão do fone (tecla Tocar/Pausar) para atender e desligar |
 | RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, as notificações do sistema continuam em português |
 | RF-20 | Early media: o cartão diz se o som antes do atendimento é o toque local ou o áudio do PBX (183), e toca esse áudio. Em SIP puro sempre; em WebRTC por opção da conta |
-| RF-52 | Chamada de vídeo em contas WebRTC e no simulado: botão Vídeo no discador, Atender com vídeo, a imagem do outro lado e a própria câmera no cartão, câmera ligável durante a chamada e escolhida em Configurações. SIP puro, modo Telefone, gravação e cenários ainda sem vídeo |
+| RF-52 | Chamada de vídeo em contas WebRTC e no simulado: botão Vídeo no discador, Atender com vídeo, a imagem do outro lado e a própria câmera no cartão, câmera ligável durante a chamada e escolhida em Configurações. SIP puro, modo Telefone, gravação ainda sem vídeo |
 | RF-58 | Modos: o app abre só com o padrão de chamada; log e diagnóstico e vídeo ligam numa área escondida das Configurações |
 | RF-57 | Áudio de atendimento: um WAV da conta toca para quem ligou logo depois de atender (SIP puro e simulado) |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, CSV, e o nome do contato nas chamadas |

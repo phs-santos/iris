@@ -18,6 +18,7 @@
         "src/shared/**/*",
         "tests/sip-core.test.ts",
         "tests/app-log.test.ts",
+        "tests/settings-migration.test.ts",
         "tests/user-agent.test.ts",
         "tests/transport.test.ts",
         "tests/media.test.ts",
