@@ -72,10 +72,7 @@ const cancelPlus = (): void => clearTimeout(plusTimer)
 
 const erase = (): string => (destination.value = destination.value.slice(0, -1))
 
-/** O motor da conta escolhida faz vídeo: WebRTC e simulado (RF-52). */
-const canVideo = computed(() => Boolean(from.value && accounts.engineOf(from.value.id)?.video))
-
-async function dial(number = destination.value, video = false): Promise<void> {
+async function dial(number = destination.value): Promise<void> {
     error.value = ''
     if (!from.value || !number.trim()) return
     const headers = headersText.value
@@ -88,7 +85,7 @@ async function dial(number = destination.value, video = false): Promise<void> {
         return
     }
     try {
-        await calls.dial(from.value.id, number, headers.length ? headers : undefined, video)
+        await calls.dial(from.value.id, number, headers.length ? headers : undefined)
         destination.value = number
     } catch (e) {
         error.value = (e as Error).message
@@ -136,17 +133,6 @@ defineExpose({
             </datalist>
             <button class="btn go big" type="submit" :disabled="!registered || !destination.trim()">
                 <PhoneIcon name="phone" class="dial-icon" />{{ $t('dialerPane.ligar') }}
-            </button>
-            <button
-                v-if="from && prefs.isOn('video')"
-                class="btn big video-call"
-                type="button"
-                :disabled="!canVideo || !registered || !destination.trim()"
-                :title="canVideo ? $t('dialerPane.ligar_com_video') : $t('dialerPane.video_so_webrtc')"
-                :aria-label="$t('dialerPane.ligar_com_video')"
-                @click="dial(destination, true)"
-            >
-                <PhoneIcon name="video" class="dial-icon" />{{ $t('dialerPane.video') }}
             </button>
         </form>
 

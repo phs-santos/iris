@@ -17,12 +17,23 @@ describe('preferências antigas (RNF-19)', () => {
     it('tira modos e avisos de recursos removidos e mantém o resto', () => {
         const out = dropRemovedKeys(
             withKeys(
-                { log: true, video: false, sdr: true, messages: true, scenarios: true },
-                { incoming: false, message: true, monitor: true }
+                { log: true, video: true, sdr: true, messages: true, scenarios: true },
+                { incoming: false, message: true, monitor: true, voicemail: true }
             )
         ) as unknown as { modes: { enabled: object }; notifications: { enabled: object } }
-        expect(out.modes.enabled).toEqual({ log: true, video: false })
+        expect(out.modes.enabled).toEqual({ log: true })
         expect(out.notifications.enabled).toEqual({ incoming: false })
+    })
+
+    it('tira a ajuda da IA e a câmera, que saíram', () => {
+        const old = {
+            schemaVersion: 1,
+            trustedHosts: [],
+            ai: { model: 'x', mask: true },
+            videoInputId: 'cam',
+            audioInputId: 'mic'
+        } as unknown as Settings
+        expect(dropRemovedKeys(old)).toEqual({ schemaVersion: 1, trustedHosts: [], audioInputId: 'mic' })
     })
 
     it('aceita preferências sem modos nem avisos', () => {

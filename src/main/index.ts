@@ -29,10 +29,8 @@ import {
 } from './storage'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
 import { setupUpdater } from './updater'
-import { AI_SECRET_PREFIX, registerAiIpc } from './ai'
 import { isAppearance, isProfile } from '@shared/appearance'
 import { isReconnect } from '@shared/reconnect'
-import { parseWav, SAMPLE_RATE } from '@shared/audio'
 import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
@@ -240,12 +238,12 @@ function createTray(): void {
 function setupSecurity(): void {
     const ses = session.defaultSession
 
-    // Só microfone, câmera (chamada de vídeo, RF-52), saída de áudio e notificações são liberados para a interface.
+    // Só microfone, saída de áudio e notificações são liberados para a interface.
     const allowed = new Set(['media', 'speaker-selection', 'notifications'])
     ses.setPermissionRequestHandler((_wc, permission, callback, details) => {
         if (permission === 'media') {
             const types = (details as Electron.MediaAccessPermissionRequest).mediaTypes ?? []
-            return callback(types.every((t) => t === 'audio' || t === 'video'))
+            return callback(types.every((t) => t === 'audio'))
         }
         callback(allowed.has(permission))
     })
@@ -273,8 +271,6 @@ app.on('certificate-error', (event, _webContents, url, error, _certificate, call
 function registerIpc(): void {
     const isList = (v: unknown, max = 1000): v is unknown[] => Array.isArray(v) && v.length <= max
     const isId = (v: unknown): v is string => isString(v, 200) && v.length > 0
-    // A chave da IA mora no mesmo cofre, mas a interface não pode ler nem trocar por estes canais (RF-38).
-    const isAccountId = (v: unknown): v is string => isId(v) && !v.startsWith(AI_SECRET_PREFIX)
 
     handle(IPC.accountsLoad, () => loadAccounts())
     handle(IPC.accountsSave, (_e, accounts: Account[]) => {
@@ -292,11 +288,11 @@ function registerIpc(): void {
         return saveServers(servers)
     })
     handle(IPC.secretsGet, (_e, id: string) => {
-        check(isAccountId(id), 'id da conta')
+        check(isId(id), 'id da conta')
         return getSecret(id)
     })
     handle(IPC.secretsSet, (_e, id: string, password: string | null) => {
-        check(isAccountId(id) && (password === null || isString(password, 1000)), 'senha')
+        check(isId(id) && (password === null || isString(password, 1000)), 'senha')
         return setSecret(id, password)
     })
     handle(IPC.secretsStatus, () => secretsStatus())
@@ -305,12 +301,11 @@ function registerIpc(): void {
     const withModes = <T extends { modes?: unknown }>(settings: T): T =>
         allModes ? { ...settings, modes: { ...ALL_MODES, unlocked: true } } : settings
     handle(IPC.settingsLoad, async () => withModes(await loadSettings()))
-    // A interface manda só os campos que mudou; os outros (canal de atualização, IA) ela não alcança.
+    // A interface manda só os campos que mudou; os outros (canal de atualização) ela não alcança.
     const patchKeys = [
         'trustedHosts',
         'audioInputId',
         'audioOutputId',
-        'videoInputId',
         'ringVolume',
         'mediaKey',
         'profile',
@@ -330,7 +325,6 @@ function registerIpc(): void {
                     (isList(patch.trustedHosts, 200) && patch.trustedHosts.every((h) => isString(h, 255)))) &&
                 isDeviceId(patch.audioInputId) &&
                 isDeviceId(patch.audioOutputId) &&
-                isDeviceId(patch.videoInputId) &&
                 isRingVolume(patch.ringVolume) &&
                 (patch.mediaKey === undefined || typeof patch.mediaKey === 'boolean') &&
                 isProfile(patch.profile) &&
@@ -399,22 +393,6 @@ function registerIpc(): void {
         const info = await fs.stat(result.filePaths[0])
         check(info.size <= 20_000_000, 'arquivo de até 20 MB')
         return fs.readFile(result.filePaths[0], 'utf8')
-    })
-
-    // WAV do áudio de atendimento (RF-57): só arquivos .wav, até 20 MB e 2 minutos de áudio.
-    handle(IPC.audioPickWav, async () => {
-        if (!mainWindow) return null
-        const result = await dialog.showOpenDialog(mainWindow, {
-            properties: ['openFile'],
-            filters: [{ name: 'WAV', extensions: ['wav'] }]
-        })
-        return result.canceled ? null : (result.filePaths[0] ?? null)
-    })
-    handle(IPC.audioLoadWav, async (_e, path: string) => {
-        check(isString(path, 2000) && /\.wav$/i.test(path), 'arquivo WAV')
-        const info = await fs.stat(path)
-        check(info.isFile() && info.size <= 20_000_000, 'arquivo WAV de até 20 MB')
-        return parseWav(await fs.readFile(path)).subarray(0, SAMPLE_RATE * 120)
     })
 
     // Pasta das gravações (RF-36): criada se ainda não existe, para o botão não abrir um erro.
@@ -504,14 +482,7 @@ function registerIpc(): void {
     // TLS do motor próprio (RF-39): mesma lista de hosts aceitos e mesmo aviso do WebSocket (RF-37).
     registerNativeSipIpc({
         isTrustedHost: (host) => trustedHosts.has(host),
-        onCertificateError: (host, error) => mainWindow?.webContents.send(IPC.certificateError, { host, error }),
-        saveFile: async (defaultName, data) => {
-            if (!mainWindow) return null
-            const result = await dialog.showSaveDialog(mainWindow, { defaultPath: basename(defaultName) })
-            if (result.canceled || !result.filePath) return null
-            await fs.writeFile(result.filePath, data)
-            return result.filePath
-        }
+        onCertificateError: (host, error) => mainWindow?.webContents.send(IPC.certificateError, { host, error })
     })
 
     handle(IPC.windowMode, (_e, mode: WindowMode) => {
@@ -558,7 +529,6 @@ app.whenReady().then(async () => {
     registerIpc()
     // Empacotado, o macOS usa o .icns do bundle; em dev o Dock mostraria o ícone do Electron.
     if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(appIcon)
-    registerAiIpc()
     // Antes da janela: a interface pede o estado da atualização assim que abre.
     setupUpdater({
         send: (status) => mainWindow?.webContents.send(IPC.updateStatus, status),

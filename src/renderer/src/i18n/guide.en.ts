@@ -111,7 +111,7 @@ export const GUIDE_EN: GuideSection[] = [
                     '**Phone mode**: swaps the window for a simple phone, with just the keypad and the call. See "Phone mode".',
                     '**Update available**: only shows when there is a new version. See "Update".',
                     '**Guide**: opens this screen. The **F1** key opens it too.',
-                    '**Settings**: profile, colors, audio, AI, certificates, import and export, and update. The shortcut is **Ctrl+,** (on macOS, **Cmd+,**).'
+                    '**Settings**: profile, colors, audio, certificates, import and export, and update. The shortcut is **Ctrl+,** (on macOS, **Cmd+,**).'
                 ]
             },
             {
@@ -150,15 +150,6 @@ export const GUIDE_EN: GuideSection[] = [
                 type: 'p',
                 text: 'The tags to the right of the name mean: a **number** is how many active calls the account has; **AA** is auto-answer on; **SIM** is an account on the simulated PBX.'
             },
-            { type: 'h', text: 'Lights of other extensions (BLF) and voicemail' },
-            {
-                type: 'p',
-                text: 'On **plain SIP** and **simulated PBX** accounts, the **Extensions to watch (BLF)** field, under Advanced, takes a list such as `1002, 1003`. With the account registered, each extension shows below it as a tag: a green border is **idle**, yellow is **ringing**, red is **on a call** and grey is **no news from the PBX** (the PBX refused to watch the extension, and the log says why). The PBX has to publish the state of the extensions; on Asterisk, that is a `hint` in the dialplan.'
-            },
-            {
-                type: 'p',
-                text: 'When the PBX reports messages in the **voicemail** of the extension, the account shows the "voicemail" tag with the number of new messages, and the log records the change.'
-            },
             {
                 type: 'p',
                 text: 'Click the PBX name (the domain above the accounts) to **collapse the group**: it shows only how many accounts are online, such as "2/3 online". The choice is kept on this machine.'
@@ -184,16 +175,13 @@ export const GUIDE_EN: GuideSection[] = [
                     '**Edit**: opens the form. If the account was registered, it registers again with the new details.',
                     '**⋯ → Health**: runs the checks of the account. See "Health and diagnostics".',
                     '**⋯ → Duplicate**: creates a copy, to add several similar extensions without retyping everything.',
-                    '**⋯ → SIP request…** (registered plain SIP accounts and simulated ones): sends a single request, such as `OPTIONS`, `MESSAGE` or `SUBSCRIBE`, with the headers and body you write, and shows the whole reply from the PBX and how long it took.',
-                    '**⋯ → Load test…** (registered plain SIP accounts): places several calls at once through the account, each one playing a tone, to a destination that answers on its own (an echo number, an IVR). At the end it shows how many were answered, how many had audio, the time to answer, the packet loss and the jitter, and lets you save the report. It goes up to 200 calls. They do not show up as cards, and closing the screen ends them all.',
-                    '**⋯ → Export PCAP** (registered plain SIP accounts): saves what went through the network for that account since registration, to open in Wireshark. "SIP only" takes the signaling; "with audio" also takes the RTP packets. The capture keeps the most recent 30 MB.',
                     '**⋯ → Delete**: asks for confirmation and deletes the account and its stored password.'
                 ]
             },
             { type: 'h', text: 'When registration fails' },
             {
                 type: 'p',
-                text: 'The account shows a red box with the problem in plain words and what to check, for example "The PBX refused the login: check the username and password". The original SIP code (such as `403 Forbidden`) stays on the account row. The **Why did it fail?** button asks the AI for an explanation. See "AI help".'
+                text: 'The account shows a red box with the problem in plain words and what to check, for example "The PBX refused the login: check the username and password". The original SIP code (such as `403 Forbidden`) stays on the account row.'
             },
             { type: 'h', text: 'Add or edit' },
             { type: 'image', name: 'conta', alt: 'Account form with the Advanced section open' },
@@ -245,7 +233,6 @@ export const GUIDE_EN: GuideSection[] = [
                 items: [
                     'On **TLS**, a self-signed certificate is refused and the screen offers **Trust this host**, as with WebSocket.',
                     'On **UDP**, Íris resends the request if the PBX does not reply and gives up after 32 seconds, with the `408` error.',
-                    'In the **PCAP** file, the messages always show as UDP, even on TCP or TLS accounts, and on TLS already decrypted: it is the SIP text that matters for diagnosis. The file holds extensions, dialed numbers and, with the audio option, the conversation: treat it as confidential.',
                     'Audio goes over **unencrypted RTP**, unless you tick **Require encrypted audio (SRTP)** in the account. With that option, Íris offers SRTP when calling and refuses (`488`) callers without it; the quality line shows `(SRTP)` next to the codec. An incoming call that already comes with SRTP is answered encrypted even without the option.',
                     'The SRTP key travels inside the signaling (SDES). So that it does not go in the clear, use the **TLS** transport with it.',
                     'With SRTP, the round-trip time (RTT) stays at 0: it comes from RTCP, which Íris only exchanges unencrypted.',
@@ -277,10 +264,6 @@ export const GUIDE_EN: GuideSection[] = [
                         'Automatic tries the best one. **SIP INFO** sends the digits through the signaling; **RTP (RFC 4733)** sends them along with the audio. Change it if the IVR does not recognize the digits'
                     ],
                     ['Color', 'The color of the account in the list, on the cards and in the log'],
-                    [
-                        'Extensions to watch (BLF)',
-                        'Only on plain SIP and the simulated PBX. Extensions whose state (idle, ringing, on a call) shows below the account'
-                    ],
                     [
                         'STUN / TURN',
                         'Servers to get through NAT, separated by commas. Without TURN, the call may have no audio behind some routers'
@@ -365,28 +348,10 @@ export const GUIDE_EN: GuideSection[] = [
                 type: 'p',
                 text: 'When a registered extension rings, Íris plays the ringtone, shows a system notification and creates a card with **Answer** and **Decline**. **Ctrl/Cmd + Enter** answers the call that is ringing. With auto-answer on, the button shows the countdown ("auto in 2 s").'
             },
-            {
-                type: 'p',
-                text: 'On **plain SIP** and simulated accounts, the account can play a WAV file to the caller as soon as the call is answered, such as a welcome message or a recording notice: under Edit → Advanced → **On answering, play to the caller**, pick the file. It plays in place of the microphone and, when it ends, the microphone comes back. It also applies to auto-answer. Use a 16-bit PCM WAV, up to 2 minutes long.'
-            },
             { type: 'h', text: 'Several calls at the same time' },
             {
                 type: 'p',
                 text: 'Each call is a card. A call between two of your extensions shows as two cards: the caller (→ arrow) and the callee (← arrow). Click a card to select it; the keyboard shortcuts act on the selected card.'
-            },
-            { type: 'h', text: 'Video calls' },
-            {
-                type: 'p',
-                text: 'On **WebRTC** accounts (and on the simulated PBX), the **Video** button, next to Call, places the call with your camera. The callee sees **Answer** (audio only, receiving the picture of the caller) and **Answer with video** (sends the camera too). The card shows the picture of the other side and yours as a thumbnail, and the **Turn camera off** button pauses the picture without dropping the call. The camera is chosen in **Settings › Audio**. Auto-answer never turns the camera on.'
-            },
-            {
-                type: 'list',
-                items: [
-                    'The PBX has to accept a video codec on the extension. On Asterisk, add `vp8` (or `h264`) to the `allow` of both extensions.',
-                    '**Plain SIP** accounts do not do video yet: the button does not show for them.',
-                    'On macOS and Windows, the system asks for camera permission on the first video call.',
-                    'Phone mode and recording do not have video yet.'
-                ]
             },
             { type: 'h', text: 'What you hear before they answer' },
             {
@@ -544,7 +509,6 @@ export const GUIDE_EN: GuideSection[] = [
                     '**Copy**: copies the filtered lines to the clipboard.',
                     '**Save .txt / Save .json**: writes the filtered lines to a file, to attach to a ticket.',
                     '**Clear**: deletes the log of the filtered account, or everything if the filter is "All accounts".',
-                    '**Explain with AI**: sends the current excerpt for the AI to explain. See "AI help".',
                     '**SIP flow**: draws the calls as a ladder diagram. See below.',
                     '**Jump to the end**: shows when you scroll up; goes back to following the new lines.'
                 ]
@@ -690,7 +654,6 @@ export const GUIDE_EN: GuideSection[] = [
                         'Connection',
                         'How many times Íris tries to register again after a drop, with growing waits (2 s, 4 s, 8 s, up to 1 minute). The default is 10; with 0 it never gives up'
                     ],
-                    ['AI help', 'The OpenRouter key, the default model and masking. See "AI help"'],
                     [
                         'Certificates',
                         'The PBXs with a self-signed certificate that you accepted, with the option to remove them'
@@ -818,56 +781,6 @@ export const GUIDE_EN: GuideSection[] = [
         ]
     },
     {
-        id: 'ia',
-        title: 'AI help',
-        summary: 'Ask an AI model to explain the log, a call or a registration failure.',
-        blocks: [
-            { type: 'image', name: 'ia', alt: 'AI help window with the text preview and the reply' },
-            {
-                type: 'p',
-                text: 'It is optional and uses **your OpenRouter key** (create it at openrouter.ai/keys). Usage is charged to your account there. Without a key, nothing is sent.'
-            },
-            { type: 'h', text: 'Where to ask' },
-            {
-                type: 'list',
-                items: [
-                    '**Explain with AI**, in the log footer: uses the lines of the current filter.',
-                    '**Explain with AI**, on the card of an ended call: uses the log of that account during the call.',
-                    '**Why did it fail?**, on an account in error: uses the last lines of the account.'
-                ]
-            },
-            { type: 'h', text: 'How to use it' },
-            {
-                type: 'steps',
-                items: [
-                    'The first time, paste the key and click **Save key**.',
-                    'Pick the **Model**. The list comes from OpenRouter; the initial suggestion is a Claude Sonnet.',
-                    'Read the **Text that will be sent**. That is exactly what leaves your machine, plus a fixed instruction on how to answer.',
-                    'Click **Send to OpenRouter** and wait for the reply, which comes in three parts: what happened, likely cause and what to do. The reply is written in Portuguese.'
-                ]
-            },
-            { type: 'h', text: 'What leaves your machine' },
-            {
-                type: 'list',
-                items: [
-                    '**Masking on (default)**: extensions, numbers, IPs, domains and account names become placeholders such as `[NÚMERO-1]` and `[HOST-1]`. The SIP conversation stays readable, but without your data.',
-                    '**Masking off**: the text goes as it shows in the preview. Useful when the explanation depends on a specific number or address.',
-                    '**Passwords and authentication data are never sent**, with or without masking.',
-                    'At most the 400 newest lines of the excerpt go.'
-                ]
-            },
-            {
-                type: 'note',
-                kind: 'atenção',
-                text: 'Masking covers what the app recognizes. Free text inside a SIP header may get through; that is why the preview exists. And the AI can be wrong: check the explanation against the log before changing the PBX.'
-            },
-            {
-                type: 'p',
-                text: 'The key is kept in the Íris passwords file, encrypted, is never shown again and is left out of exports. **Remove key** deletes it.'
-            }
-        ]
-    },
-    {
         id: 'atualizacao',
         title: 'Update',
         summary: 'How Íris looks for, downloads and installs new versions.',
@@ -919,7 +832,7 @@ export const GUIDE_EN: GuideSection[] = [
                     'The **icon color** tells the overall state: grey with no account registered, green with registered accounts, yellow with a call ringing, blue in a call and red when some account is in error. Hovering over it shows the numbers.',
                     '**Sair** (quit) really closes the app: the extensions go offline and the calls drop.',
                     'An **incoming call** raises a system notification, with **Atender** (answer) and **Recusar** (decline) on the notification itself (on macOS); clicking it opens the window. In the Bench, it also shows on a colored strip at the top of the middle column.',
-                    'These also notify: **missed call**, **account dropped** and new **voicemail**. In **Settings → Notifications** you choose which ones you want, can make an incoming call bring the window to the front and have the **Test notification** button.',
+                    'These also notify: **missed call** and **account dropped**. In **Settings → Notifications** you choose which ones you want, can make an incoming call bring the window to the front and have the **Test notification** button.',
                     'Nothing shows? On macOS, check in **System Settings → Notifications → Iris** whether notifications are allowed and **Do Not Disturb** is off. Auto-answer accounts do not notify of incoming calls.'
                 ]
             },
@@ -990,7 +903,7 @@ export const GUIDE_EN: GuideSection[] = [
                 rows: [
                     ['Accounts (without password)', '`accounts.json`, in the data folder'],
                     [
-                        'Extension passwords and AI key',
+                        'Extension passwords',
                         '`senhas.json`, encrypted with its own key (`chave-local.bin`); both can only be read by your system account'
                     ],
                     ['Contacts and servers', '`contacts.json` and `servers.json`'],
@@ -998,7 +911,7 @@ export const GUIDE_EN: GuideSection[] = [
                         'Call recordings',
                         '`gravacoes` folder: one WAV file per recording, unencrypted. They only exist if you click Record'
                     ],
-                    ['Preferences', '`settings.json`: audio, update channel, trusted hosts, AI options'],
+                    ['Preferences', '`settings.json`: audio, update channel, trusted hosts'],
                     ['Account log (events and SIP)', 'Only in memory, until the app closes or you save it'],
                     [
                         'Internal app log',
@@ -1017,7 +930,7 @@ export const GUIDE_EN: GuideSection[] = [
                     'It does not store passwords in plain text: the passwords file is encrypted. Whoever has the whole data folder, though, can read the passwords; treat that folder as confidential.',
                     'It does not delete a damaged file. Passwords, accounts or preferences that cannot be read are set aside, with the date in the name, and the screen tells you. The app opens anyway.',
                     'It does not put a password, hash or nonce in the log, on screen or in saved files.',
-                    'It sends nothing out beyond what you ask for: registration and calls with your PBX, the update check on GitHub and, if you use it, the preview text to OpenRouter.',
+                    'It sends nothing out beyond what you ask for: registration and calls with your PBX, the update check on GitHub ',
                     'It does not accept an invalid certificate unless you say so, and only for the chosen host.'
                 ]
             },
@@ -1092,7 +1005,7 @@ export const GUIDE_EN: GuideSection[] = [
             {
                 type: 'note',
                 kind: 'dica',
-                text: 'When the reason is not clear, turn on **Show raw SIP in the log** in the account, repeat the test and read the **All** tab. If you want, ask for the explanation with **Explain with AI**.'
+                text: 'When the reason is not clear, turn on **Show raw SIP in the log** in the account, repeat the test and read the **All** tab.'
             }
         ]
     }

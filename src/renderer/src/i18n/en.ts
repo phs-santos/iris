@@ -11,20 +11,10 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         explicacao:
             'Anything beyond the standard calling features stays hidden. Turn on here only what this person uses; the rest stays off screen.',
         log: 'Log and diagnostics',
-        log_dica: 'Log panel, raw SIP, SIP flow, Health, SIP request, PCAP, load test, SIP headers and AI help.',
-        video: 'Video',
-        video_dica: 'Video button in the dialer and Answer with video, on WebRTC accounts.',
+        log_dica: 'Log panel, raw SIP, SIP flow, Health and SIP headers.',
         esconder: 'Hide this area',
         esconder_dica:
             'Modes that are on stay on. To come back here: five quick clicks on the Íris logo, or Ctrl+Alt+Shift+M.'
-    },
-    callVideo: {
-        imagem_de: 'Picture of {name}',
-        sua_camera: 'Your camera',
-        sem_imagem: 'The other side is not sending a picture',
-        ligar_camera: 'Turn camera on',
-        desligar_camera: 'Turn camera off',
-        so_recebendo: 'You answered without a camera: only the other side shows.'
     },
     shortcutsSection: {
         atalhos: 'Global shortcuts',
@@ -100,8 +90,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         perdida_dica: 'The caller gave up before anyone answered.',
         caiu: 'Account dropped',
         caiu_dica: 'A registered account lost its registration. Íris keeps retrying on its own.',
-        correio: 'Voicemail',
-        correio_dica: 'New message in the mailbox, on plain SIP accounts.',
         trazer_janela: 'Incoming call brings the window to the front',
         trazer_janela_dica: 'Even with Íris hidden in the tray.',
         testar: 'Test notification',
@@ -193,42 +181,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         contas_atualizadas: 'Server saved and {n} account(s) updated.',
         apagado: 'Server deleted. Its accounts keep their details.'
     },
-    loadDialog: {
-        log_resultado: 'Load test to {destination}: {established} of {requested} answered, {withAudio} with audio',
-        titulo: 'Load test · {name}',
-        fechar: 'Close',
-        explicacao:
-            'Places several calls at once through this account, each one playing a tone, and measures how many complete and whether audio arrives. Use a destination that answers on its own, such as an echo number. The calls do not show up as cards.',
-        destino: 'Destination',
-        chamadas: 'Simultaneous calls',
-        segundos: 'Length of each one (s)',
-        intervalo: 'Interval between them (ms)',
-        andamento: 'Dialed {started} of {total} · answered {established} · ended {finished}',
-        resumo: '{established} of {requested} calls answered · {withAudio} with audio',
-        relatorio: 'Load test report',
-        salvar: 'Save report',
-        salvo_em: 'Report saved to {path}',
-        parar: 'Stop',
-        comecar: 'Start',
-        registre_antes: 'Register the account before the load test'
-    },
-    sipRequestDialog: {
-        titulo: 'SIP request · {name}',
-        fechar: 'Close',
-        explicacao:
-            'Sends a single SIP request through this account and shows the reply from the PBX. Via, From, To, Call-ID, CSeq and Contact come from Íris; only the extra headers go here.',
-        metodo: 'Method',
-        endereco: 'Address (URI)',
-        cabecalhos: 'Extra headers, one per line',
-        cabecalhos_exemplo: 'Event: message-summary\nAccept: application/simple-message-summary',
-        corpo: 'Body (optional)',
-        tipo_do_corpo: 'Body type',
-        enviar: 'Send',
-        enviando: 'Sending…',
-        resposta: '{status} {reason} in {ms} ms',
-        resposta_completa: 'Full reply',
-        registre_antes: 'Register the account before sending a request'
-    },
     nativeEngine: {
         consulta_outra_conta: 'The consultation call must be made from the same account as the call'
     },
@@ -299,7 +251,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         area_central: 'Main area',
         telefone: 'Phone',
         atender: 'Answer',
-        atender_com_video: 'Answer with video',
         recusar: 'Decline',
         chamadas: 'Calls',
         ativas: '{length} active',
@@ -319,8 +270,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
             'Domain, transport, address, STUN/TURN and SRTP come from the server "{name}". To change them, edit the server in Settings → Servers: all of its accounts change together.',
         salvar_como_servidor: 'Save connection as server',
         servidor_salvo: 'Server "{name}" added and linked to this account.',
-        blf_ramais: 'Extensions to watch (BLF), separated by commas',
-        blf_exemplo: '1002, 1003',
         audio_cifrado: 'Require encrypted audio (SRTP)',
         fechar: 'Close',
         nome: 'Name',
@@ -349,14 +298,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         early_media_dica:
             'With a 183 and audio, plays what the PBX sends (carrier ringback, announcement) instead of the local ringback. Leave it off if the PBX forks the call to several destinations: in that case the library drops the call.',
         toque: 'Ringtone for incoming calls',
-        audio_ao_atender: 'On answering, play to the caller',
-        audio_ao_atender_nenhum: 'no audio',
-        escolher_wav: 'Choose WAV…',
-        tirar_audio: 'Remove',
-        audio_ao_atender_dica:
-            'The file plays right after answering, in place of the microphone; when it ends, the microphone comes back. Also applies to auto-answer.',
-        audio_ao_atender_webrtc:
-            'Only on plain SIP and simulated accounts: on WebRTC Íris does not replace what the microphone sends.',
         ouvir: 'Listen',
         toque_classico: 'Classic',
         toque_digital: 'Digital',
@@ -398,17 +339,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
     },
     accountsPane: {
         grupo_resumo: '{registered}/{total} online',
-        blf_livre: 'idle',
-        blf_tocando: 'ringing',
-        blf_ocupado: 'on a call',
-        blf_sem_noticia: 'no news from the PBX',
-        correio: 'voicemail: {n}',
-        teste_de_carga: 'Load test…',
-        requisicao_sip: 'SIP request…',
-        exportar_pcap: 'Export PCAP (SIP only)',
-        exportar_pcap_com_audio: 'Export PCAP (with audio)',
-        pcap_salvo: 'Capture saved to {path}',
-        pcap_falhou: 'Could not export the capture: {message}',
         contas: 'Accounts',
         acoes_de_todas_as_contas: 'Actions for all accounts',
         nova: '+ New',
@@ -418,7 +348,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         aa: 'AA',
         pbx_simulado: 'Simulated PBX',
         sim: 'SIM',
-        por_que_falhou: 'Why did it fail?',
         editar: 'Edit',
         confirmar_exclusao: 'Confirm deletion',
         cancelar: 'Cancel',
@@ -432,38 +361,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         excluir: 'Delete',
         registrar_todas: 'Register all',
         desregistrar_todas: 'Unregister all'
-    },
-    aiDialog: {
-        ia: '{title} · AI',
-        fechar: 'Close',
-        a_explicacao_e_feita_por:
-            'The explanation is written by an AI model from OpenRouter, with your key. Usage is charged to your account there. Create the key at',
-        openrouter_ai_keys: 'openrouter.ai/keys',
-        e_cole_aqui: 'and paste it here.',
-        chave_da_openrouter: 'OpenRouter key',
-        a_chave_fica_no_arquivo:
-            'The key is kept in the Íris passwords file, encrypted, together with the account passwords. It is never shown again and is left out of exports.',
-        modelo: 'Model',
-        fornecedor_modelo: 'provider/model',
-        mascarar_ramais_numeros_ips_dominios: 'Mask extensions, numbers, IPs, domains and account names',
-        texto_que_sera_enviado_para: 'Text that will be sent to OpenRouter',
-        texto_que_sera_enviado: 'Text that will be sent',
-        o_recorte_e_grande_as: 'The excerpt is large: the {dropped} oldest lines were left out.',
-        alem_deste_texto_vai_so:
-            'Besides this text, only a fixed instruction on how to answer is sent. Passwords and authentication data are never sent. With masking off, extensions, numbers and addresses of your PBX go to OpenRouter exactly as shown above.',
-        esperando_a_resposta_da_ia: 'Waiting for the AI reply…',
-        resposta: 'Reply',
-        resposta_da_ia: 'AI reply',
-        a_ia_pode_errar_confira: 'The AI can be wrong. Check the explanation against the log before changing the PBX.',
-        salvar_chave: 'Save key',
-        remover_chave: 'Remove key',
-        nenhuma_linha_de_log_neste: '(no log lines in this excerpt)',
-        copiada: 'Copied',
-        copiar_resposta: 'Copy reply',
-        enviar_de_novo: 'Send again',
-        enviar_para_a_openrouter: 'Send to OpenRouter',
-        nao_deu_para_carregar_a: 'Could not load the list of models. Type the model name (e.g. provider/model).',
-        cole_a_chave_da_openrouter: 'Paste the OpenRouter key.'
     },
     callCard: {
         audio_chegando: 'Incoming audio',
@@ -479,7 +376,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         transferencia: '· transfer {transfer}',
         consultando: '· consulting {remote}',
         dtmf_recebido: '· DTMF received {dtmfReceived}',
-        explicar_com_ia: 'Explain with AI',
         consulta_para_transferir: 'Consultation before transfer',
         concluir_transferencia: 'Complete transfer',
         cancelar_e_voltar: 'Cancel and go back',
@@ -510,8 +406,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         em_espera_remoto: 'on hold (remote)',
         em_chamada: 'in call',
         early_media: 'early media',
-        com_video: 'With video',
-        video: '· video',
         falhou: 'failed',
         encerrada: 'ended',
         tocando: 'ringing',
@@ -527,9 +421,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         numero_ou_ramal: 'Number or extension',
         numero: 'Number',
         ligar: 'Call',
-        video: 'Video',
-        ligar_com_video: 'Video call',
-        video_so_webrtc: 'Video calls only on WebRTC accounts (WebSocket transport). This account is plain SIP.',
         registre_para_ligar: 'Register {name} to call.',
         teclado: 'keypad',
         teclado_rotulo: 'Numeric keypad',
@@ -637,7 +528,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         salvar_txt: 'Save .txt',
         salvar_json: 'Save .json',
         limpar: 'Clear',
-        explicar_com_ia: 'Explain with AI',
         fluxo_sip: 'SIP flow',
         ir_para_o_fim: 'Jump to the end',
         nenhuma_mensagem_sip_ative_mostrar: 'No SIP messages. Turn on "Show raw SIP" in the account to see them here.',
@@ -689,28 +579,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         chamando_early_media: 'calling (early media)',
         qualidade_jitter_ms_perda_rtt: 'Quality {score}: jitter {jitterMs} ms, loss {p}%, RTT {rttMs} ms, {p2}'
     },
-    aiSection: {
-        ajuda_da_ia: 'AI help',
-        o_botao_explicar_com_ia:
-            'The "Explain with AI" button sends a piece of the log to an OpenRouter model, with your key. Usage is charged to your account there.',
-        chave_da_openrouter: 'OpenRouter key',
-        crie_a_chave_em: 'Create the key at',
-        openrouter_ai_keys: 'openrouter.ai/keys',
-        ela_fica_no_arquivo_de:
-            '. It is kept in the Íris passwords file, encrypted, and is never shown again or included in exports.',
-        salvar_chave: 'Save key',
-        salva_e_cifrada_no_arquivo: 'Saved and encrypted in the passwords file.',
-        remover_chave: 'Remove key',
-        modelo_padrao: 'Default model',
-        no_formato_fornecedor_modelo_da: 'In the provider/model format. You can change it when sending.',
-        fornecedor_modelo: 'provider/model',
-        mascarar_dados_do_ambiente: 'Mask environment data',
-        ramais_numeros_ips_dominios_e:
-            'Extensions, numbers, IPs, domains and account names become placeholders before leaving.',
-        salvar: 'Save',
-        salvo: 'Saved.',
-        cole_a_chave_da_openrouter: 'Paste the OpenRouter key.'
-    },
     appearanceSection: {
         tema: 'Theme',
         tema_dica: "System follows your computer's light or dark mode, and switches on its own.",
@@ -749,8 +617,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         nivel_do_microfone: 'Microphone level',
         fale_alguma_coisa_a_barra: 'Say something: the bar should move.',
         alto_falante: 'Speaker',
-        camera: 'Camera',
-        camera_dica: 'For video calls, on WebRTC accounts. Applies from the next call on.',
         tocar_som_de_teste: 'Play test sound',
         volume_do_toque: 'Ringtone volume: {n}%',
         volume_do_toque_rotulo: 'Ringtone volume',
@@ -828,7 +694,6 @@ export const en: { [N in keyof Messages]: Record<keyof Messages[N], string> } = 
         aparencia: 'Appearance',
         audio: 'Audio',
         conexao: 'Connection',
-        ajuda_da_ia: 'AI help',
         certificados: 'Certificates',
         importar_e_exportar: 'Import and export',
         atualizacao: 'Update'

@@ -1,10 +1,7 @@
 // Motor simulado (RF-32): imita um PBX sem rede. Contas simuladas do mesmo domínio
 // ligam umas para as outras; alguns números especiais simulam respostas do PBX.
 
-import { testPattern, type TestPattern } from './mock-video'
-import { parseBlfList, type PresenceState } from '@shared/presence'
-import type { SipManualRequest, SipManualResponse } from '@shared/types'
-import { levelDb, SAMPLE_RATE, SILENCE_DB } from '@shared/audio'
+import { SILENCE_DB } from '@shared/audio'
 import type { Account, DtmfMode } from '@shared/types'
 import { Emitter } from '@renderer/lib/emitter'
 import type {
@@ -17,9 +14,7 @@ import type {
     LogLevel,
     LogKind,
     RegStatus,
-    SipEngine,
-    DialOptions,
-    VideoStreams
+    SipEngine
 } from './engine'
 
 /** Números especiais do PBX simulado, mostrados na ajuda do discador. */
@@ -42,12 +37,6 @@ export const MOCK_TIMING = {
 const registry = new Set<MockEngine>()
 
 /** Remove todas as contas registradas no PBX simulado. Usado nos testes. */
-/** Avisa os motores simulados do mesmo domínio que acompanham este ramal (BLF, RF-27). */
-function publishPresence(domain: string, extension: string, state: PresenceState): void {
-    for (const engine of registry)
-        if (engine.domain === domain && engine.watching.includes(extension)) engine.notifyPresence(extension, state)
-}
-
 export function resetMockNetwork(): void {
     registry.clear()
 }
@@ -60,13 +49,8 @@ const MOCK_VOICE_DB = -30
 class MockCall implements EngineCall {
     readonly earlyAudio = false
     readonly localRingback = false
-    /** Chamada de vídeo (RF-52): cada ponta que manda vídeo desenha uma imagem de teste. */
-    video = false
-    private pattern: TestPattern | null = null
-    private cameraOff = false
     muted = false
     held = false
-    private heard?: { db: number; until: number }
     readonly id = `m${nextId++}`
     private emitter = new Emitter<CallEvents>()
     peer?: MockCall
@@ -126,52 +110,19 @@ class MockCall implements EngineCall {
     establish(): void {
         if (this.state !== 'ringing') return
         this.state = 'established'
-        publishPresence(this.engine.domain, this.engine.extension, 'busy')
         this.emit('established')
     }
 
     end(end: CallEnd): void {
         if (this.state === 'ended') return
         this.state = 'ended'
-        publishPresence(this.engine.domain, this.engine.extension, 'idle')
         this.timers.forEach(clearTimeout)
-        this.pattern?.stop()
-        this.pattern = null
         this.emit('ended', end)
         this.emitter.clear()
     }
 
-    /** Liga a imagem de teste desta ponta e avisa as duas telas. */
-    startVideo(label: string, color: string): void {
-        this.pattern ??= testPattern(label, color)
-        this.emit('video')
-        this.peer?.emit('video')
-    }
-
-    videoStreams(): VideoStreams {
-        return {
-            remote: this.video ? (this.peer?.outgoingVideo ?? this.ivrVideo?.stream ?? null) : null,
-            local: this.outgoingVideo
-        }
-    }
-
-    /** O que esta ponta manda: nada com a câmera desligada. */
-    get outgoingVideo(): MediaStream | null {
-        return this.cameraOff ? null : (this.pattern?.stream ?? null)
-    }
-
-    /** A URA também "aparece", para dar para ver vídeo com uma conta só. */
-    ivrVideo: TestPattern | null = null
-
-    setCamera(on: boolean): void {
-        this.cameraOff = !on
-        this.emit('video')
-        this.peer?.emit('video')
-    }
-
-    async answer(options: { video?: boolean } = {}): Promise<void> {
+    async answer(): Promise<void> {
         if (this.direction !== 'in' || this.state !== 'ringing') return
-        if (options.video && this.video) this.startVideo(this.engine.label, this.engine.color)
         this.respond('out', '200 OK', ['Content-Type: application/sdp'])
         this.ack('in')
         this.establish()
@@ -223,29 +174,14 @@ class MockCall implements EngineCall {
         this.engine.log('info', muted ? 'Microfone mudo' : 'Microfone ativo')
     }
 
-    /** O outro lado tocou um áudio: por `ms`, é esse o volume que esta ponta ouve. */
-
-    hears(db: number, ms: number): void {
-        this.heard = { db, until: Date.now() + ms }
-    }
-
     /**
      * Volume simulado (RF-41): sem ninguém em mudo ou em espera, cada ponta ouve a "voz" da outra, e a
-     * URA fala o tempo todo. Um áudio tocado pelo outro lado vale mais que a voz enquanto durar.
+     * URA fala o tempo todo.
      */
     async audioLevel(): Promise<number | null> {
         if (this.state !== 'established' || this.held || this.peer?.held) return SILENCE_DB
-        if (this.heard && Date.now() < this.heard.until) return this.heard.db
         if (this.peer?.muted) return SILENCE_DB
         return MOCK_VOICE_DB
-    }
-
-    async playAudio(pcm: Int16Array): Promise<void> {
-        if (this.state !== 'established') throw new Error('A chamada ainda não foi atendida')
-        const ms = Math.round((pcm.length / SAMPLE_RATE) * 1000)
-        this.engine.log('info', `Tocando áudio de ${ms} ms na chamada`)
-        this.peer?.hears(levelDb(pcm), ms)
-        await new Promise<void>((done) => this.later(ms, done))
     }
 
     async setHeld(held: boolean): Promise<void> {
@@ -343,16 +279,10 @@ class MockCall implements EngineCall {
 }
 
 export class MockEngine implements SipEngine {
-    readonly video = true
     private emitter = new Emitter<EngineEvents>()
     private status: RegStatus = { state: 'disconnected' }
     readonly domain: string
     readonly extension: string
-    /** Nome e cor da conta, para a imagem de teste do vídeo (RF-52). */
-    readonly label: string
-    readonly color: string
-    /** Ramais que esta conta acompanha (BLF, RF-27). */
-    readonly watching: string[]
     private calls = new Set<MockCall>()
     private readonly registerCallId: string
     private registerSeq = 0
@@ -363,9 +293,6 @@ export class MockEngine implements SipEngine {
     ) {
         this.domain = account.domain.toLowerCase()
         this.extension = account.extension
-        this.label = account.name
-        this.color = account.color
-        this.watching = parseBlfList(account.blf)
         this.registerCallId = `reg-${nextId++}-${Math.random().toString(36).slice(2, 8)}@${this.domain}`
     }
 
@@ -375,10 +302,6 @@ export class MockEngine implements SipEngine {
 
     log(level: LogLevel, text: string, kind: LogKind = 'event'): void {
         this.emitter.emit('log', { level, kind, text })
-    }
-
-    notifyPresence(extension: string, state: PresenceState): void {
-        this.emitter.emit('presence', extension, state)
     }
 
     /** Mensagem do SIP bruto simulado: a linha inicial e os cabeçalhos que o diagrama de escada usa. */
@@ -438,12 +361,6 @@ export class MockEngine implements SipEngine {
                     this.registerReply(this.register(600), '200 OK')
                     registry.add(this)
                     this.setStatus({ state: 'registered' })
-                    // BLF simulado (RF-27): quem já está registrado aparece livre; o resto, sem notícia.
-                    for (const extension of this.watching) {
-                        const known = [...registry].some((e) => e.domain === this.domain && e.extension === extension)
-                        this.emitter.emit('presence', extension, known ? 'idle' : 'unknown')
-                    }
-                    publishPresence(this.domain, this.extension, 'idle')
                 }
                 resolve()
             }, MOCK_TIMING.register)
@@ -463,13 +380,9 @@ export class MockEngine implements SipEngine {
         return call
     }
 
-    async dial(destination: string, options: DialOptions = {}): Promise<EngineCall> {
+    async dial(destination: string): Promise<EngineCall> {
         if (!this.registered) throw new Error('A conta precisa estar registrada para ligar')
         const call = this.track(new MockCall(this, 'out', destination))
-        if (options.video) {
-            call.video = true
-            call.startVideo(this.label, this.color)
-        }
         call.sip('out', `INVITE sip:${destination}@${this.domain} SIP/2.0`, 'INVITE', 1, [
             `From: <sip:${this.extension}@${this.domain}>`,
             `To: <sip:${destination}@${this.domain}>`,
@@ -527,12 +440,7 @@ export class MockEngine implements SipEngine {
                 call.respond('in', '200 OK', ['Content-Type: application/sdp'])
                 call.ack('out')
                 this.log('info', 'URA atendeu: "Digite 1 para suporte, 2 para vendas"')
-                if (call.video) {
-                    call.ivrVideo = testPattern('URA', '#7a5cff')
-                    call.later(60_000, () => call.ivrVideo?.stop())
-                }
                 call.establish()
-                call.emit('video')
             })
             return
         }
@@ -542,7 +450,6 @@ export class MockEngine implements SipEngine {
     receive(from: string, fromName: string, peer: MockCall): MockCall {
         const call = this.track(new MockCall(this, 'in', from, fromName))
         call.peer = peer
-        call.video = peer.video
         call.sip('in', `INVITE sip:${this.extension}@${this.domain} SIP/2.0`, 'INVITE', 1, [
             `From: <sip:${from}@${this.domain}>`,
             `To: <sip:${this.extension}@${this.domain}>`,
@@ -552,24 +459,6 @@ export class MockEngine implements SipEngine {
         call.respond('out', '180 Ringing')
         this.emitter.emit('incoming', call)
         return call
-    }
-
-    /** Pedido manual no PBX simulado (RF-45): responde 200 ao que conhece e 489 a assinaturas. */
-    async request(spec: SipManualRequest): Promise<SipManualResponse> {
-        if (!this.registered) throw new Error('Registre a conta antes de mandar um pedido')
-        const [status, reason] =
-            spec.method === 'SUBSCRIBE' || spec.method === 'PUBLISH' ? [489, 'Bad Event'] : [200, 'OK']
-        this.log('info', `${spec.method} manual para ${spec.uri}: ${status} ${reason}`)
-        const text = [
-            `SIP/2.0 ${status} ${reason}`,
-            `To: <${spec.uri}>;tag=simulado`,
-            `CSeq: 1 ${spec.method}`,
-            'Allow: INVITE, ACK, CANCEL, BYE, OPTIONS, INFO, MESSAGE, REFER, NOTIFY',
-            'Server: PBX simulado da Íris',
-            'Content-Length: 0',
-            ''
-        ].join('\n')
-        return { status, reason, text, ms: 20 }
     }
 
     async health(): Promise<HealthReport> {

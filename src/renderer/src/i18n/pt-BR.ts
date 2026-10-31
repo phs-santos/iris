@@ -8,21 +8,10 @@ export const ptBR = {
         explicacao:
             'O que não é o padrão de chamada fica escondido. Ligue aqui só o que esta pessoa usa; o resto continua fora da tela.',
         log: 'Log e diagnóstico',
-        log_dica:
-            'Painel do log, SIP bruto, Fluxo SIP, Saúde, requisição SIP, PCAP, teste de carga, cabeçalhos SIP e a ajuda da IA.',
-        video: 'Vídeo',
-        video_dica: 'Botão Vídeo no discador e Atender com vídeo, em contas WebRTC.',
+        log_dica: 'Painel do log, SIP bruto, Fluxo SIP, Saúde e cabeçalhos SIP.',
         esconder: 'Esconder esta área',
         esconder_dica:
             'Os modos ligados continuam ligados. Para voltar aqui: cinco cliques seguidos no logo da Íris, ou Ctrl+Alt+Shift+M.'
-    },
-    callVideo: {
-        imagem_de: 'Imagem de {name}',
-        sua_camera: 'A sua câmera',
-        sem_imagem: 'O outro lado não está mandando imagem',
-        ligar_camera: 'Ligar a câmera',
-        desligar_camera: 'Desligar a câmera',
-        so_recebendo: 'Você atendeu sem câmera: só o outro lado aparece.'
     },
     shortcutsSection: {
         atalhos: 'Atalhos globais',
@@ -96,8 +85,6 @@ export const ptBR = {
         perdida_dica: 'Quem ligou desistiu antes de alguém atender.',
         caiu: 'Conta caiu',
         caiu_dica: 'Uma conta registrada perdeu o registro. A Íris continua tentando sozinha.',
-        correio: 'Correio de voz',
-        correio_dica: 'Mensagem nova na caixa postal, em contas de SIP puro.',
         trazer_janela: 'Chamada recebida traz a janela para a frente',
         trazer_janela_dica: 'Mesmo com a Íris escondida na bandeja.',
         testar: 'Testar notificação',
@@ -189,43 +176,6 @@ export const ptBR = {
         contas_atualizadas: 'Servidor salvo e {n} conta(s) atualizada(s).',
         apagado: 'Servidor excluído. As contas dele mantêm os dados.'
     },
-    loadDialog: {
-        log_resultado:
-            'Teste de carga para {destination}: {established} de {requested} atendidas, {withAudio} com áudio',
-        titulo: 'Teste de carga · {name}',
-        fechar: 'Fechar',
-        explicacao:
-            'Faz várias chamadas ao mesmo tempo por esta conta, cada uma tocando um tom, e mede quantas completam e se o áudio chega. Use um destino que atenda sozinho, como um número de eco. As chamadas não aparecem nos cartões.',
-        destino: 'Destino',
-        chamadas: 'Chamadas ao mesmo tempo',
-        segundos: 'Duração de cada uma (s)',
-        intervalo: 'Intervalo entre elas (ms)',
-        andamento: 'Discadas {started} de {total} · atendidas {established} · encerradas {finished}',
-        resumo: '{established} de {requested} chamadas atendidas · {withAudio} com áudio',
-        relatorio: 'Relatório do teste de carga',
-        salvar: 'Salvar relatório',
-        salvo_em: 'Relatório salvo em {path}',
-        parar: 'Parar',
-        comecar: 'Começar',
-        registre_antes: 'Registre a conta antes do teste de carga'
-    },
-    sipRequestDialog: {
-        titulo: 'Requisição SIP · {name}',
-        fechar: 'Fechar',
-        explicacao:
-            'Manda um pedido SIP avulso por esta conta e mostra a resposta do PBX. Via, From, To, Call-ID, CSeq e Contact são da Íris; aqui entram só os cabeçalhos a mais.',
-        metodo: 'Método',
-        endereco: 'Endereço (URI)',
-        cabecalhos: 'Cabeçalhos extras, um por linha',
-        cabecalhos_exemplo: 'Event: message-summary\nAccept: application/simple-message-summary',
-        corpo: 'Corpo (opcional)',
-        tipo_do_corpo: 'Tipo do corpo',
-        enviar: 'Enviar',
-        enviando: 'Enviando…',
-        resposta: '{status} {reason} em {ms} ms',
-        resposta_completa: 'Resposta completa',
-        registre_antes: 'Registre a conta antes de mandar um pedido'
-    },
     // Motor próprio de SIP puro (sip/native-engine.ts).
     nativeEngine: {
         consulta_outra_conta: 'A consulta precisa ser feita pela mesma conta da chamada'
@@ -298,7 +248,6 @@ export const ptBR = {
         area_central: 'Área central',
         telefone: 'Telefone',
         atender: 'Atender',
-        atender_com_video: 'Atender com vídeo',
         recusar: 'Recusar',
         chamadas: 'Chamadas',
         ativas: '{length} ativas',
@@ -318,8 +267,6 @@ export const ptBR = {
             'Domínio, transporte, endereço, STUN/TURN e SRTP vêm do servidor "{name}". Para mudar, edite o servidor em Configurações → Servidores: todas as contas dele mudam juntas.',
         salvar_como_servidor: 'Salvar conexão como servidor',
         servidor_salvo: 'Servidor "{name}" cadastrado e ligado a esta conta.',
-        blf_ramais: 'Ramais para acompanhar (BLF), separados por vírgula',
-        blf_exemplo: '1002, 1003',
         audio_cifrado: 'Exigir áudio cifrado (SRTP)',
         fechar: 'Fechar',
         nome: 'Nome',
@@ -348,14 +295,6 @@ export const ptBR = {
         early_media_dica:
             'Com 183 e áudio, toca o que o PBX manda (toque da operadora, mensagem) em vez do toque local. Deixe desligado se o PBX bifurca a chamada para vários destinos: nesse caso a biblioteca derruba a chamada.',
         toque: 'Toque das chamadas recebidas',
-        audio_ao_atender: 'Ao atender, tocar para quem ligou',
-        audio_ao_atender_nenhum: 'nenhum áudio',
-        escolher_wav: 'Escolher WAV…',
-        tirar_audio: 'Tirar',
-        audio_ao_atender_dica:
-            'O arquivo toca logo depois de atender, no lugar do microfone; quando acaba, o microfone volta. Vale também para o auto-atender.',
-        audio_ao_atender_webrtc:
-            'Só em contas de SIP puro e simuladas: em WebRTC a Íris não troca o que o microfone manda.',
         ouvir: 'Ouvir',
         toque_classico: 'Clássico',
         toque_digital: 'Digital',
@@ -397,17 +336,6 @@ export const ptBR = {
     },
     accountsPane: {
         grupo_resumo: '{registered}/{total} no ar',
-        blf_livre: 'livre',
-        blf_tocando: 'tocando',
-        blf_ocupado: 'em chamada',
-        blf_sem_noticia: 'sem notícia do PBX',
-        correio: 'correio de voz: {n}',
-        teste_de_carga: 'Teste de carga…',
-        requisicao_sip: 'Requisição SIP…',
-        exportar_pcap: 'Exportar PCAP (só SIP)',
-        exportar_pcap_com_audio: 'Exportar PCAP (com áudio)',
-        pcap_salvo: 'Captura salva em {path}',
-        pcap_falhou: 'Não foi possível exportar a captura: {message}',
         contas: 'Contas',
         acoes_de_todas_as_contas: 'Ações de todas as contas',
         nova: '+ Nova',
@@ -417,7 +345,6 @@ export const ptBR = {
         aa: 'AA',
         pbx_simulado: 'PBX simulado',
         sim: 'SIM',
-        por_que_falhou: 'Por que falhou?',
         editar: 'Editar',
         confirmar_exclusao: 'Confirmar exclusão',
         cancelar: 'Cancelar',
@@ -431,39 +358,6 @@ export const ptBR = {
         excluir: 'Excluir',
         registrar_todas: 'Registrar todas',
         desregistrar_todas: 'Desregistrar todas'
-    },
-    aiDialog: {
-        ia: '{title} · IA',
-        fechar: 'Fechar',
-        a_explicacao_e_feita_por:
-            'A explicação é feita por um modelo de IA da OpenRouter, com a sua chave. O uso é cobrado na sua conta de lá. Crie a chave em',
-        openrouter_ai_keys: 'openrouter.ai/keys',
-        e_cole_aqui: 'e cole aqui.',
-        chave_da_openrouter: 'Chave da OpenRouter',
-        a_chave_fica_no_arquivo:
-            'A chave fica no arquivo de senhas da Íris, cifrada, junto com as senhas das contas. Ela não aparece de novo na tela nem entra em exportações.',
-        modelo: 'Modelo',
-        fornecedor_modelo: 'fornecedor/modelo',
-        mascarar_ramais_numeros_ips_dominios: 'Mascarar ramais, números, IPs, domínios e nomes de conta',
-        texto_que_sera_enviado_para: 'Texto que será enviado para a OpenRouter',
-        texto_que_sera_enviado: 'Texto que será enviado',
-        o_recorte_e_grande_as: 'O recorte é grande: as {dropped} linhas mais antigas ficaram de fora.',
-        alem_deste_texto_vai_so:
-            'Além deste texto, vai só uma instrução fixa de como responder. Senhas e dados de autenticação nunca são enviados. Com a máscara desligada, ramais, números e endereços do seu PBX vão para a OpenRouter como aparecem acima.',
-        esperando_a_resposta_da_ia: 'Esperando a resposta da IA…',
-        resposta: 'Resposta',
-        resposta_da_ia: 'Resposta da IA',
-        a_ia_pode_errar_confira: 'A IA pode errar. Confira a explicação com o log antes de mexer no PBX.',
-        salvar_chave: 'Salvar chave',
-        remover_chave: 'Remover chave',
-        nenhuma_linha_de_log_neste: '(nenhuma linha de log neste recorte)',
-        copiada: 'Copiada',
-        copiar_resposta: 'Copiar resposta',
-        enviar_de_novo: 'Enviar de novo',
-        enviar_para_a_openrouter: 'Enviar para a OpenRouter',
-        nao_deu_para_carregar_a:
-            'Não deu para carregar a lista de modelos. Digite o nome do modelo (ex.: fornecedor/modelo).',
-        cole_a_chave_da_openrouter: 'Cole a chave da OpenRouter.'
     },
     callCard: {
         audio_chegando: 'Áudio chegando',
@@ -479,7 +373,6 @@ export const ptBR = {
         transferencia: '· transferência {transfer}',
         consultando: '· consultando {remote}',
         dtmf_recebido: '· DTMF recebido {dtmfReceived}',
-        explicar_com_ia: 'Explicar com IA',
         consulta_para_transferir: 'Consulta para transferir',
         concluir_transferencia: 'Concluir transferência',
         cancelar_e_voltar: 'Cancelar e voltar',
@@ -510,8 +403,6 @@ export const ptBR = {
         em_espera_remoto: 'em espera (remoto)',
         em_chamada: 'em chamada',
         early_media: 'early media',
-        com_video: 'Com vídeo',
-        video: '· vídeo',
         falhou: 'falhou',
         encerrada: 'encerrada',
         tocando: 'tocando',
@@ -527,9 +418,6 @@ export const ptBR = {
         numero_ou_ramal: 'Número ou ramal',
         numero: 'Número',
         ligar: 'Ligar',
-        video: 'Vídeo',
-        ligar_com_video: 'Ligar com vídeo',
-        video_so_webrtc: 'Chamada de vídeo só em contas WebRTC (transporte WebSocket). Esta conta é de SIP puro.',
         registre_para_ligar: 'Registre {name} para ligar.',
         teclado: 'teclado',
         teclado_rotulo: 'Teclado numérico',
@@ -637,7 +525,6 @@ export const ptBR = {
         salvar_txt: 'Salvar .txt',
         salvar_json: 'Salvar .json',
         limpar: 'Limpar',
-        explicar_com_ia: 'Explicar com IA',
         fluxo_sip: 'Fluxo SIP',
         ir_para_o_fim: 'Ir para o fim',
         nenhuma_mensagem_sip_ative_mostrar:
@@ -690,28 +577,6 @@ export const ptBR = {
         chamando_early_media: 'chamando (early media)',
         qualidade_jitter_ms_perda_rtt: 'Qualidade {score}: jitter {jitterMs} ms, perda {p}%, RTT {rttMs} ms, {p2}'
     },
-    aiSection: {
-        ajuda_da_ia: 'Ajuda da IA',
-        o_botao_explicar_com_ia:
-            'O botão "Explicar com IA" manda um trecho do log para um modelo da OpenRouter, com a sua chave. O uso é cobrado na sua conta de lá.',
-        chave_da_openrouter: 'Chave da OpenRouter',
-        crie_a_chave_em: 'Crie a chave em',
-        openrouter_ai_keys: 'openrouter.ai/keys',
-        ela_fica_no_arquivo_de:
-            '. Ela fica no arquivo de senhas da Íris, cifrada, e não aparece de novo na tela nem entra em exportações.',
-        salvar_chave: 'Salvar chave',
-        salva_e_cifrada_no_arquivo: 'Salva e cifrada no arquivo de senhas.',
-        remover_chave: 'Remover chave',
-        modelo_padrao: 'Modelo padrão',
-        no_formato_fornecedor_modelo_da: 'No formato fornecedor/modelo. Dá para trocar na hora de enviar.',
-        fornecedor_modelo: 'fornecedor/modelo',
-        mascarar_dados_do_ambiente: 'Mascarar dados do ambiente',
-        ramais_numeros_ips_dominios_e:
-            'Ramais, números, IPs, domínios e nomes de conta viram marcadores antes de sair.',
-        salvar: 'Salvar',
-        salvo: 'Salvo.',
-        cole_a_chave_da_openrouter: 'Cole a chave da OpenRouter.'
-    },
     appearanceSection: {
         tema: 'Tema',
         tema_dica: 'Sistema acompanha o modo claro ou escuro do computador, e troca sozinho.',
@@ -750,8 +615,6 @@ export const ptBR = {
         nivel_do_microfone: 'Nível do microfone',
         fale_alguma_coisa_a_barra: 'Fale alguma coisa: a barra deve se mexer.',
         alto_falante: 'Alto-falante',
-        camera: 'Câmera',
-        camera_dica: 'Para as chamadas de vídeo, em contas WebRTC. Vale a partir da próxima chamada.',
         tocar_som_de_teste: 'Tocar som de teste',
         volume_do_toque: 'Volume do toque: {n}%',
         volume_do_toque_rotulo: 'Volume do toque',
@@ -828,7 +691,6 @@ export const ptBR = {
         aparencia: 'Aparência',
         audio: 'Áudio',
         conexao: 'Conexão',
-        ajuda_da_ia: 'Ajuda da IA',
         certificados: 'Certificados',
         importar_e_exportar: 'Importar e exportar',
         atualizacao: 'Atualização'

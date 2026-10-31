@@ -5,16 +5,11 @@ import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore, type CallView } from '@renderer/stores/calls'
 import { DtmfSyntaxError, parseDtmfSequence } from '@renderer/lib/dtmf'
 import { duration, now } from '@renderer/lib/now'
-import { useAiStore } from '@renderer/stores/ai'
-import CallVideo from './CallVideo.vue'
-import { usePreferencesStore } from '@renderer/stores/preferences'
 import PhoneIcon from './PhoneIcon.vue'
 
 const props = defineProps<{ call: CallView }>()
 const accounts = useAccountsStore()
-const prefs = usePreferencesStore()
 const calls = useCallsStore()
-const ai = useAiStore()
 
 const dtmf = ref('')
 const dtmfError = ref('')
@@ -135,7 +130,6 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                 $t('callCard.early_nao_ouvido')
             }}</span>
             <span v-else-if="call.ringback === 'local'">{{ $t('callCard.toque_local') }}</span>
-            <span v-if="call.video && live">{{ $t('callCard.video') }}</span>
             <span v-if="call.muted">{{ $t('callCard.mudo') }}</span>
             <span v-if="call.transfer">{{ $t('callCard.transferencia', { transfer: call.transfer }) }}</span>
             <span v-if="consulting">{{ $t('callCard.consultando', { remote: consulting.remote }) }}</span>
@@ -143,9 +137,6 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                 $t('callCard.dtmf_recebido', { dtmfReceived: call.dtmfReceived })
             }}</span>
             <span v-if="call.endText">· {{ call.endText }}</span>
-            <button v-if="!live && prefs.isOn('log')" class="btn small explain" @click.stop="ai.explainCall(call)">
-                {{ $t('callCard.explicar_com_ia') }}
-            </button>
         </div>
 
         <div v-if="live && consultOf" class="consult" @click.stop>
@@ -166,9 +157,6 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                     }}<span v-if="autoAnswerIn !== null" class="muted-inv">
                         {{ $t('callCard.auto_em_s', { autoAnswerIn }) }}</span
                     >
-                </button>
-                <button v-if="call.video && prefs.isOn('video')" class="btn go" @click="calls.answer(call.id, true)">
-                    <PhoneIcon name="video" />{{ $t('callCard.com_video') }}
                 </button>
                 <button class="btn stop" @click="calls.reject(call.id)">{{ $t('callCard.recusar') }}</button>
             </template>
@@ -278,8 +266,6 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
             </p>
         </div>
 
-        <CallVideo v-if="established && call.video && prefs.isOn('video')" :call="call" />
-
         <div v-if="(established || call.ringback === 'pbx') && (meter || call.quality)" class="signal">
             <span
                 v-if="meter"
@@ -332,9 +318,6 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
 </template>
 
 <style scoped>
-.explain {
-    margin-left: auto;
-}
 .consult {
     display: flex;
     align-items: center;

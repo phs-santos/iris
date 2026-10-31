@@ -9,8 +9,7 @@ const prefs = usePreferencesStore()
 
 const label = (mode: ModeId): { name: string; hint: string } =>
     ({
-        log: { name: t('modesSection.log'), hint: t('modesSection.log_dica') },
-        video: { name: t('modesSection.video'), hint: t('modesSection.video_dica') }
+        log: { name: t('modesSection.log'), hint: t('modesSection.log_dica') }
     })[mode]
 
 async function hide(): Promise<void> {

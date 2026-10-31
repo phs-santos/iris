@@ -136,7 +136,7 @@ export const GUIDE: GuideSection[] = [
                     '**Modo Telefone**: troca a janela por um telefone simples, só com o teclado e a chamada. Veja "Modo Telefone".',
                     '**Atualização disponível**: aparece só quando há versão nova. Veja "Atualização".',
                     '**Guia**: abre esta tela. A tecla **F1** também abre.',
-                    '**Configurações**: perfil, cores, áudio, IA, certificados, importar e exportar e atualização. O atalho é **Ctrl+,** (no macOS, **Cmd+,**).'
+                    '**Configurações**: perfil, cores, áudio, certificados, importar e exportar e atualização. O atalho é **Ctrl+,** (no macOS, **Cmd+,**).'
                 ]
             },
             {
@@ -175,15 +175,6 @@ export const GUIDE: GuideSection[] = [
                 type: 'p',
                 text: 'As etiquetas à direita do nome dizem: um **número** é a quantidade de chamadas ativas da conta; **AA** é auto-atender ligado; **SIM** é conta do PBX simulado.'
             },
-            { type: 'h', text: 'Luzes de outros ramais (BLF) e correio de voz' },
-            {
-                type: 'p',
-                text: 'Em contas de **SIP puro** e do **PBX simulado**, o campo **Ramais para acompanhar (BLF)**, em Avançado, recebe uma lista como `1002, 1003`. Com a conta registrada, cada ramal aparece embaixo dela como uma etiqueta: borda verde é **livre**, amarela é **tocando**, vermelha é **em chamada** e cinza é **sem notícia do PBX** (o PBX recusou acompanhar o ramal, e o log diz o motivo). O PBX precisa publicar o estado dos ramais; no Asterisk, isso é um `hint` no plano de discagem.'
-            },
-            {
-                type: 'p',
-                text: 'Quando o PBX avisa que há mensagens no **correio de voz** do ramal, a conta mostra a etiqueta "correio de voz" com a quantidade de mensagens novas, e o log registra a mudança.'
-            },
             {
                 type: 'p',
                 text: 'Clique no nome do PBX (o domínio acima das contas) para **recolher o grupo**: ele mostra só quantas contas estão no ar, como "2/3 no ar". A escolha fica guardada nesta máquina.'
@@ -209,16 +200,13 @@ export const GUIDE: GuideSection[] = [
                     '**Editar**: abre o formulário. Se a conta estava registrada, ela é registrada de novo com os dados novos.',
                     '**⋯ → Saúde**: roda as verificações da conta. Veja "Saúde e diagnóstico".',
                     '**⋯ → Duplicar**: cria uma cópia, para cadastrar vários ramais parecidos sem redigitar tudo.',
-                    '**⋯ → Requisição SIP…** (contas de SIP puro registradas e simuladas): manda um pedido avulso, como `OPTIONS`, `MESSAGE` ou `SUBSCRIBE`, com os cabeçalhos e o corpo que você escrever, e mostra a resposta inteira do PBX e o tempo que levou.',
-                    '**⋯ → Teste de carga…** (contas de SIP puro registradas): faz várias chamadas ao mesmo tempo pela conta, cada uma tocando um tom, para um destino que atenda sozinho (um número de eco, uma URA). No fim mostra quantas foram atendidas, em quantas chegou áudio, o tempo até atender, a perda de pacotes e o jitter, e deixa salvar o relatório. Vai até 200 chamadas. Elas não aparecem nos cartões, e fechar a tela encerra todas.',
-                    '**⋯ → Exportar PCAP** (contas de SIP puro registradas): salva o que passou pela rede daquela conta desde o registro, para abrir no Wireshark. "Só SIP" leva a sinalização; "com áudio" leva também os pacotes RTP. A captura guarda os 30 MB mais recentes.',
                     '**⋯ → Excluir**: pede confirmação e apaga a conta e a senha guardada.'
                 ]
             },
             { type: 'h', text: 'Quando o registro falha' },
             {
                 type: 'p',
-                text: 'A conta mostra um quadro vermelho com o problema em português e o que conferir, por exemplo "O PBX recusou o login: confira usuário e senha". O código SIP original (como `403 Forbidden`) continua na linha da conta. O botão **Por que falhou?** pede a explicação à IA. Veja "Ajuda da IA".'
+                text: 'A conta mostra um quadro vermelho com o problema em português e o que conferir, por exemplo "O PBX recusou o login: confira usuário e senha". O código SIP original (como `403 Forbidden`) continua na linha da conta.'
             },
             { type: 'h', text: 'Cadastrar ou editar' },
             { type: 'image', name: 'conta', alt: 'Formulário de conta com a seção Avançado aberta' },
@@ -270,7 +258,6 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     'Em **TLS**, um certificado autoassinado é recusado e a tela oferece **Confiar neste host**, como no WebSocket.',
                     'Em **UDP**, a Íris repete o pedido se a central não responder e desiste depois de 32 segundos, com o erro `408`.',
-                    'No arquivo **PCAP**, as mensagens aparecem sempre como UDP, mesmo em contas TCP ou TLS, e em TLS já decifradas: é o texto SIP que interessa para diagnosticar. O arquivo tem ramais, números discados e, na opção com áudio, a conversa: trate como confidencial.',
                     'O áudio vai por **RTP sem cifra**, a não ser que você marque **Exigir áudio cifrado (SRTP)** na conta. Com essa opção, a Íris oferece SRTP ao ligar e recusa (`488`) quem liga sem ele; na linha de qualidade aparece `(SRTP)` ao lado do codec. Uma chamada recebida que já venha com SRTP é atendida com cifra mesmo sem a opção.',
                     'A chave do SRTP vai dentro da sinalização (SDES). Para ela não passar em claro, use o transporte **TLS** junto.',
                     'Com SRTP, o tempo de ida e volta (RTT) fica em 0: ele vem do RTCP, que a Íris só troca sem cifra.',
@@ -302,10 +289,6 @@ export const GUIDE: GuideSection[] = [
                         'Automático tenta o melhor. **SIP INFO** manda os dígitos pela sinalização; **RTP (RFC 4733)** manda junto com o áudio. Troque se a URA não reconhecer os dígitos'
                     ],
                     ['Cor', 'A cor da conta na lista, nos cartões e no log'],
-                    [
-                        'Ramais para acompanhar (BLF)',
-                        'Só em SIP puro e no simulado. Ramais cujo estado (livre, tocando, em chamada) aparece embaixo da conta'
-                    ],
                     [
                         'STUN / TURN',
                         'Servidores para atravessar NAT, separados por vírgula. Sem TURN, a chamada pode ficar muda atrás de alguns roteadores'
@@ -390,28 +373,10 @@ export const GUIDE: GuideSection[] = [
                 type: 'p',
                 text: 'Quando um ramal registrado toca, a Íris toca o som de chamada, mostra uma notificação do sistema e cria um cartão com **Atender** e **Recusar**. **Ctrl/Cmd + Enter** atende a chamada que está tocando. Com auto-atender ligado, o botão mostra a contagem ("auto em 2 s").'
             },
-            {
-                type: 'p',
-                text: 'Em contas de **SIP puro** e simuladas, a conta pode tocar um arquivo WAV para quem ligou assim que a chamada é atendida, como uma mensagem de boas-vindas ou um aviso de gravação: em Editar → Avançado → **Ao atender, tocar para quem ligou**, escolha o arquivo. Ele toca no lugar do microfone e, quando acaba, o microfone volta. Vale também com o auto-atender. Use WAV de PCM de 16 bits, de até 2 minutos.'
-            },
             { type: 'h', text: 'Várias chamadas ao mesmo tempo' },
             {
                 type: 'p',
                 text: 'Cada chamada é um cartão. Uma ligação entre dois ramais seus aparece como dois cartões: o de quem ligou (seta →) e o de quem recebeu (seta ←). Clique num cartão para selecioná-lo; os atalhos de teclado agem sobre o cartão selecionado.'
-            },
-            { type: 'h', text: 'Chamada de vídeo' },
-            {
-                type: 'p',
-                text: 'Em contas **WebRTC** (e no PBX simulado), o botão **Vídeo**, ao lado de Ligar, faz a chamada com a câmera. Quem recebe vê **Atender** (só o áudio, recebendo a imagem de quem ligou) e **Atender com vídeo** (manda a câmera também). No cartão aparecem a imagem do outro lado e a sua numa miniatura, e o botão **Desligar a câmera** pausa a imagem sem derrubar a chamada. A câmera é escolhida em **Configurações › Áudio**. O auto-atender nunca liga a câmera.'
-            },
-            {
-                type: 'list',
-                items: [
-                    'O PBX precisa aceitar um codec de vídeo no ramal. No Asterisk, inclua `vp8` (ou `h264`) no `allow` dos dois ramais.',
-                    'Contas de **SIP puro** ainda não fazem vídeo: o botão não aparece para elas.',
-                    'No macOS e no Windows, o sistema pede permissão de câmera na primeira chamada de vídeo.',
-                    'O modo Telefone e a gravação ainda não têm vídeo.'
-                ]
             },
             { type: 'h', text: 'O que você ouve antes de atenderem' },
             {
@@ -569,7 +534,6 @@ export const GUIDE: GuideSection[] = [
                     '**Copiar**: copia as linhas filtradas para a área de transferência.',
                     '**Salvar .txt / Salvar .json**: grava as linhas filtradas num arquivo, para anexar a um chamado.',
                     '**Limpar**: apaga o log da conta filtrada, ou tudo se o filtro for "Todas as contas".',
-                    '**Explicar com IA**: manda o recorte atual para a IA explicar. Veja "Ajuda da IA".',
                     '**Fluxo SIP**: desenha as chamadas como diagrama de escada. Veja abaixo.',
                     '**Ir para o fim**: aparece quando você rola para cima; volta a acompanhar as linhas novas.'
                 ]
@@ -712,7 +676,6 @@ export const GUIDE: GuideSection[] = [
                         'Conexão',
                         'Quantas vezes a Íris tenta registrar de novo depois de uma queda, com espera crescente (2 s, 4 s, 8 s, até 1 minuto). O padrão é 10; com 0 ela não desiste'
                     ],
-                    ['Ajuda da IA', 'A chave da OpenRouter, o modelo padrão e a máscara. Veja "Ajuda da IA"'],
                     ['Certificados', 'Os PBX com certificado autoassinado que você aceitou, com a opção de remover'],
                     ['Importar e exportar', 'Levar as contas para outra máquina. Veja "Importar e exportar contas"'],
                     ['Atualização', 'A versão instalada e a busca por versão nova. Veja "Atualização"']
@@ -834,56 +797,6 @@ export const GUIDE: GuideSection[] = [
         ]
     },
     {
-        id: 'ia',
-        title: 'Ajuda da IA',
-        summary: 'Pedir a um modelo de IA que explique o log, uma chamada ou uma falha de registro.',
-        blocks: [
-            { type: 'image', name: 'ia', alt: 'Janela da ajuda da IA com a prévia do texto e a resposta' },
-            {
-                type: 'p',
-                text: 'É opcional e usa a **sua chave da OpenRouter** (crie em openrouter.ai/keys). O uso é cobrado na sua conta de lá. Sem chave, nada é enviado.'
-            },
-            { type: 'h', text: 'Onde pedir' },
-            {
-                type: 'list',
-                items: [
-                    '**Explicar com IA**, no rodapé do log: usa as linhas do filtro atual.',
-                    '**Explicar com IA**, no cartão de uma chamada encerrada: usa o log daquela conta durante a chamada.',
-                    '**Por que falhou?**, numa conta em erro: usa as últimas linhas da conta.'
-                ]
-            },
-            { type: 'h', text: 'Como usar' },
-            {
-                type: 'steps',
-                items: [
-                    'Na primeira vez, cole a chave e clique em **Salvar chave**.',
-                    'Escolha o **Modelo**. A lista vem da OpenRouter; a sugestão inicial é um Claude Sonnet.',
-                    'Leia o **Texto que será enviado**. É exatamente isso que sai da sua máquina, mais uma instrução fixa de como responder.',
-                    'Clique em **Enviar para a OpenRouter** e espere a resposta, que vem em três partes: o que aconteceu, causa provável e o que fazer.'
-                ]
-            },
-            { type: 'h', text: 'O que sai da sua máquina' },
-            {
-                type: 'list',
-                items: [
-                    '**Máscara ligada (padrão)**: ramais, números, IPs, domínios e nomes de conta viram marcadores como `[NÚMERO-1]` e `[HOST-1]`. A conversa SIP continua legível, mas sem os seus dados.',
-                    '**Máscara desligada**: o texto vai como aparece na prévia. Útil quando a explicação depende de um número ou endereço específico.',
-                    '**Senhas e dados de autenticação nunca são enviados**, com ou sem máscara.',
-                    'Vão no máximo as 400 linhas mais novas do recorte.'
-                ]
-            },
-            {
-                type: 'note',
-                kind: 'atenção',
-                text: 'A máscara cobre o que o app reconhece. Um texto livre dentro de um cabeçalho SIP pode passar; por isso a prévia existe. E a IA pode errar: confira a explicação com o log antes de mexer na central.'
-            },
-            {
-                type: 'p',
-                text: 'A chave fica no arquivo de senhas da Íris, cifrada, não aparece de novo na tela e não entra em exportações. **Remover chave** apaga.'
-            }
-        ]
-    },
-    {
         id: 'atualizacao',
         title: 'Atualização',
         summary: 'Como a Íris procura, baixa e instala versões novas.',
@@ -935,7 +848,7 @@ export const GUIDE: GuideSection[] = [
                     'A **cor do ícone** diz o estado geral: cinza sem conta registrada, verde com contas registradas, amarelo com chamada tocando, azul em chamada e vermelho quando alguma conta está em erro. Parar o mouse em cima mostra os números.',
                     '**Sair** encerra o app de verdade: os ramais saem do ar e as chamadas caem.',
                     'Uma **chamada recebida** gera uma notificação do sistema, com **Atender** e **Recusar** no próprio aviso (no macOS); clicar nela abre a janela. Na Bancada, ela também aparece numa faixa colorida no alto da coluna do meio.',
-                    'Também avisam: **chamada perdida**, **conta que caiu** e **correio de voz** novo. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
+                    'Também avisam: **chamada perdida** e **conta que caiu**. Em **Configurações → Notificações** você escolhe quais avisos quer, pode fazer a chamada recebida trazer a janela para a frente e tem o botão **Testar notificação**.',
                     'Não aparece nada? No macOS, confira em **Ajustes do Sistema → Notificações → Iris** se os avisos estão permitidos e se o **Não Perturbe** está desligado. Contas com auto-atender não avisam de chamada recebida.'
                 ]
             },
@@ -1006,7 +919,7 @@ export const GUIDE: GuideSection[] = [
                 rows: [
                     ['Contas (sem senha)', '`accounts.json`, na pasta de dados'],
                     [
-                        'Senhas dos ramais e chave da IA',
+                        'Senhas dos ramais',
                         '`senhas.json`, cifrado com uma chave própria (`chave-local.bin`); os dois só podem ser lidos pela sua conta do sistema'
                     ],
                     ['Contatos e servidores', '`contacts.json` e `servers.json`'],
@@ -1014,7 +927,7 @@ export const GUIDE: GuideSection[] = [
                         'Gravações de chamadas',
                         'Pasta `gravacoes`: um arquivo WAV por gravação, sem cifra. Só existem se você clicar em Gravar'
                     ],
-                    ['Preferências', '`settings.json`: áudio, canal de atualização, hosts confiáveis, opções da IA'],
+                    ['Preferências', '`settings.json`: áudio, canal de atualização, hosts confiáveis'],
                     ['Log das contas (eventos e SIP)', 'Só na memória, até o app fechar ou você salvar'],
                     [
                         'Log interno do app',
@@ -1033,7 +946,7 @@ export const GUIDE: GuideSection[] = [
                     'Não grava senha em texto puro: o arquivo de senhas é cifrado. Quem tiver a pasta de dados inteira, porém, consegue ler as senhas; trate essa pasta como confidencial.',
                     'Não apaga um arquivo estragado. Senhas, contas ou preferências que não dão para ler são guardados ao lado, com a data no nome, e a tela avisa. O app abre mesmo assim.',
                     'Não põe senha, hash nem nonce no log, nem na tela nem nos arquivos salvos.',
-                    'Não manda nada para fora além do que você pede: o registro e as chamadas com a sua central, a busca por atualização no GitHub e, se você usar, o texto da prévia para a OpenRouter.',
+                    'Não manda nada para fora além do que você pede: o registro e as chamadas com a sua central, a busca por atualização no GitHub ',
                     'Não aceita certificado inválido sem você mandar, e só para o host escolhido.'
                 ]
             },
@@ -1108,7 +1021,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'note',
                 kind: 'dica',
-                text: 'Quando o motivo não estiver claro, ligue **Mostrar SIP bruto no log** na conta, repita o teste e leia a aba **Tudo**. Se quiser, peça a explicação em **Explicar com IA**.'
+                text: 'Quando o motivo não estiver claro, ligue **Mostrar SIP bruto no log** na conta, repita o teste e leia a aba **Tudo**.'
             }
         ]
     }

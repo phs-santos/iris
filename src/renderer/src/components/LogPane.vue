@@ -3,7 +3,6 @@ import { t } from '@renderer/i18n'
 import { computed, nextTick, reactive, ref, watch } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { formatEntry, formatTime, useLogStore, type LogFilter } from '@renderer/stores/log'
-import { useAiStore } from '@renderer/stores/ai'
 import LadderDialog from './LadderDialog.vue'
 
 /** Linhas desenhadas na tela; o resto continua disponível para copiar e salvar. */
@@ -11,7 +10,6 @@ const VISIBLE_LIMIT = 1500
 
 const accounts = useAccountsStore()
 const log = useLogStore()
-const ai = useAiStore()
 // Por padrão esconde o detalhe interno da biblioteca SIP (nível debug).
 const filter = reactive<LogFilter>({ accountId: null, kind: 'event', minLevel: 'info', text: '' })
 const follow = ref(true)
@@ -155,9 +153,6 @@ async function save(format: 'txt' | 'json'): Promise<void> {
             <button class="btn small" @click="save('txt')">{{ $t('logPane.salvar_txt') }}</button>
             <button class="btn small" @click="save('json')">{{ $t('logPane.salvar_json') }}</button>
             <button class="btn small" @click="log.clear(filter.accountId)">{{ $t('logPane.limpar') }}</button>
-            <button class="btn small" :disabled="matching.length === 0" @click="ai.explainLog(matching)">
-                {{ $t('logPane.explicar_com_ia') }}
-            </button>
             <button class="btn small" @click="showLadder = true">{{ $t('logPane.fluxo_sip') }}</button>
             <span class="note">{{ copied }}</span>
             <button v-if="!follow" class="btn small ghost" @click="jumpToEnd">{{ $t('logPane.ir_para_o_fim') }}</button>

@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { levelDb, parseWav, SILENCE_DB, toneSamples, wavHeader, WavError } from '../src/shared/audio'
+import { levelDb, SILENCE_DB } from '../src/shared/audio'
 import { WavRecorder } from '../src/main/sip/recorder'
 
 const dirs: string[] = []
@@ -13,54 +13,20 @@ const tempFile = (): string => {
     return join(dir, 'gravacao.wav')
 }
 
-/** WAV de teste em qualquer taxa e número de canais. */
-function wav(samples: Int16Array, channels = 1, rate = 8000): Uint8Array {
-    const body = new Uint8Array(samples.buffer, samples.byteOffset, samples.byteLength)
-    const out = new Uint8Array(44 + body.length)
-    out.set(wavHeader(body.length, channels, rate))
-    out.set(body, 44)
+/** Tom puro de teste, a 8000 Hz. */
+function toneSamples(hz: number, ms: number, amplitude = 0.5): Int16Array {
+    const out = new Int16Array(Math.round((8000 * ms) / 1000))
+    for (let i = 0; i < out.length; i++)
+        out[i] = Math.round(Math.sin((2 * Math.PI * hz * i) / 8000) * amplitude * 0x7fff)
     return out
 }
 
-describe('ferramentas de áudio (RF-36, RF-41)', () => {
-    it('gera um tom com a duração pedida e volume audível', () => {
-        const tone = toneSamples(440, 500)
-        expect(tone).toHaveLength(4000)
-        expect(levelDb(tone)).toBeGreaterThan(-12)
-        expect(levelDb(tone)).toBeLessThan(-6)
-        // Começa e termina em silêncio, para não estalar.
-        expect(Math.abs(tone[0]!)).toBeLessThan(50)
-        expect(Math.abs(tone.at(-1)!)).toBeLessThan(50)
-    })
-
+describe('medida de volume (RF-41)', () => {
     it('mede silêncio, áudio fraco e áudio cheio', () => {
         expect(levelDb(new Int16Array(160))).toBe(SILENCE_DB)
         expect(levelDb(new Int16Array(0))).toBe(SILENCE_DB)
         expect(levelDb(new Int16Array(160).fill(32767))).toBe(0)
         expect(levelDb(new Int16Array(160).fill(328))).toBe(-40)
-    })
-
-    it('lê um WAV mono de 8000 Hz como está', () => {
-        const tone = toneSamples(600, 100)
-        expect(parseWav(wav(tone))).toEqual(tone)
-    })
-
-    it('junta os canais de um WAV estéreo e converte outra taxa', () => {
-        const stereo = Int16Array.from([1000, 3000, -2000, -4000])
-        expect([...parseWav(wav(stereo, 2))]).toEqual([2000, -3000])
-        const fast = toneSamples(440, 100)
-        // O mesmo som declarado a 16000 Hz tem metade da duração a 8000 Hz.
-        const half = parseWav(wav(fast, 1, 16000))
-        expect(half).toHaveLength(fast.length / 2)
-        expect(levelDb(half)).toBeGreaterThan(-12)
-    })
-
-    it('recusa o que não é WAV de PCM de 16 bits', () => {
-        expect(() => parseWav(new Uint8Array(100))).toThrow(WavError)
-        const eightBit = wav(new Int16Array(10))
-        eightBit[34] = 8
-        expect(() => parseWav(eightBit)).toThrow(/16 bits/)
-        expect(() => parseWav(wavHeader(0, 1))).toThrow(/sem formato ou sem áudio/)
     })
 })
 

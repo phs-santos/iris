@@ -27,7 +27,6 @@ export type SettingsSection =
     | 'shortcuts'
     | 'servers'
     | 'connection'
-    | 'ai'
     | 'security'
     | 'data'
     | 'update'
@@ -81,7 +80,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
         apply()
     }
 
-    /** Só os campos desta tela: Áudio, IA e certificados gravam no mesmo arquivo. */
+    /** Só os campos desta tela: Áudio e certificados gravam no mesmo arquivo. */
     async function persist(): Promise<void> {
         await window.iris.settings.update({ profile: { ...profile.value }, appearance: { ...appearance.value } })
     }

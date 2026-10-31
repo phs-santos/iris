@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
-import type { CallQuality, EngineCall, VideoStreams } from '@renderer/sip/engine'
+import type { CallQuality, EngineCall } from '@renderer/sip/engine'
 import { ringbackTone, ringer } from '@renderer/sip/audio'
 import { ringbackOf, type Ringback } from '@shared/ringback'
 import { parseDtmfSequence, runDtmfSequence } from '@renderer/lib/dtmf'
@@ -47,13 +47,6 @@ export interface CallView {
     consultId?: string
     /** Nesta chamada de consulta: a chamada original, que está em espera. */
     consultFor?: string
-    /** A chamada tem vídeo: pedido por quem ligou, ou oferecido por quem liga para cá (RF-52). */
-    video: boolean
-    /** Esta ponta manda a câmera; `cameraOff` é a câmera pausada sem refazer a chamada. */
-    sendsVideo: boolean
-    cameraOff: boolean
-    /** Sobe a cada mudança nas imagens, para a tela buscar os fluxos de novo. */
-    videoRev: number
     /** O motor desta chamada grava em arquivo (RF-36). */
     canRecord: boolean
     /** Arquivo da gravação em andamento. */
@@ -113,10 +106,6 @@ export const useCallsStore = defineStore('calls', () => {
             failed: false,
             dtmfRunning: false,
             dtmfReceived: '',
-            video: call.video,
-            sendsVideo: call.direction === 'out' && call.video,
-            cameraOff: false,
-            videoRev: 0,
             canRecord: typeof call.setRecording === 'function'
         })
         selectedId.value = call.id
@@ -141,7 +130,6 @@ export const useCallsStore = defineStore('calls', () => {
             c.autoAnswerAt = undefined
             window.iris.closeNotification?.(call.id)
             log.add(accountId, 'info', 'event', `Chamada ${label()} em andamento`)
-            if (call.direction === 'in') void playAnswerAudio(accountId, call.id)
         })
         call.on('ended', (end) => {
             const c = v()
@@ -201,10 +189,6 @@ export const useCallsStore = defineStore('calls', () => {
                 by === 'remote' ? `${call.remote} retomou a chamada` : 'Chamada retomada'
             )
         })
-        call.on('video', () => {
-            const c = v()
-            if (c) c.videoRev++
-        })
         call.on('dtmf', (tone) => {
             const c = v()
             if (c) c.dtmfReceived = (c.dtmfReceived + tone).slice(-24)
@@ -232,12 +216,7 @@ export const useCallsStore = defineStore('calls', () => {
     }
 
     /** Liga e devolve o id da chamada criada. */
-    async function dial(
-        accountId: string,
-        destination: string,
-        headers?: string[],
-        video = false
-    ): Promise<string | undefined> {
+    async function dial(accountId: string, destination: string, headers?: string[]): Promise<string | undefined> {
         const accounts = useAccountsStore()
         const log = useLogStore()
         const engine = accounts.engineOf(accountId)
@@ -249,8 +228,7 @@ export const useCallsStore = defineStore('calls', () => {
         }
         log.add(accountId, 'info', 'event', `Ligando para ${dest}`)
         try {
-            if (video && !engine.video) throw new Error('Esta conta não faz chamada de vídeo: use uma conta WebRTC')
-            const call = await engine.dial(dest, { headers, video })
+            const call = await engine.dial(dest, { headers })
             return track(accountId, call, 'dialing').id
         } catch (error) {
             log.add(accountId, 'error', 'event', `Não foi possível ligar para ${dest}: ${(error as Error).message}`)
@@ -290,23 +268,7 @@ export const useCallsStore = defineStore('calls', () => {
         }
     }
 
-    /** Com `video`, atende mandando a câmera; sem, só recebe a imagem de quem ligou (RF-52). */
-    async function answer(id: string, video = false): Promise<void> {
-        const c = view(id)
-        if (c) c.sendsVideo = video && c.video
-        await run(id, (call) => call.answer({ video }), 'Atender')
-    }
-
-    const videoStreams = (id: string): VideoStreams =>
-        engineCalls.get(id)?.videoStreams?.() ?? { remote: null, local: null }
-
-    function toggleCamera(id: string): void {
-        const c = view(id)
-        const call = engineCalls.get(id)
-        if (!c || !call?.setCamera || !c.sendsVideo) return
-        c.cameraOff = !c.cameraOff
-        call.setCamera(!c.cameraOff)
-    }
+    const answer = (id: string): Promise<void> => run(id, (call) => call.answer(), 'Atender')
     const reject = (id: string): Promise<void> => run(id, (call) => call.reject(), 'Recusar')
     const hangup = (id: string): Promise<void> => run(id, (call) => call.hangup(), 'Desligar')
 
@@ -342,39 +304,6 @@ export const useCallsStore = defineStore('calls', () => {
             log.add(c.accountId, 'error', 'event', `Gravação falhou: ${(error as Error).message}`)
         }
     }
-
-    /** Áudio de atendimento (RF-57): o WAV da conta toca para quem ligou, logo depois de atender. */
-    async function playAnswerAudio(accountId: string, id: string): Promise<void> {
-        const path = useAccountsStore().byId(accountId)?.answerAudio
-        const call = engineCalls.get(id)
-        if (!path || !call || !window.iris.audio) return
-        const log = useLogStore()
-        if (!call.playAudio) {
-            log.add(accountId, 'warn', 'event', 'Áudio de atendimento não tocado: só funciona em SIP puro')
-            return
-        }
-        try {
-            const pcm = await window.iris.audio.loadWav(path)
-            const name = path.split(/[\\/]/).pop()
-            log.add(accountId, 'info', 'event', `Áudio de atendimento: tocando ${name} para quem ligou`)
-            await call.playAudio(pcm)
-        } catch (error) {
-            const message = (error as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
-            log.add(accountId, 'warn', 'event', `Áudio de atendimento não tocado: ${message}`)
-        }
-    }
-
-    /** Toca um áudio na chamada, no lugar do microfone (RF-41). Lança erro se o motor não consegue. */
-    async function playAudio(id: string, pcm: Int16Array): Promise<void> {
-        const call = engineCalls.get(id)
-        if (!call) throw new Error('A chamada não existe mais')
-        if (!call.playAudio)
-            throw new Error('Esta conta não toca áudio na chamada: use uma conta de SIP puro ou simulada')
-        await call.playAudio(pcm)
-    }
-
-    /** A chamada consegue tocar um áudio no lugar do microfone (SIP puro e simulado). */
-    const canPlay = (id: string): boolean => typeof engineCalls.get(id)?.playAudio === 'function'
 
     /** Envia uma sequência como "1,w2,4321#". Lança erro de sintaxe antes de enviar qualquer dígito. */
     async function sendDtmf(id: string, sequence: string): Promise<void> {
@@ -513,16 +442,12 @@ export const useCallsStore = defineStore('calls', () => {
         dial,
         addIncoming,
         answer,
-        videoStreams,
-        toggleCamera,
         reject,
         hangup,
         toggleMute,
         shortcut,
         toggleHold,
         toggleRecording,
-        playAudio,
-        canPlay,
         sendDtmf,
         stopDtmf,
         transfer,

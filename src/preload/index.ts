@@ -1,5 +1,4 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { LoadProgress } from '@shared/load'
 import type { NotificationAction } from '@shared/notifications'
 import type { ShortcutAction } from '@shared/shortcuts'
 import { IPC, type IrisApi, type CertificateErrorEvent, type NativeSipEvent, type UpdateStatus } from '@shared/types'
@@ -32,8 +31,6 @@ const api: IrisApi = {
         openText: (kind) => ipcRenderer.invoke(IPC.filesOpenText, kind)
     },
     audio: {
-        pickWav: () => ipcRenderer.invoke(IPC.audioPickWav),
-        loadWav: (path) => ipcRenderer.invoke(IPC.audioLoadWav, path),
         openRecordings: () => ipcRenderer.invoke(IPC.audioOpenRecordings)
     },
     notify: (request) => ipcRenderer.send(IPC.notify, request),
@@ -88,13 +85,6 @@ const api: IrisApi = {
             return () => ipcRenderer.removeListener(IPC.updateStatus, handler)
         }
     },
-    ai: {
-        status: () => ipcRenderer.invoke(IPC.aiStatus),
-        setKey: (key) => ipcRenderer.invoke(IPC.aiSetKey, key),
-        setOptions: (options) => ipcRenderer.invoke(IPC.aiSetOptions, options),
-        models: () => ipcRenderer.invoke(IPC.aiModels),
-        explain: (request) => ipcRenderer.invoke(IPC.aiExplain, request)
-    },
     sip: {
         start: (engineId, config, password) => ipcRenderer.invoke(IPC.sipStart, engineId, config, password),
         stop: (engineId) => ipcRenderer.invoke(IPC.sipStop, engineId),
@@ -104,16 +94,6 @@ const api: IrisApi = {
         callStats: (engineId, callId) => ipcRenderer.invoke(IPC.sipCallStats, engineId, callId),
         callLevel: (engineId, callId) => ipcRenderer.invoke(IPC.sipCallLevel, engineId, callId),
         record: (engineId, callId, on) => ipcRenderer.invoke(IPC.sipRecord, engineId, callId, on),
-        request: (engineId, request) => ipcRenderer.invoke(IPC.sipRequest, engineId, request),
-        exportPcap: (engineId, withRtp) => ipcRenderer.invoke(IPC.sipPcap, engineId, withRtp),
-        loadStart: (engineId, spec) => ipcRenderer.invoke(IPC.sipLoadStart, engineId, spec),
-        loadStop: (engineId) => ipcRenderer.invoke(IPC.sipLoadStop, engineId),
-        onLoadProgress: (listener) => {
-            const handler = (_e: Electron.IpcRendererEvent, engineId: string, progress: LoadProgress): void =>
-                listener(engineId, progress)
-            ipcRenderer.on(IPC.sipLoadProgress, handler)
-            return () => ipcRenderer.removeListener(IPC.sipLoadProgress, handler)
-        },
         sendAudio: (engineId, callId, pcm) => ipcRenderer.send(IPC.sipAudio, engineId, callId, pcm),
         onEvent: (listener) => {
             const handler = (_e: Electron.IpcRendererEvent, event: NativeSipEvent): void => listener(event)

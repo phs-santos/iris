@@ -12,9 +12,7 @@ import LogPane from './components/LogPane.vue'
 import AccountForm from './components/AccountForm.vue'
 import HealthDialog from './components/HealthDialog.vue'
 import SettingsDialog from './components/settings/SettingsDialog.vue'
-import AiDialog from './components/AiDialog.vue'
 import GuideDialog from './components/GuideDialog.vue'
-import { useAiStore } from './stores/ai'
 import PhoneView from './components/PhoneView.vue'
 import PhoneIcon from './components/PhoneIcon.vue'
 import ToastStack from './components/ToastStack.vue'
@@ -35,7 +33,6 @@ const accounts = useAccountsStore()
 const calls = useCallsStore()
 const log = useLogStore()
 const devices = useDevicesStore()
-const ai = useAiStore()
 const prefs = usePreferencesStore()
 const toasts = useToastsStore()
 const centerTab = ref<'phone' | 'contacts'>('phone')
@@ -376,13 +373,6 @@ onUnmounted(() => {
                         <span class="mono">{{ call.remote }} → {{ accounts.nameOf(call.accountId) }}</span>
                     </span>
                     <button class="btn go" @click="calls.answer(call.id)">{{ $t('app.atender') }}</button>
-                    <button
-                        v-if="call.video && prefs.isOn('video')"
-                        class="btn go"
-                        @click="calls.answer(call.id, true)"
-                    >
-                        {{ $t('app.atender_com_video') }}
-                    </button>
                     <button class="btn stop" @click="calls.reject(call.id)">{{ $t('app.recusar') }}</button>
                 </div>
                 <template v-if="centerTab === 'phone'">
@@ -392,7 +382,8 @@ onUnmounted(() => {
                         <span class="label">{{ $t('app.chamadas') }}</span>
                         <span class="label tabular">{{ $t('app.ativas', { length: calls.active.length }) }}</span>
                     </div>
-                    <div class="calls">
+                    <!-- Rola quando há muitos cartões, inclusive os de chamadas encerradas, que não têm botão: o teclado precisa alcançar (RNF-12). -->
+                    <div class="calls" tabindex="0" role="region" :aria-label="$t('app.chamadas')">
                         <CallCard v-for="call in calls.calls" :key="call.id" :call="call" />
                         <p v-if="calls.calls.length === 0" class="empty">
                             {{ $t('app.nenhuma_chamada_escolha_uma_conta') }}
@@ -408,7 +399,6 @@ onUnmounted(() => {
         <AccountForm v-if="editing" :account="editing" @close="editing = null" />
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
         <GuideDialog v-if="showGuide" @close="showGuide = false" />
-        <AiDialog v-if="ai.ask" :ask="ai.ask" @close="ai.ask = null" />
         <ToastStack />
         <CommandPalette
             v-if="showPalette"

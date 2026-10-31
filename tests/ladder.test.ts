@@ -7,6 +7,7 @@ import {
     ladderHtml,
     layoutLadder,
     parseSipEntry,
+    stripCredentials,
     type LadderSource
 } from '@renderer/lib/ladder'
 import { MockEngine, MOCK_TIMING, resetMockNetwork } from '@renderer/sip/mock-engine'
@@ -157,5 +158,19 @@ describe('diagrama de escada com o motor simulado', () => {
         expect(calls[0]!.messages[0]!.raw.startsWith('INVITE sip:1002@demo.local SIP/2.0')).toBe(true)
         const register = buildDialogs(logs).find((d) => d.method === 'REGISTER' && d.accountId === 'a')!
         expect(register.messages.map((m) => m.label)).toEqual(['REGISTER', '401 Unauthorized', 'REGISTER', '200 OK'])
+    })
+})
+
+describe('credenciais no diagrama exportado (RNF-10)', () => {
+    it('tira credenciais que por acaso tenham sobrado no log', () => {
+        const out = stripCredentials(
+            [
+                'Authorization: Digest username="1001", response="abcdef0123"',
+                'WWW-Authenticate: Digest realm="asterisk", nonce="xyz"',
+                'detalhe nonce="12345" password=1234'
+            ].join('\n')
+        )
+        for (const secret of ['abcdef0123', 'xyz', '12345', '1234']) expect(out).not.toContain(secret)
+        expect(out).toContain('Authorization: [removido]')
     })
 })

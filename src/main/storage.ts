@@ -133,8 +133,8 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 /**
- * Tira das preferências as chaves de recursos que deixaram de existir na 2.0 (modos SDR, Mensagens e Cenários, avisos de
- * mensagem de texto e de monitor): arquivos antigos continuam valendo, e a validação dos canais não recusa o que a tela devolve (RNF-19).
+ * Tira das preferências as chaves de recursos que deixaram de existir na 2.0 (modos SDR, Mensagens, Cenários e Vídeo, ajuda da IA, câmera, avisos de
+ * mensagem de texto e de monitor, correio de voz): arquivos antigos continuam valendo, e a validação dos canais não recusa o que a tela devolve (RNF-19).
  */
 export function dropRemovedKeys(settings: Settings): Settings {
     const clean = (enabled: object | undefined, removed: string[]): Record<string, boolean> | undefined =>
@@ -144,11 +144,22 @@ export function dropRemovedKeys(settings: Settings): Settings {
                   boolean
               >)
             : undefined
-    const out = { ...settings } as Settings & { modes?: { enabled?: object }; notifications?: { enabled?: object } }
+    const out = { ...settings } as Settings & {
+        modes?: { enabled?: object }
+        notifications?: { enabled?: object }
+        ai?: unknown
+        videoInputId?: unknown
+    }
+    // Ajuda da IA (RF-38) e câmera (RF-52) saíram: os campos antigos somem do arquivo na próxima gravação.
+    delete out.ai
+    delete out.videoInputId
     if (out.modes?.enabled)
-        out.modes = { ...out.modes, enabled: clean(out.modes.enabled, ['sdr', 'messages', 'scenarios']) }
+        out.modes = { ...out.modes, enabled: clean(out.modes.enabled, ['sdr', 'messages', 'scenarios', 'video']) }
     if (out.notifications?.enabled)
-        out.notifications = { ...out.notifications, enabled: clean(out.notifications.enabled, ['message', 'monitor']) }
+        out.notifications = {
+            ...out.notifications,
+            enabled: clean(out.notifications.enabled, ['message', 'monitor', 'voicemail'])
+        }
     return out
 }
 

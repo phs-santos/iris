@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MockEngine, MOCK_TIMING, resetMockNetwork } from '@renderer/sip/mock-engine'
 import type { CallEnd, EngineCall, RegStatus } from '@renderer/sip/engine'
 import { newAccount } from '@renderer/lib/accounts'
-import { levelDb, SILENCE_DB, toneSamples } from '@shared/audio'
+import { SILENCE_DB } from '@shared/audio'
 
 const make = (extension: string, password = '1234', domain = 'demo.local'): MockEngine =>
     new MockEngine(newAccount({ name: extension, extension, domain, simulated: true, rawSipLog: true }), password)
@@ -29,30 +29,6 @@ describe('MockEngine', () => {
         await registered(bad)
         expect(ok.registered).toBe(true)
         expect(statuses.at(-1)).toEqual({ state: 'error', code: 403, reason: 'Forbidden' })
-    })
-
-    it('vídeo (RF-52): a chamada de vídeo chega oferecendo vídeo, e a comum não', async () => {
-        const a = make('1001')
-        const b = make('1002')
-        await registered(a)
-        await registered(b)
-        const incoming: EngineCall[] = []
-        b.on('incoming', (call) => incoming.push(call))
-
-        const video = await a.dial('1002', { video: true })
-        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
-        expect(a.video).toBe(true)
-        expect(video.video).toBe(true)
-        expect(incoming[0]!.video).toBe(true)
-        // Sem tela (teste de unidade) não há imagem de teste, mas a chamada segue.
-        await incoming[0]!.answer({ video: true })
-        expect(incoming[0]!.videoStreams!()).toEqual({ remote: null, local: null })
-        await video.hangup()
-
-        const plain = await a.dial('1002')
-        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
-        expect(plain.video).toBe(false)
-        expect(incoming[1]!.video).toBe(false)
     })
 
     it('liga entre duas contas do mesmo domínio e encerra dos dois lados', async () => {
@@ -82,7 +58,7 @@ describe('MockEngine', () => {
         expect(inEnd).toEqual({ by: 'remote' })
     })
 
-    it('simula o áudio: voz dos dois lados, silêncio em mudo e em espera, e o volume de um tom tocado (RF-41)', async () => {
+    it('simula o áudio: voz dos dois lados e silêncio em mudo e em espera (RF-41)', async () => {
         const a = make('1001')
         const b = make('1002')
         await registered(a)
@@ -102,54 +78,9 @@ describe('MockEngine', () => {
         expect(await incoming!.audioLevel()).toBe(-30)
         incoming!.setMuted(false)
 
-        // Um tom tocado por A chega em B com o volume do tom, enquanto durar.
-        const tone = toneSamples(440, 300)
-        const playing = out.playAudio!(tone)
-        expect(await incoming!.audioLevel()).toBe(levelDb(tone))
-        await vi.advanceTimersByTimeAsync(300)
-        await playing
-        expect(await incoming!.audioLevel()).toBe(-30)
-
         await out.setHeld(true)
         expect(await out.audioLevel()).toBe(SILENCE_DB)
         expect(await incoming!.audioLevel()).toBe(SILENCE_DB)
-    })
-
-    it('pedido manual no simulado (RF-45): 200 para OPTIONS, 489 para assinatura, erro sem registro', async () => {
-        const a = make('1001')
-        await expect(a.request({ method: 'OPTIONS', uri: 'sip:demo.local', headers: [] })).rejects.toThrow(
-            /Registre a conta/
-        )
-        await registered(a)
-        const ok = await a.request({ method: 'OPTIONS', uri: 'sip:demo.local', headers: [] })
-        expect(ok).toMatchObject({ status: 200, reason: 'OK' })
-        expect(ok.text).toContain('Allow: INVITE')
-        expect(await a.request({ method: 'SUBSCRIBE', uri: 'sip:1002@demo.local', headers: [] })).toMatchObject({
-            status: 489
-        })
-    })
-
-    it('BLF simulado (RF-27): quem acompanha um ramal vê livre, em chamada e livre de novo', async () => {
-        const watcher = new MockEngine(
-            newAccount({ name: 'vigia', extension: '1003', domain: 'demo.local', simulated: true, blf: '1002, 1009' }),
-            '1234'
-        )
-        const a = make('1001')
-        const b = make('1002')
-        const seen: string[] = []
-        watcher.on('presence', (extension, state) => seen.push(`${extension} ${state}`))
-        await registered(b)
-        await registered(a)
-        await registered(watcher)
-        // 1002 já estava registrado; 1009 não existe.
-        expect(seen).toEqual(['1002 idle', '1009 unknown'])
-        let incoming: EngineCall | undefined
-        b.on('incoming', (call) => (incoming = call))
-        const out = await a.dial('1002')
-        await vi.advanceTimersByTimeAsync(MOCK_TIMING.trying)
-        await incoming!.answer()
-        await out.hangup()
-        expect(seen.slice(2)).toEqual(['1002 busy', '1002 idle'])
     })
 
     it('entrega o DTMF enviado ao outro lado', async () => {

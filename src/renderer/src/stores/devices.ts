@@ -16,8 +16,6 @@ export const useDevicesStore = defineStore('devices', () => {
     const outputs = ref<AudioDevice[]>([])
     const inputId = ref('')
     const outputId = ref('')
-    const cameras = ref<AudioDevice[]>([])
-    const cameraId = ref('')
     /** Volume do toque de chamada, de 0 a 100 (RF-55). */
     const ringVolume = ref(DEFAULT_RING_VOLUME)
     let watching = false
@@ -38,9 +36,6 @@ export const useDevicesStore = defineStore('devices', () => {
                 }))
         inputs.value = list('audioinput')
         outputs.value = list('audiooutput')
-        cameras.value = devices
-            .filter((d) => d.kind === 'videoinput' && d.deviceId)
-            .map((d, i) => ({ id: d.deviceId, label: d.label || `Câmera ${i + 1}` }))
         labelsHidden = devices.some((d) => d.kind === 'audioinput' && !d.label)
 
         // Avisa uma vez quando o dispositivo escolhido some, não a cada evento de troca.
@@ -61,8 +56,6 @@ export const useDevicesStore = defineStore('devices', () => {
         inputId.value = settings.audioInputId ?? ''
         outputId.value = settings.audioOutputId ?? ''
         audioInput.deviceId = inputId.value
-        cameraId.value = settings.videoInputId ?? ''
-        audioInput.cameraId = cameraId.value
         await audioOutput.setDevice(outputId.value)
         ringer.setDevice(outputId.value)
         ringbackTone.setDevice(outputId.value)
@@ -99,13 +92,6 @@ export const useDevicesStore = defineStore('devices', () => {
         useLogStore().add(null, 'info', 'event', `Saída de áudio: ${labelOf(outputs.value, id)}`)
     }
 
-    /** Vale para as próximas chamadas de vídeo (RF-52). */
-    async function setCamera(id: string): Promise<void> {
-        cameraId.value = id
-        audioInput.cameraId = id
-        await window.iris.settings.update({ videoInputId: id || undefined })
-    }
-
     async function setRingVolume(volume: number): Promise<void> {
         ringVolume.value = volume
         ringer.volume = volume
@@ -129,9 +115,6 @@ export const useDevicesStore = defineStore('devices', () => {
         outputs,
         inputId,
         outputId,
-        cameras,
-        cameraId,
-        setCamera,
         ringVolume,
         load,
         refresh,

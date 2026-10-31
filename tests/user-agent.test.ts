@@ -5,7 +5,6 @@ import { TlsCertificateError, type SipTransport, type TransportOptions } from '.
 import { redact, SipUserAgent, T1, TIMER_F, type UaStatus, type UserAgentConfig } from '../src/main/sip/user-agent'
 import { parseSipServer } from '../src/shared/sip-target'
 import type { CallEvents, SipCall } from '../src/main/sip/call'
-import { toneSamples } from '../src/shared/audio'
 
 /** PBX falso em memória: guarda o que o user-agent manda e responde o que o teste disser. */
 class FakeTransport implements SipTransport {
@@ -325,105 +324,26 @@ describe('motor próprio: registro por SIP puro (RF-39)', () => {
         await agent.stop()
     })
 
-    it('pedido manual (RF-45): leva os cabeçalhos extras e o corpo, responde ao desafio e mede o tempo', async () => {
+    it('NOTIFY que ninguém pediu (correio de voz) recebe 200 e é ignorado', async () => {
         const { agent, transport } = setup({}, (t) => (t.answer = withAuth()))
         await agent.start()
-        const before = transport().sent.length
-        // O PBX pede a senha de novo, agora como proxy, para os pedidos que não são REGISTER.
-        transport().answer = (request) =>
-            request.method === 'REGISTER' || header(request, 'Proxy-Authorization')
-                ? { status: 200, reason: 'OK' }
-                : { status: 407, reason: 'Proxy Authentication Required', extra: [['Proxy-Authenticate', CHALLENGE]] }
-        const { response, ms } = await agent.sendRequest({
-            method: 'MESSAGE',
-            uri: 'sip:1002@pbx.teste',
-            headers: [['X-Teste', '1']],
-            body: 'olá',
-            contentType: 'text/plain'
-        })
-        expect(response.status).toBe(200)
-        expect(ms).toBeGreaterThanOrEqual(0)
-        const [first, second] = transport().sent.slice(before)
-        expect(first!.method).toBe('MESSAGE')
-        expect(header(first!, 'To')).toBe('<sip:1002@pbx.teste>')
-        expect(header(first!, 'X-Teste')).toBe('1')
-        expect(header(first!, 'Content-Type')).toBe('text/plain')
-        expect(first!.body).toBe('olá')
-        expect(header(first!, 'Proxy-Authorization')).toBeUndefined()
-        expect(header(second!, 'Proxy-Authorization')).toContain('uri="sip:1002@pbx.teste"')
-        expect(second!.body).toBe('olá')
-        // Um pedido para o próprio PBX mantém o To da conta.
-        await agent.sendRequest({ method: 'OPTIONS', uri: 'sip:pbx.teste', headers: [] })
-        expect(header(transport().sent.at(-1)!, 'To')).toBe('<sip:2001@pbx.teste>')
-        // Tudo o que foi e voltou está na captura (RF-44).
-        expect(agent.capture.count).toBe(transport().sent.length * 2)
-        await agent.stop()
-    })
-
-    it('BLF e correio de voz (RF-27): assina o estado dos ramais e lê os avisos do PBX', async () => {
-        const presence: string[] = []
-        const mwi: unknown[] = []
-        let transport!: FakeTransport
-        const agent = new SipUserAgent(
-            { ...config, blf: ['1002', '1003'] },
-            (options) => {
-                transport = new FakeTransport(options)
-                // O PBX aceita acompanhar o 1002 e recusa o 1003.
-                transport.answer = (request) =>
-                    request.method === 'SUBSCRIBE' && request.uri.includes('1003')
-                        ? { status: 489, reason: 'Bad Event' }
-                        : { status: 200, reason: 'OK', extra: [['Expires', '600']] }
-                return transport
-            },
-            {
-                status: () => undefined,
-                log: () => undefined,
-                certificate: () => undefined,
-                presence: (extension, state) => presence.push(`${extension} ${state}`),
-                mwi: (info) => mwi.push(info)
-            }
-        )
-        await agent.start()
-        await vi.advanceTimersByTimeAsync(0)
-        const subscribes = transport.sent.filter((r) => r.method === 'SUBSCRIBE')
-        expect(subscribes.map((r) => r.uri)).toEqual(['sip:1002@pbx.teste', 'sip:1003@pbx.teste'])
-        expect(header(subscribes[0]!, 'Event')).toBe('dialog')
-        expect(header(subscribes[0]!, 'Accept')).toBe('application/dialog-info+xml')
-        expect(header(subscribes[0]!, 'To')).toBe('<sip:1002@pbx.teste>')
-
-        const notify = (callId: string, event: string, body: string): string =>
+        const body = 'Messages-Waiting: yes\r\nVoice-Message: 3/1\r\n'
+        transport().onMessage(
             [
                 'NOTIFY sip:2001@192.168.0.10:50600 SIP/2.0',
-                'Via: SIP/2.0/UDP pbx.teste:5060;branch=z9hG4bKnotify' + body.length,
+                'Via: SIP/2.0/UDP pbx.teste:5060;branch=z9hG4bKnotify1',
                 'From: <sip:1002@pbx.teste>;tag=pbx',
                 'To: <sip:2001@pbx.teste>;tag=a',
-                `Call-ID: ${callId}`,
+                'Call-ID: avulso',
                 'CSeq: 1 NOTIFY',
-                `Event: ${event}`,
-                'Subscription-State: active;expires=600',
+                'Event: message-summary',
                 `Content-Length: ${Buffer.byteLength(body)}`,
                 '',
                 body
             ].join('\r\n')
-        const callId = header(subscribes[0]!, 'Call-ID')!
-        transport.onMessage(
-            notify(callId, 'dialog', '<dialog-info><dialog id="a"><state>confirmed</state></dialog></dialog-info>')
         )
-        transport.onMessage(notify(callId, 'dialog', '<dialog-info></dialog-info>'))
-        // De uma assinatura que não é nossa: ignorado. O aviso de correio vale mesmo sem assinatura.
-        transport.onMessage(
-            notify(
-                'desconhecido',
-                'dialog',
-                '<dialog-info><dialog id="a"><state>confirmed</state></dialog></dialog-info>'
-            )
-        )
-        transport.onMessage(notify('avulso', 'message-summary', 'Messages-Waiting: yes\r\nVoice-Message: 3/1\r\n'))
-        expect(presence).toEqual(['1003 unknown', '1002 busy', '1002 idle'])
-        expect(mwi).toEqual([{ waiting: true, newMessages: 3, oldMessages: 1 }])
-        // Todo NOTIFY recebe 200, inclusive o que foi ignorado.
-        const replies = transport.raw.slice(-4).map((text) => parseMessage(text))
-        expect(replies.every((r) => r.kind === 'response' && r.status === 200)).toBe(true)
+        const reply = parseMessage(transport().raw.at(-1)!)
+        expect(reply.kind === 'response' && reply.status).toBe(200)
         await agent.stop()
     })
 
@@ -707,52 +627,6 @@ describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
         // O PBX recusou o REFER: a recusa já é o resultado final.
         expect(first.seen).toEqual(['established', 'transfer 603 Declined final'])
         transport.answer = () => null
-        await agent.stop()
-    })
-
-    it('toca um áudio no lugar do microfone, no ritmo de 20 ms por bloco, e mede o que chega (RF-41)', async () => {
-        const { agent, transport } = await registered()
-        const { seen, events } = callRecorder()
-        const call = agent.dial('600', events)
-        await expect(call.play(toneSamples(440, 100))).rejects.toThrow(/não está em andamento/)
-        await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
-        const invite = sentOf(transport, 'INVITE')[0]!
-        const body = PBX_SDP()
-        transport.onMessage(
-            [
-                'SIP/2.0 200 OK',
-                `Via: ${header(invite, 'Via')}`,
-                `From: ${header(invite, 'From')}`,
-                `To: ${header(invite, 'To')};tag=pbx`,
-                `Call-ID: ${header(invite, 'Call-ID')}`,
-                `CSeq: ${header(invite, 'CSeq')}`,
-                'Contact: <sip:600@pbx.teste:5060>',
-                'Content-Type: application/sdp',
-                `Content-Length: ${Buffer.byteLength(body)}`,
-                '',
-                body
-            ].join('\r\n')
-        )
-        await until(() => seen.includes('established'), 'chamada em andamento')
-        const copied: Int16Array[] = []
-        call.tap = (side, pcm) => side === 'sent' && copied.push(pcm)
-        const started = Date.now()
-        const playing = call.play(toneSamples(440, 200))
-        // Enquanto toca, o microfone é descartado.
-        call.sendPcm(new Int16Array(160).fill(9999))
-        await playing
-        const elapsed = Date.now() - started
-        expect(elapsed).toBeGreaterThanOrEqual(170)
-        expect(elapsed).toBeLessThan(1500)
-        expect(copied).toHaveLength(10)
-        expect(copied.every((frame) => frame.length === 160 && !frame.includes(9999))).toBe(true)
-        expect(call.stats().packetsSent).toBe(10)
-        // Depois do áudio, o microfone volta a passar; e ninguém mandou nada de volta.
-        call.sendPcm(new Int16Array(160).fill(9999))
-        expect(copied).toHaveLength(11)
-        expect(call.receivedLevel()).toBe(-96)
-        transport.answer = () => ({ status: 200, reason: 'OK' })
-        await call.hangup()
         await agent.stop()
     })
 

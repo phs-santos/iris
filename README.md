@@ -25,14 +25,9 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | Fluxo SIP | Diagrama de escada de cada chamada a partir do SIP bruto, com a mensagem completa ao clicar e exportação em .html |
 | RF-24, 25, 26 | Saúde da conta, diagnóstico de microfone e TURN, qualidade da chamada |
 | RF-32, 33, 37 | Modo simulado, ícone na bandeja com a cor do estado geral (sem registro, registrada, tocando, em chamada, erro), aceite de certificado autoassinado por host |
-| RF-38 | Ajuda de IA (OpenRouter, com a sua chave) para explicar o log, uma chamada ou uma falha de registro, com prévia do que é enviado e máscara de dados ligada por padrão |
 | RF-35 | Atualização automática pelo GitHub Releases, com canais estável e beta: procura sozinha, baixa só quando você pede e aplica ao reiniciar. Conferida no macOS (1.2.9 → 1.3.0); falta ver no Windows e no AppImage |
 | RF-47 | G.722 e Opus em SIP puro, além do G.711. O G.722 é oferecido primeiro e leva a voz em alta definição (16 kHz); o codec e a troca de taxa são próprios, em TypeScript, conferidos contra o Asterisk. O Opus sai em banda estreita, com o DTMF no relógio de 48 kHz. A gravação continua a 8 kHz |
-| RF-27 | BLF em SIP puro e no simulado: a conta acompanha o estado (livre, tocando, em chamada) dos ramais escolhidos; e aviso de correio de voz (MWI) |
-| RF-42 | Teste de carga por SIP puro: até 200 chamadas simultâneas por uma conta, cada uma tocando um tom, com relatório de atendidas, áudio, tempo até atender, perda e jitter |
 | RF-46 | Diagnóstico de rede na Saúde: registros DNS SRV do domínio, certificado TLS do PBX (emissor, validade, nomes) e endereço público pelo servidor STUN da conta |
-| RF-44 | Exportar em PCAP, para o Wireshark, o que passou pela rede de uma conta de SIP puro: sinalização e, se pedido, o áudio |
-| RF-45 | Requisição SIP manual (OPTIONS, MESSAGE, SUBSCRIBE, NOTIFY, INFO, PUBLISH) por uma conta de SIP puro ou simulada, com a resposta inteira na tela |
 | RF-48 | Contas em lote por planilha CSV |
 | RF-36 | Gravação da chamada em WAV estéreo (um lado em cada canal), por enquanto só em SIP puro |
 | Interface | Tema claro e do sistema, listas compactas, ícones nos botões, medidor do áudio que chega e barras de sinal na chamada, avatar com iniciais, avisos rápidos na tela, paleta de comandos (Ctrl/Cmd+K), primeiros passos no primeiro uso, grupos de PBX recolhíveis e chamada recebida na cor da conta |
@@ -42,9 +37,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-55 | Toque de chamada por conta (clássico, digital, suave, sino ou nenhum), volume do toque em Configurações → Áudio e o botão do fone (tecla Tocar/Pausar) para atender e desligar |
 | RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, as notificações do sistema continuam em português |
 | RF-20 | Early media: o cartão diz se o som antes do atendimento é o toque local ou o áudio do PBX (183), e toca esse áudio. Em SIP puro sempre; em WebRTC por opção da conta |
-| RF-52 | Chamada de vídeo em contas WebRTC e no simulado: botão Vídeo no discador, Atender com vídeo, a imagem do outro lado e a própria câmera no cartão, câmera ligável durante a chamada e escolhida em Configurações. SIP puro, modo Telefone, gravação ainda sem vídeo |
 | RF-58 | Modos: o app abre só com o padrão de chamada; log e diagnóstico e vídeo ligam numa área escondida das Configurações |
-| RF-57 | Áudio de atendimento: um WAV da conta toca para quem ligou logo depois de atender (SIP puro e simulado) |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, CSV, e o nome do contato nas chamadas |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
 | RF-39 | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde, liga e recebe chamadas com áudio G.711, DTMF por RTP ou SIP INFO, mudo, espera, transferência cega e assistida, SRTP (SDES, AES_CM_128_HMAC_SHA1_80) e qualidade com perda, jitter e tempo de ida e volta (RTCP). Não tem: RTCP cifrado (com SRTP o RTT fica em 0), INVITE sem SDP, temporizador de sessão e DNS SRV |
@@ -114,7 +107,6 @@ npm test            # testes de unidade (Vitest)
 npm run test:coverage   # os mesmos, com cobertura da camada de domínio (mínimo de 70%)
 npm run test:e2e    # ponta a ponta no modo simulado (abre o app)
 npm run test:senhas # senhas cifradas em arquivo local, sem nunca usar o cofre do sistema
-npm run test:ai     # ajuda da IA com uma OpenRouter falsa: máscara, chave cifrada e resposta na tela
 npm run test:a11y   # acessibilidade: axe (WCAG A/AA) em todas as telas e atalhos de teclado
 npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
@@ -122,14 +114,11 @@ npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Gui
 npm run test:pbx    # integração com o Asterisk do docker compose
 npm run test:atalhos       # links tel: e sip:, atalhos globais, botão do fone e toque por conta, no simulado
 npm run test:modos         # modos escondidos por padrão e a área secreta
-npm run test:video         # chamada de vídeo no simulado (com o Asterisk e VP8, entra no test:pbx)
 npm run test:idioma        # interface e guia em inglês: troca na hora, grava e volta ao português
 npm run test:notificacoes  # notificações no simulado: chamada recebida, Atender pelo aviso, chamada perdida e a escolha em Configurações
 npm run test:contatos   # agenda de contatos e servidores cadastrados pela tela, no simulado (RF-50, RF-51)
 npm run test:sip    # SIP puro no Asterisk: registro por UDP, TCP e TLS, chamadas com áudio, DTMF, cancelar, recusar, espera, transferência e SRTP (RF-39)
 npm run test:reconexao  # derruba o contêiner do PBX e confere que as contas voltam sozinhas (RNF-06)
-npm run test:carga-sip  # carga por SIP puro: 50 chamadas simultâneas com o eco do Asterisk e o relatório (RF-42)
-npm run test:load   # carga: 20 contas e 4 chamadas no Asterisk, mede a resposta da interface
 npm run test:resources   # recursos: RAM com 10 contas e 1 chamada e CPU ociosa, no Asterisk (RNF-05)
 ```
 

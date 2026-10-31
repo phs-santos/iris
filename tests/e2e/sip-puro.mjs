@@ -26,7 +26,7 @@ const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)
 const account = (name) => page.locator('.acc', { hasText: name })
 
-async function addAccount(name, ext, transport, password = '1234', autoAnswer = false, srtp = false, blf = '') {
+async function addAccount(name, ext, transport, password = '1234', autoAnswer = false, srtp = false) {
     await page.getByRole('button', { name: '+ Nova' }).click()
     const form = page.locator('form.dialog')
     await form.getByRole('textbox', { name: 'Nome' }).fill(name)
@@ -38,10 +38,6 @@ async function addAccount(name, ext, transport, password = '1234', autoAnswer = 
         throw new Error('o campo do WebSocket continua na tela de uma conta de SIP puro')
     if (autoAnswer) await form.getByText('Auto-atender após').locator('input[type=checkbox]').check()
     if (srtp) await form.getByText('Exigir áudio cifrado (SRTP)').locator('input[type=checkbox]').check()
-    if (blf) {
-        await form.getByRole('button', { name: /Avançado/ }).click()
-        await form.getByLabel(/Ramais para acompanhar/).fill(blf)
-    }
     await form.getByRole('button', { name: 'Salvar e registrar' }).click()
 }
 
@@ -81,8 +77,7 @@ try {
     step('2002 registrou por TCP')
 
     // O PBX de teste usa certificado autoassinado: o app recusa e oferece confiar no host (RF-37).
-    // A conta TLS acompanha o ramal 2001 (BLF, RF-27).
-    await addAccount('Puro TLS', '2003', 'TLS', '1234', false, false, '2001')
+    await addAccount('Puro TLS', '2003', 'TLS')
     await page.getByRole('button', { name: 'Confiar neste host' }).click({ timeout: 15000 })
     await account('Puro TLS').locator('.dot.registered').waitFor({ timeout: 15000 })
     await expectContact('2003', true)
@@ -118,20 +113,6 @@ try {
     await net.getByRole('button', { name: 'Fechar' }).first().click()
     step('Saúde mostra o certificado TLS do PBX: autoassinado, com validade e nomes')
 
-    // Pedido SIP manual (RF-45): um OPTIONS pela conta registrada mostra a resposta do PBX.
-    await account('Puro UDP').locator('.row').click()
-    await account('Puro UDP')
-        .getByRole('button', { name: /Mais ações|⋯/ })
-        .click()
-    await page.getByRole('menuitem', { name: 'Requisição SIP…' }).click()
-    const manual = page.getByRole('dialog')
-    await manual.getByRole('button', { name: 'Enviar' }).click()
-    await manual.getByText(/^200 OK em \d+ ms$/).waitFor({ timeout: 10000 })
-    if (!/Allow: .*INVITE/.test(await manual.locator('pre').textContent()))
-        throw new Error('a resposta completa do OPTIONS não apareceu')
-    await manual.getByRole('button', { name: 'Fechar' }).first().click()
-    step('pedido manual: OPTIONS ao PBX mostra o 200 OK com os cabeçalhos')
-
     await page.getByRole('tab', { name: 'SIP bruto' }).click()
     const log = page.locator('.line.sip')
     await log
@@ -149,9 +130,6 @@ try {
     const echo = call(/2001\s*→\s*600/)
     await echo.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
     await expectAudio(echo, 'chamada para o eco atendida, com áudio voltando')
-    // BLF (RF-27): enquanto o 2001 fala, a conta que o acompanha mostra o ramal em chamada.
-    await account('Puro TLS').locator('.lamp.busy', { hasText: '2001' }).waitFor({ timeout: 10000 })
-    step('BLF: o ramal 2001 aparece em chamada na conta que o acompanha')
     // Gravação (RF-36): o WAV sai com o microfone num canal e o eco no outro.
     await echo.getByRole('button', { name: 'Gravar' }).click()
     await page.waitForTimeout(1500)
@@ -185,9 +163,6 @@ try {
     await echo.getByRole('button', { name: 'Desligar' }).click()
     await echo.locator('.pill', { hasText: 'encerrada' }).waitFor({ timeout: 10000 })
     step('desligar encerra a chamada (BYE)')
-    await account('Puro TLS').locator('.lamp.idle', { hasText: '2001' }).waitFor({ timeout: 10000 })
-    step('BLF: terminada a chamada, o ramal volta a aparecer livre')
-
     await dial('Puro UDP', '486')
     await call('486 Busy Here').waitFor({ timeout: 20000 })
     step('número ocupado: 486 no cartão')
@@ -492,27 +467,6 @@ try {
         .first()
         .waitFor({ timeout: 15000 })
     step('recusar devolve ocupado para quem ligou')
-
-    // Captura em PCAP (RF-44). O diálogo de salvar é do sistema; aqui ele é trocado por um caminho fixo.
-    const pcapPath = join(userData, 'captura.pcap')
-    await app.evaluate(({ dialog }, filePath) => {
-        dialog.showSaveDialog = async () => ({ canceled: false, filePath })
-    }, pcapPath)
-    await account('Puro UDP').locator('.row').click()
-    await account('Puro UDP')
-        .getByRole('button', { name: /Mais ações|⋯/ })
-        .click()
-    await page.getByRole('menuitem', { name: 'Exportar PCAP (com áudio)' }).click()
-    await page.getByRole('tab', { name: 'Eventos' }).click()
-    await page.locator('.list').getByText('Captura salva em').first().waitFor({ timeout: 10000 })
-    const pcap = readFileSync(pcapPath)
-    if (pcap.readUInt32LE(0) !== 0xa1b2c3d4 || pcap.readUInt32LE(20) !== 101)
-        throw new Error('cabeçalho do PCAP errado')
-    const captured = pcap.toString('latin1')
-    if (!captured.includes(`REGISTER sip:${HOST} SIP/2.0`) || !captured.includes('INVITE sip:600@'))
-        throw new Error('o PCAP não tem o REGISTER e o INVITE da conta')
-    if (pcap.length < 200_000) throw new Error(`o PCAP com áudio ficou pequeno demais: ${pcap.length} bytes`)
-    step(`captura em PCAP com a sinalização e o áudio (${Math.round(pcap.length / 1024)} KB)`)
 
     await account('Puro UDP').getByRole('button', { name: 'Desregistrar' }).click()
     await expectContact('2001', false)

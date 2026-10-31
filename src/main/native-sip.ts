@@ -5,7 +5,6 @@
 import { app, type WebContents } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { SAMPLE_RATE } from '@shared/audio'
 import { WavRecorder } from './sip/recorder'
 import {
     IPC,
@@ -15,45 +14,26 @@ import {
     type NativeSipConfig,
     type NativeSipEvent,
     type NativeSipEventBody,
-    type NativeSipHealth,
-    type SipManualRequest,
-    type SipManualResponse,
-    MANUAL_METHODS
+    type NativeSipHealth
 } from '@shared/types'
 import { isSipTransportKind, parseSipServer } from '@shared/sip-target'
 import { check, handle, isPlainObject, isString, on } from './ipc-guard'
 import type { CallEvents, SipCall } from './sip/call'
 import { createTransport } from './sip/transport'
 import { SipUserAgent } from './sip/user-agent'
-import { serializeMessage } from './sip/message'
-import { AUDIO_THRESHOLD_DB, toneSamples } from '@shared/audio'
-import {
-    buildLoadReport,
-    isLoadSpec,
-    type LoadCallResult,
-    type LoadProgress,
-    type LoadReport,
-    type LoadSpec
-} from '@shared/load'
 
 interface Options {
     /** Hosts cujo certificado inválido o usuário aceitou (RF-37). */
     isTrustedHost(host: string): boolean
     onCertificateError(host: string, error: string): void
-    /** Pergunta onde salvar e grava; devolve o caminho, ou null se o usuário cancelou. */
-    saveFile(defaultName: string, data: Buffer): Promise<string | null>
 }
 
 const agents = new Map<string, SipUserAgent>()
 /** Chamadas em andamento, por motor e id da chamada. */
 const calls = new Map<string, SipCall>()
 const callKey = (engineId: string, callId: string): string => `${engineId}|${callId}`
-/** Testes de carga em andamento (RF-42), por motor: chamar a função encerra as chamadas e fecha o relatório. */
-const loads = new Map<string, () => void>()
 /** Gravações em andamento (RF-36), pela mesma chave das chamadas. */
 const recorders = new Map<string, WavRecorder>()
-/** Um áudio tocado numa chamada tem no máximo 2 minutos. */
-const MAX_PLAY_SAMPLES = SAMPLE_RATE * 120
 
 function stopRecording(key: string): void {
     const recorder = recorders.get(key)
@@ -82,8 +62,7 @@ function isConfig(v: unknown): v is NativeSipConfig {
         parseSipServer(v.server as string | undefined, v.domain, v.transport) !== null &&
         (v.authUser === undefined || v.authUser === '' || isSipUser(v.authUser)) &&
         isOptionalText(v.displayName, 120) &&
-        (v.srtp === undefined || typeof v.srtp === 'boolean') &&
-        (v.blf === undefined || (Array.isArray(v.blf) && v.blf.length <= 50 && v.blf.every(isSipUser)))
+        (v.srtp === undefined || typeof v.srtp === 'boolean')
     )
 }
 
@@ -107,8 +86,6 @@ function isCallAction(v: unknown): v is NativeCallAction {
     if (v.type === 'hold') return typeof v.held === 'boolean'
     if (v.type === 'transfer') return isSipUser(v.target)
     if (v.type === 'attended') return isCallId(v.consultCallId)
-    if (v.type === 'stopPlay') return true
-    if (v.type === 'play') return v.pcm instanceof Int16Array && v.pcm.length > 0 && v.pcm.length <= MAX_PLAY_SAMPLES
     return (
         v.type === 'dtmf' &&
         isString(v.tone, 1) &&
@@ -141,7 +118,6 @@ export function registerNativeSipIpc(options: Options): void {
                 port: target.port,
                 trusted: options.isTrustedHost(target.host),
                 srtp: config.srtp,
-                blf: config.blf,
                 userAgent: `Iris/${app.getVersion()}`
             },
             createTransport,
@@ -149,8 +125,6 @@ export function registerNativeSipIpc(options: Options): void {
                 status: (status) => send(sender, engineId, { type: 'status', status }),
                 log: (level, kind, text) => send(sender, engineId, { type: 'log', level, kind, text }),
                 certificate: (host, error) => options.onCertificateError(host, error),
-                presence: (extension, state) => send(sender, engineId, { type: 'presence', extension, state }),
-                mwi: (info) => send(sender, engineId, { type: 'mwi', info }),
                 incoming: (call) => {
                     calls.set(callKey(engineId, call.callId), call)
                     send(sender, engineId, {
@@ -234,8 +208,6 @@ export function registerNativeSipIpc(options: Options): void {
         else if (action.type === 'mute') call.setMuted(action.muted)
         else if (action.type === 'hold') await call.setHeld(action.held)
         else if (action.type === 'transfer') await call.transfer(action.target)
-        else if (action.type === 'play') await call.play(action.pcm)
-        else if (action.type === 'stopPlay') call.stopPlaying()
         else if (action.type === 'attended') {
             const consult = calls.get(callKey(engineId, action.consultCallId))
             if (!consult) throw new Error('A chamada de consulta não existe mais')
@@ -273,152 +245,6 @@ export function registerNativeSipIpc(options: Options): void {
         recorders.set(key, recorder)
         call.tap = (side, pcm) => recorder.push(side, pcm)
         return recorder.path
-    })
-
-    handle(IPC.sipRequest, async (_e, engineId: string, spec: SipManualRequest): Promise<SipManualResponse> => {
-        check(
-            isEngineId(engineId) &&
-                isPlainObject(spec) &&
-                (MANUAL_METHODS as readonly string[]).includes(spec.method as string) &&
-                isString(spec.uri, 300) &&
-                /^sips?:[^\s<>"]+$/i.test(spec.uri) &&
-                Array.isArray(spec.headers) &&
-                spec.headers.length <= 20 &&
-                spec.headers.every(isExtraHeader) &&
-                (spec.body === undefined || (isString(spec.body, 20_000) && !spec.body.includes('\0'))) &&
-                (spec.contentType === undefined ||
-                    (isString(spec.contentType, 100) && /^[\w.+-]+\/[\w.+-]+$/.test(spec.contentType))),
-            'pedido SIP'
-        )
-        const agent = agents.get(engineId)
-        if (!agent?.connected) throw new Error('Registre a conta antes de mandar um pedido')
-        const { response, ms } = await agent.sendRequest({
-            method: spec.method,
-            uri: spec.uri,
-            headers: spec.headers.map((line): [string, string] => [
-                line.slice(0, line.indexOf(':')).trim(),
-                line.slice(line.indexOf(':') + 1).trim()
-            ]),
-            // O corpo do SIP usa CRLF; a tela manda as linhas como o usuário digitou.
-            body: spec.body?.replace(/\r?\n/g, '\r\n'),
-            contentType: spec.contentType
-        })
-        return {
-            status: response.status,
-            reason: response.reason,
-            text: serializeMessage(response).replace(/\r\n/g, '\n'),
-            ms
-        }
-    })
-
-    handle(IPC.sipPcap, async (_e, engineId: string, withRtp: boolean): Promise<string | null> => {
-        check(isEngineId(engineId) && typeof withRtp === 'boolean', 'captura')
-        const agent = agents.get(engineId)
-        if (!agent) throw new Error('Registre a conta para ter o que capturar')
-        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
-        return options.saveFile(`iris-${stamp}.pcap`, agent.capture.toPcap(withRtp))
-    })
-
-    // Teste de carga (RF-42): as chamadas nascem e morrem aqui, sem passar pela interface. Cada uma
-    // toca um tom em laço, que é o que o eco do PBX devolve e o que as estatísticas medem.
-    handle(IPC.sipLoadStart, (event, engineId: string, spec: LoadSpec): Promise<LoadReport> => {
-        check(isEngineId(engineId) && isLoadSpec(spec), 'teste de carga')
-        const agent = agents.get(engineId)
-        if (!agent || agent.currentState !== 'registered') throw new Error('Registre a conta antes do teste de carga')
-        if (loads.has(engineId)) throw new Error('Já há um teste de carga rodando nesta conta')
-        const sender = event.sender
-        const started = Date.now()
-        const tone = toneSamples(440, 1000)
-        const results: LoadCallResult[] = []
-        const progress: LoadProgress = { started: 0, established: 0, finished: 0, total: spec.calls }
-        const report = (): void => {
-            if (!sender.isDestroyed()) sender.send(IPC.sipLoadProgress, engineId, { ...progress })
-        }
-        let stopped = false
-        const hangups = new Set<() => void>()
-
-        const one = (): Promise<void> =>
-            new Promise<void>((done) => {
-                const dialed = Date.now()
-                const result: LoadCallResult = {
-                    established: false,
-                    packetsReceived: 0,
-                    packetsLost: 0,
-                    jitterMs: 0,
-                    levelDb: -96
-                }
-                let timer: ReturnType<typeof setTimeout> | undefined
-                const snapshot = (): void => {
-                    const stats = call.stats()
-                    result.packetsReceived = stats.packetsReceived
-                    result.packetsLost = stats.packetsLost
-                    result.jitterMs = stats.jitterMs
-                    result.levelDb = call.receivedLevel(1000)
-                }
-                const call = agent.dial(spec.destination, {
-                    progress: () => undefined,
-                    established: () => {
-                        result.established = true
-                        result.setupMs = Date.now() - dialed
-                        progress.established++
-                        report()
-                        const loop = (): void => {
-                            if (!call.ended) void call.play(tone).then(loop, () => undefined)
-                        }
-                        loop()
-                        timer = setTimeout(() => {
-                            snapshot()
-                            void call.hangup()
-                        }, spec.seconds * 1000)
-                    },
-                    ended: (end) => {
-                        clearTimeout(timer)
-                        hangups.delete(hang)
-                        if (!result.established) {
-                            result.code = end.code
-                            result.reason = end.reason
-                        }
-                        results.push(result)
-                        progress.finished++
-                        report()
-                        done()
-                    },
-                    hold: () => undefined,
-                    dtmf: () => undefined,
-                    transfer: () => undefined,
-                    audio: () => undefined
-                })
-                const hang = (): void => {
-                    if (result.established) snapshot()
-                    void call.hangup()
-                }
-                hangups.add(hang)
-                progress.started++
-                report()
-            })
-
-        return (async () => {
-            loads.set(engineId, () => {
-                stopped = true
-                for (const hang of [...hangups]) hang()
-            })
-            try {
-                const running: Promise<void>[] = []
-                for (let i = 0; i < spec.calls && !stopped; i++) {
-                    running.push(one())
-                    if (spec.rampMs && i < spec.calls - 1) await new Promise((r) => setTimeout(r, spec.rampMs))
-                }
-                await Promise.all(running)
-            } finally {
-                loads.delete(engineId)
-            }
-            return buildLoadReport(spec, results, Date.now() - started, stopped, AUDIO_THRESHOLD_DB)
-        })()
-    })
-
-    handle(IPC.sipLoadStop, (_e, engineId: string) => {
-        check(isEngineId(engineId), 'id do motor SIP')
-        loads.get(engineId)?.()
     })
 
     // 50 blocos por segundo por chamada, a 16 kHz: sem resposta e sem log, só confere o tamanho.

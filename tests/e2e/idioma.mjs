@@ -61,7 +61,6 @@ try {
         'Shortcuts and links',
         'Servers',
         'Connection',
-        'AI help',
         'Certificates',
         'Import and export'
     ]) {

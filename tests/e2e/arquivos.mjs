@@ -30,14 +30,13 @@ try {
     if (!/INFO Íris \S+ abriu/.test(appLog())) fail('o log interno não registrou a abertura do app')
     step('log interno criado em logs/iris.log na pasta de dados')
 
-    // Quatro telas gravando ao mesmo tempo: nenhuma alteração pode se perder.
+    // Quatro gravações ao mesmo tempo: nenhuma alteração pode se perder.
     await page.evaluate(() =>
         Promise.all([
             window.iris.settings.update({ profile: { name: 'Ana' } }),
             window.iris.settings.update({ appearance: { size: 'large' } }),
             window.iris.settings.update({ reconnect: { maxAttempts: 3 } }),
-            window.iris.settings.update({ trustedHosts: ['pbx.exemplo'] }),
-            window.iris.ai.setOptions({ mask: false })
+            window.iris.settings.update({ trustedHosts: ['pbx.exemplo'] })
         ])
     )
     const settings = readData('settings.json')
@@ -45,12 +44,11 @@ try {
         settings.profile?.name !== 'Ana' ||
         settings.appearance?.size !== 'large' ||
         settings.reconnect?.maxAttempts !== 3 ||
-        settings.trustedHosts?.[0] !== 'pbx.exemplo' ||
-        settings.ai?.mask !== false
+        settings.trustedHosts?.[0] !== 'pbx.exemplo'
     )
         fail(`gravações simultâneas se perderam: ${JSON.stringify(settings)}`)
     if (readdirSync(userData).some((name) => name.endsWith('.tmp'))) fail('sobrou arquivo temporário na pasta de dados')
-    step('cinco gravações simultâneas das preferências: nenhuma se perdeu')
+    step('quatro gravações simultâneas das preferências: nenhuma se perdeu')
 
     const refused = await page.evaluate(() =>
         window.iris.settings.update({ updateChannel: 'beta' }).then(

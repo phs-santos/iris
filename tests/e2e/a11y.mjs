@@ -77,7 +77,6 @@ try {
         'Áudio',
         'Servidores',
         'Conexão',
-        'Ajuda da IA',
         'Certificados',
         'Importar e exportar'
     ]) {
@@ -108,15 +107,6 @@ try {
     await page.getByRole('menuitem', { name: 'Saúde' }).click()
     await scan('saúde da conta')
     await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: /^Mais ações de / }).click()
-    await page.getByRole('menuitem', { name: 'Requisição SIP…' }).click()
-    await page.getByRole('dialog').getByRole('button', { name: 'Enviar' }).click()
-    await page
-        .getByRole('dialog')
-        .getByText(/^200 OK em \d+ ms$/)
-        .waitFor()
-    await scan('requisição SIP manual')
-    await page.keyboard.press('Escape')
     await page.keyboard.press('ControlOrMeta+k')
     await page.getByRole('dialog', { name: 'Paleta de comandos' }).waitFor()
     await scan('paleta de comandos')
@@ -133,23 +123,6 @@ try {
         .waitFor()
     await scan('configurações, modos')
     await page.keyboard.press('Escape')
-    await page.getByRole('tab', { name: 'Telefone' }).click()
-    await page.getByLabel('Número', { exact: true }).fill('1002')
-    await page.getByRole('button', { name: 'Ligar com vídeo' }).click()
-    await page.locator('.call', { hasText: '→' }).locator('video.local').waitFor({ timeout: 8000 })
-    await scan('chamada de vídeo')
-    await page.locator('.call', { hasText: '→' }).getByRole('button', { name: 'Desligar', exact: true }).click()
-    await page.waitForFunction(() => document.querySelectorAll('.call').length === 0, null, { timeout: 15000 })
-
-    await page.getByRole('button', { name: 'Explicar com IA' }).last().click()
-    await page.getByLabel('Chave da OpenRouter').waitFor()
-    await scan('ajuda da IA')
-    await page.keyboard.press('Escape')
-    await page
-        .getByRole('dialog', { name: /IA$/ })
-        .waitFor({ state: 'detached', timeout: 2000 })
-        .catch(() => problems.push('[ajuda da IA] Esc não fecha'))
-
     // Guia: todas as seções abrem, as capturas carregam e a busca filtra o índice.
     await page.keyboard.press('F1')
     const guide = page.getByRole('dialog', { name: 'Guia da Íris' })

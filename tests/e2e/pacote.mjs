@@ -69,7 +69,6 @@ try {
     // Telas que falam com o processo principal ao abrir: se um canal faltar, o erro aparece aqui.
     await page.getByRole('button', { name: 'Configurações' }).click()
     await page.getByRole('tab', { name: /Atualização/ }).click()
-    await page.getByRole('tab', { name: 'Ajuda da IA' }).click()
     await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
     await page.getByRole('button', { name: 'Guia' }).click()
     await page.locator('.dialog img').first().waitFor({ timeout: 10000 })

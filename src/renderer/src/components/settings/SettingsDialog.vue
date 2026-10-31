@@ -13,12 +13,11 @@ import ServersSection from './ServersSection.vue'
 import NotificationsSection from './NotificationsSection.vue'
 import ShortcutsSection from './ShortcutsSection.vue'
 import ModesSection from './ModesSection.vue'
-import AiSection from './AiSection.vue'
 import SecuritySection from './SecuritySection.vue'
 import ImportExportSection from './ImportExportSection.vue'
 import UpdateSection from './UpdateSection.vue'
 
-/** Tela única de Configurações: junta Áudio, Importar/Exportar, Atualização, IA e certificados. */
+/** Tela única de Configurações: junta Áudio, Importar/Exportar, Atualização e certificados. */
 const props = defineProps<{ section: SettingsSection; update: UpdateInfo | null }>()
 const emit = defineEmits<{ close: []; channel: [channel: UpdateChannel] }>()
 const dialogEl = ref<HTMLElement | null>(null)
@@ -36,7 +35,6 @@ const sections = computed(() =>
         { id: 'shortcuts' as const, name: t('settingsDialog.atalhos') },
         { id: 'servers' as const, name: t('settingsDialog.servidores') },
         { id: 'connection' as const, name: t('settingsDialog.conexao') },
-        { id: 'ai' as const, name: t('settingsDialog.ajuda_da_ia') },
         { id: 'security' as const, name: t('settingsDialog.certificados') },
         { id: 'data' as const, name: t('settingsDialog.importar_e_exportar') },
         { id: 'update' as const, name: t('settingsDialog.atualizacao'), badge: props.update?.currentVersion },
@@ -130,7 +128,6 @@ function onNavKey(event: KeyboardEvent): void {
                     <ModesSection v-else-if="current === 'modes'" @hidden="current = 'profile'" />
                     <ServersSection v-else-if="current === 'servers'" />
                     <ConnectionSection v-else-if="current === 'connection'" />
-                    <AiSection v-else-if="current === 'ai'" />
                     <SecuritySection v-else-if="current === 'security'" />
                     <ImportExportSection v-else-if="current === 'data'" />
                     <UpdateSection

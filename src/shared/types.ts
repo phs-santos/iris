@@ -1,14 +1,11 @@
 // Tipos compartilhados entre o processo principal, o preload e a interface.
 
-import type { AiModel, AiRequest, AiResult, AiSettings, AiStatus } from './ai'
 import type { Appearance, Profile } from './appearance'
 import type { TrayCounts } from './tray'
 import type { Contact } from './contacts'
 import type { SipServer } from './servers'
 import type { NetDiagRequest, NetDiagResult } from './net-diag'
-import type { LoadProgress, LoadReport, LoadSpec } from './load'
 import type { NotificationAction, NotificationSettings, NotifyRequest } from './notifications'
-import type { MwiInfo, PresenceState } from './presence'
 import type { AccountTransport, SipTransportKind } from './sip-target'
 import type { LinkSettings, LinkStatus } from './links'
 import type { ShortcutAction, ShortcutSettings } from './shortcuts'
@@ -41,8 +38,6 @@ export interface Account {
     sipServer?: string
     /** SIP puro: exige áudio cifrado (SRTP) nas chamadas. */
     srtp?: boolean
-    /** Ramais cujo estado acompanhar (BLF, RF-27), separados por vírgula ou espaço. */
-    blf?: string
     /** Servidor cadastrado de onde vêm os dados de conexão (RF-51). */
     serverId?: string
     /**
@@ -50,11 +45,6 @@ export interface Account {
      * padrão: com ele, o SIP.js derruba a chamada se o PBX bifurcar o INVITE. Em SIP puro vale sempre.
      */
     earlyMedia?: boolean
-    /**
-     * Arquivo WAV tocado para quem ligou assim que a chamada é atendida, no lugar do microfone (RF-57).
-     * Só em SIP puro e no simulado.
-     */
-    answerAudio?: string
     /** Toque das chamadas recebidas nesta conta (RF-55). Sem o campo, vale o clássico. */
     ringtone?: RingtoneId
     /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */
@@ -80,16 +70,12 @@ export interface Settings {
     trustedHosts: string[]
     audioInputId?: string
     audioOutputId?: string
-    /** Câmera das chamadas de vídeo (RF-52). Sem o campo, a padrão do sistema. */
-    videoInputId?: string
     /** Volume do toque de chamada, de 0 a 100 (RF-55). Sem o campo, 50. */
     ringVolume?: number
     /** A tecla Tocar/Pausar (o botão do fone) atende e desliga enquanto há chamada (RF-55). */
     mediaKey?: boolean
     /** Canal de atualização (RF-35). Sem o campo, vale o estável. */
     updateChannel?: UpdateChannel
-    /** Ajuda da IA para ler o log (RF-38). */
-    ai?: AiSettings
     /** Tela de Configurações: quem usa e como a interface aparece. */
     profile?: Profile
     appearance?: Appearance
@@ -105,14 +91,13 @@ export interface Settings {
     shortcuts?: ShortcutSettings
 }
 
-/** Campos que a interface pode mudar em `settings.json`; o canal de atualização e a IA têm canais próprios. */
+/** Campos que a interface pode mudar em `settings.json`; o canal de atualização tem canal próprio. */
 export type SettingsPatch = Partial<
     Pick<
         Settings,
         | 'trustedHosts'
         | 'audioInputId'
         | 'audioOutputId'
-        | 'videoInputId'
         | 'ringVolume'
         | 'mediaKey'
         | 'profile'
@@ -164,16 +149,12 @@ export interface NativeSipConfig {
     /** Host e porta do PBX; vazio usa o domínio. */
     server?: string
     srtp?: boolean
-    /** Ramais cujo estado acompanhar (BLF, RF-27). */
-    blf?: string[]
 }
 
 export type NativeSipEventBody =
     | { type: 'status'; status: { state: RegStateName; code?: number; reason?: string; final?: boolean } }
     | { type: 'log'; level: 'debug' | 'info' | 'warn' | 'error'; kind: 'event' | 'sip'; text: string }
     | { type: 'call'; callId: string; event: NativeCallEvent }
-    | { type: 'presence'; extension: string; state: PresenceState }
-    | { type: 'mwi'; info: MwiInfo }
     /** 20 ms de áudio recebido: 320 amostras de 16 bits a 16000 Hz. */
     | { type: 'audio'; callId: string; pcm: Int16Array }
 
@@ -197,31 +178,6 @@ export type NativeCallAction =
     | { type: 'transfer'; target: string }
     /** Transferência assistida: junta o outro lado desta chamada com o da chamada de consulta. */
     | { type: 'attended'; consultCallId: string }
-    /** Toca um áudio (PCM de 16 bits a 8000 Hz) no lugar do microfone; termina quando o áudio acaba. */
-    | { type: 'play'; pcm: Int16Array }
-    /** Para o áudio tocado; o microfone volta. */
-    | { type: 'stopPlay' }
-
-/** Pedido SIP manual (RF-45), fora de qualquer chamada. */
-export interface SipManualRequest {
-    method: string
-    /** Endereço do pedido, ex.: `sip:pbx.empresa.com` ou `sip:1002@pbx.empresa.com`. */
-    uri: string
-    /** Cabeçalhos extras, um por item, como "Nome: valor". */
-    headers: string[]
-    body?: string
-    contentType?: string
-}
-
-export interface SipManualResponse {
-    status: number
-    reason: string
-    /** A resposta inteira, como chegou. */
-    text: string
-    ms: number
-}
-
-export const MANUAL_METHODS = ['OPTIONS', 'MESSAGE', 'SUBSCRIBE', 'NOTIFY', 'INFO', 'PUBLISH'] as const
 
 export interface NativeCallStats {
     packetsSent: number
@@ -297,11 +253,7 @@ export interface IrisApi {
         /** Abre o diálogo e devolve o texto do arquivo escolhido. `csv` troca o filtro de JSON por CSV. */
         openText(kind?: 'json' | 'csv'): Promise<string | null>
     }
-    /** Arquivos WAV para o áudio de atendimento (RF-57): o processo principal lê e devolve PCM de 16 bits a 8000 Hz. */
     audio: {
-        /** Abre o diálogo e devolve o caminho escolhido, ou null. */
-        pickWav(): Promise<string | null>
-        loadWav(path: string): Promise<Int16Array>
         /** Abre no gerenciador de arquivos a pasta das gravações de chamadas (RF-36). */
         openRecordings(): Promise<void>
     }
@@ -350,15 +302,6 @@ export interface IrisApi {
         openDownloadPage(): Promise<void>
         onStatus(listener: (status: UpdateStatus) => void): () => void
     }
-    /** Ajuda da IA para ler o log (RF-38). A chave entra, mas nunca volta para a interface. */
-    ai: {
-        status(): Promise<AiStatus>
-        /** `null` apaga a chave. */
-        setKey(key: string | null): Promise<void>
-        setOptions(options: AiSettings): Promise<void>
-        models(): Promise<AiModel[]>
-        explain(request: AiRequest): Promise<AiResult>
-    }
     /** Motor próprio (RF-39): os sockets ficam no processo principal. */
     sip: {
         start(engineId: string, config: NativeSipConfig, password: string): Promise<void>
@@ -372,14 +315,6 @@ export interface IrisApi {
         callLevel(engineId: string, callId: string): Promise<number | null>
         /** Liga ou desliga a gravação (RF-36). Devolve o caminho do arquivo, ou null se a chamada não existe. */
         record(engineId: string, callId: string, on: boolean): Promise<string | null>
-        /** Pedido SIP manual (RF-45). */
-        request(engineId: string, request: SipManualRequest): Promise<SipManualResponse>
-        /** Salva a captura da conta em PCAP (RF-44); devolve o caminho, ou null se o usuário cancelou. */
-        exportPcap(engineId: string, withRtp: boolean): Promise<string | null>
-        /** Teste de carga (RF-42): resolve com o relatório quando todas as chamadas terminam. */
-        loadStart(engineId: string, spec: LoadSpec): Promise<LoadReport>
-        loadStop(engineId: string): Promise<void>
-        onLoadProgress(listener: (engineId: string, progress: LoadProgress) => void): () => void
         /** 20 ms do microfone para a chamada: 320 amostras de 16 bits a 16000 Hz. */
         sendAudio(engineId: string, callId: string, pcm: Int16Array): void
         onEvent(listener: (event: NativeSipEvent) => void): () => void
@@ -441,16 +376,6 @@ export const IPC = {
     sipCallStats: 'sip:call-stats',
     sipCallLevel: 'sip:call-level',
     sipRecord: 'sip:record',
-    sipRequest: 'sip:request',
-    sipPcap: 'sip:pcap',
-    sipLoadStart: 'sip:load-start',
-    sipLoadStop: 'sip:load-stop',
-    sipLoadProgress: 'sip:load-progress',
     sipAudio: 'sip:audio',
-    sipEvent: 'sip:event',
-    aiStatus: 'ai:status',
-    aiSetKey: 'ai:set-key',
-    aiSetOptions: 'ai:set-options',
-    aiModels: 'ai:models',
-    aiExplain: 'ai:explain'
+    sipEvent: 'sip:event'
 } as const

@@ -18,7 +18,6 @@ import {
 import type { AudioCodec } from './codec'
 import { newSrtpKey } from './srtp'
 import { levelDb, SILENCE_DB } from '@shared/audio'
-import { FRAME_SAMPLES } from './rtp'
 import { Downsampler, Upsampler } from './resample'
 
 const token = (bytes = 6): string => randomBytes(bytes).toString('hex')
@@ -68,8 +67,6 @@ export interface CallHost {
     readonly reliable: boolean
     log(level: 'info' | 'warn' | 'error', text: string): void
     forget(call: SipCall): void
-    /** Guarda um pacote de áudio na captura da conta (RF-44). */
-    captureRtp(direction: 'out' | 'in', data: Buffer, localPort: number, address: string, port: number): void
 }
 
 export interface ResponseOptions {
@@ -117,8 +114,6 @@ export class SipCall {
     private levels: { at: number; db: number }[] = []
     private mic = new Downsampler()
     private speaker = new Upsampler()
-    /** Áudio que está sendo tocado no lugar do microfone, e por onde ele vai. */
-    private playing?: { timer: ReturnType<typeof setInterval>; done: () => void }
     /** Quem quer uma cópia do áudio que passa, nos dois sentidos (gravação, RF-36). */
     tap?: (side: 'sent' | 'received', pcm: Int16Array) => void
     private gotProvisional = false
@@ -143,8 +138,6 @@ export class SipCall {
             },
             dtmf: (tone) => this.events.dtmf(tone)
         })
-        this.rtp.wire = (direction, data, address, port) =>
-            this.host.captureRtp(direction, data, this.rtpPort, address, port)
     }
 
     get ended(): boolean {
@@ -285,7 +278,6 @@ export class SipCall {
     private finish(end: CallEnd): void {
         if (this.state === 'ended') return
         this.state = 'ended'
-        this.stopPlaying()
         clearTimeout(this.retransmit)
         this.rtp.close()
         this.host.forget(this)
@@ -560,51 +552,17 @@ export class SipCall {
      * para a gravação, vale a versão de 8 kHz.
      */
     sendMic(wide: Int16Array): void {
-        if (this.state === 'ended' || this.playing) return
+        if (this.state === 'ended') return
         const pcm = this.mic.process(wide)
         this.tap?.('sent', pcm)
         this.rtp.sendPcm(pcm, wide)
     }
 
-    /** 20 ms de áudio a 8000 Hz. Enquanto um tom ou arquivo toca, o microfone é descartado. */
+    /** 20 ms de áudio a 8000 Hz. */
     sendPcm(pcm: Int16Array): void {
-        if (this.state === 'ended' || this.playing) return
+        if (this.state === 'ended') return
         this.tap?.('sent', pcm)
         this.rtp.sendPcm(pcm)
-    }
-
-    /**
-     * Toca um áudio na chamada, no lugar do microfone (RF-41). O ritmo vem do relógio, não de um
-     * temporizador exato: a cada volta manda os blocos que já deveriam ter saído.
-     */
-    play(pcm: Int16Array): Promise<void> {
-        if (this.state !== 'established') return Promise.reject(new Error('A chamada não está em andamento'))
-        this.stopPlaying()
-        return new Promise<void>((done) => {
-            const started = Date.now()
-            let sent = 0
-            const total = Math.ceil(pcm.length / FRAME_SAMPLES)
-            const tick = (): void => {
-                const due = Math.min(total, Math.floor((Date.now() - started) / 20) + 1)
-                for (; sent < due; sent++) {
-                    const frame = new Int16Array(FRAME_SAMPLES)
-                    frame.set(pcm.subarray(sent * FRAME_SAMPLES, (sent + 1) * FRAME_SAMPLES))
-                    this.tap?.('sent', frame)
-                    this.rtp.sendPcm(frame)
-                }
-                if (sent >= total) this.stopPlaying()
-            }
-            this.playing = { timer: setInterval(tick, 10), done }
-            tick()
-        })
-    }
-
-    stopPlaying(): void {
-        const playing = this.playing
-        if (!playing) return
-        this.playing = undefined
-        clearInterval(playing.timer)
-        playing.done()
     }
 
     /** Volume médio do que chegou nos últimos `windowMs`, em dBFS; silêncio total se nada chegou. */

@@ -65,9 +65,6 @@ jobs:
             - name: Senhas em arquivo local e migração do formato antigo (RNF-07)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/senhas.mjs
-            - name: Ajuda da IA com uma OpenRouter falsa (RF-38)
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/ai.mjs
             - name: Arquivos de dados estragados, gravação em fila e log interno (RNF-14, RNF-19)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/arquivos.mjs
@@ -83,12 +80,6 @@ jobs:
             - name: Interface e guia em inglês (RF-56)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/idioma.mjs
-            - name: Chamada de vídeo no simulado (RF-52)
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/video.mjs
-            - name: Áudio de atendimento (RF-57)
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/atendimento.mjs
             - name: Modos e área secreta
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/modos.mjs
@@ -107,9 +98,6 @@ jobs:
             - name: SIP puro por UDP, TCP e TLS com o motor próprio (RF-39)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/sip-puro.mjs
-            - name: Carga por SIP puro, 50 chamadas simultâneas (RF-42)
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/carga-sip.mjs
             # Por último: este teste para e religa o contêiner do PBX.
             - name: Reconexão derrubando o contêiner do PBX (RNF-06)
               if: ${{ !cancelled() }}

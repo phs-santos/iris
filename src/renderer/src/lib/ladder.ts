@@ -1,7 +1,13 @@
 // Diagrama de escada: transforma as linhas do SIP bruto em diálogos (agrupados por Call-ID) e em
 // setas entre a conta e o PBX. É só leitura do log; nada aqui fala com a rede.
 
-import { stripCredentials } from '@shared/ai'
+/** O log já chega sem credenciais (RNF-10); esta passada é a segunda trava antes de o diagrama sair da máquina. */
+export function stripCredentials(text: string): string {
+    return text
+        .replace(/^(\s*(?:Proxy-)?Authorization:).*$/gim, '$1 [removido]')
+        .replace(/^(\s*(?:WWW|Proxy)-Authenticate:).*$/gim, '$1 [removido]')
+        .replace(/\b(response|nonce|cnonce|opaque|password|secret)="?[^",\s]+"?/gi, '$1=[removido]')
+}
 
 export interface LadderSource {
     id: number

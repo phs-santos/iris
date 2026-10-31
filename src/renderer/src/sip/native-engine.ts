@@ -1,18 +1,9 @@
-import type {
-    Account,
-    DtmfMode,
-    NativeCallEvent,
-    NativeSipEvent,
-    SipManualRequest,
-    SipManualResponse
-} from '@shared/types'
+import type { Account, DtmfMode, NativeCallEvent, NativeSipEvent } from '@shared/types'
 import type { SipTransportKind } from '@shared/sip-target'
 import { Emitter } from '@renderer/lib/emitter'
 import { t } from '@renderer/i18n'
 import type { CallEvents, CallQuality, DialOptions, EngineCall, EngineEvents, HealthReport, SipEngine } from './engine'
 import { audioInput } from './audio'
-import { parseBlfList } from '@shared/presence'
-import type { LoadProgress, LoadReport, LoadSpec } from '@shared/load'
 import { NativeAudio } from './native-audio'
 
 let nextEngine = 1
@@ -33,7 +24,6 @@ class NativeSipCall implements EngineCall {
     // O RTP do 183 já é tocado: o áudio abre junto com a discagem.
     readonly earlyAudio = true
     readonly localRingback = true
-    readonly video = false
 
     constructor(
         readonly engineId: string,
@@ -124,10 +114,6 @@ class NativeSipCall implements EngineCall {
         return window.iris.sip.callLevel(this.engineId, this.id)
     }
 
-    playAudio(pcm: Int16Array): Promise<void> {
-        return this.action({ type: 'play', pcm })
-    }
-
     setRecording(on: boolean): Promise<string | null> {
         return window.iris.sip.record(this.engineId, this.id, on)
     }
@@ -147,7 +133,6 @@ class NativeSipCall implements EngineCall {
  * com G.711, DTMF, espera e transferência; o áudio cifrado (SRTP) ainda não existe.
  */
 export class NativeSipEngine implements SipEngine {
-    readonly video = false
     private emitter = new Emitter<EngineEvents>()
     private readonly id: string
     private off?: () => void
@@ -170,8 +155,6 @@ export class NativeSipEngine implements SipEngine {
         if (event.engineId !== this.id) return
         if (event.type === 'status') return this.emitter.emit('status', event.status)
         if (event.type === 'audio') return this.calls.get(event.callId)?.play(event.pcm)
-        if (event.type === 'presence') return this.emitter.emit('presence', event.extension, event.state)
-        if (event.type === 'mwi') return this.emitter.emit('mwi', event.info)
         if (event.type === 'log') {
             // Sem "Mostrar SIP bruto no log", ficam só os eventos.
             if (event.kind !== 'sip' || this.account.rawSipLog)
@@ -211,8 +194,7 @@ export class NativeSipEngine implements SipEngine {
                     displayName: account.displayName?.trim() || undefined,
                     transport: account.transport as SipTransportKind,
                     server: account.sipServer?.trim() || undefined,
-                    srtp: account.srtp || undefined,
-                    blf: parseBlfList(account.blf)
+                    srtp: account.srtp || undefined
                 },
                 this.password
             )
@@ -235,29 +217,6 @@ export class NativeSipEngine implements SipEngine {
         this.early.delete(callId)
         if (pending.length) setTimeout(() => pending.forEach((event) => this.deliver(call, event)), 0)
         return call
-    }
-
-    request(spec: SipManualRequest): Promise<SipManualResponse> {
-        return window.iris.sip.request(this.id, spec)
-    }
-
-    async loadTest(spec: LoadSpec, onProgress: (progress: LoadProgress) => void): Promise<LoadReport> {
-        const off = window.iris.sip.onLoadProgress((engineId, progress) => {
-            if (engineId === this.id) onProgress(progress)
-        })
-        try {
-            return await window.iris.sip.loadStart(this.id, spec)
-        } finally {
-            off()
-        }
-    }
-
-    stopLoadTest(): Promise<void> {
-        return window.iris.sip.loadStop(this.id)
-    }
-
-    exportCapture(withRtp: boolean): Promise<string | null> {
-        return window.iris.sip.exportPcap(this.id, withRtp)
     }
 
     async health(): Promise<HealthReport> {

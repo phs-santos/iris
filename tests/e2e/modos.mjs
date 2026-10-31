@@ -23,7 +23,6 @@ try {
     await page.locator('.dot.registered').nth(1).waitFor()
     await page.getByRole('tab', { name: 'Telefone' }).waitFor()
     await absent(page.getByRole('tab', { name: 'Eventos' }), 'o log')
-    await absent(page.getByRole('button', { name: 'Ligar com vídeo' }), 'o botão de vídeo')
     await absent(page.getByRole('button', { name: 'cabeçalhos SIP' }), 'os cabeçalhos SIP')
     await page.getByRole('tab', { name: 'Contatos' }).waitFor()
     await page.locator('.acc', { hasText: 'Suporte 1001' }).locator('.row').click()
@@ -36,7 +35,7 @@ try {
     await dialog.getByRole('tab', { name: 'Perfil' }).waitFor()
     await absent(dialog.getByRole('tab', { name: 'Modos' }), 'a área dos modos')
     await dialog.getByRole('button', { name: 'Fechar', exact: true }).click()
-    step('sem modos ligados: só contas, telefone e contatos; log, vídeo e diagnóstico escondidos')
+    step('sem modos ligados: só contas, telefone e contatos; log e diagnóstico escondidos')
 
     // Quatro cliques não abrem; o quinto, sim.
     const logo = page.locator('.brand')
