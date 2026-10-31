@@ -91,6 +91,20 @@ try {
     if (!Array.isArray(readData('accounts.json').accounts)) fail('accounts.json não foi recriado')
     if (!existsSync(join(userData, 'senhas.json'))) fail('senhas.json sumiu')
     step('contas de exemplo recriadas')
+
+    // Dados de uma versão anterior à 2.0: tudo é descartado e o app começa limpo, com as contas de exemplo.
+    await app.close()
+    writeFileSync(join(userData, 'accounts.json'), JSON.stringify({ schemaVersion: 1, accounts: [] }))
+    writeFileSync(join(userData, 'history.json'), '{"schemaVersion":1,"calls":[]}')
+    app = await launch()
+    page = await app.firstWindow()
+    await page.getByText('3 contas').waitFor({ timeout: 15000 })
+    if (existsSync(join(userData, 'history.json'))) fail('history.json da versão antiga continuou na pasta')
+    const fresh = readData('accounts.json')
+    if (fresh.schemaVersion !== 2 || !fresh.accounts.every((a) => a.serverId === 'simulado'))
+        fail(`as contas de exemplo não saíram no esquema 2: ${JSON.stringify(fresh)}`)
+    if (!/versão anterior à 2.0 descartados/.test(appLog())) fail('o descarte não foi para o log interno')
+    step('dados de versão antiga descartados; contas de exemplo no esquema 2, no PBX simulado')
 } catch (error) {
     failed = true
     console.error(`✗ ${error.message}`)

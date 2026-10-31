@@ -54,7 +54,7 @@ Sucesso: abrir o app, escolher a conta, digitar o número (ou o começo do nome 
 | Perfil e as 6 paletas | | Aparência fica só com Claro/Escuro/Sistema e uma cor de destaque |
 | Discagens rápidas da conta | parte do RF-09 | viram contatos |
 
-Os dados que ficaram órfãos são **apagados** na primeira abertura da versão nova (decisão do usuário: "não quero resquícios"). A migração (RNF-19) também tira de `settings.json` e `accounts.json` os campos que não existem mais. Para não perder nada por engano, só se apagam os arquivos com os nomes acima, e só depois de a migração das contas ter dado certo.
+**Sem migração** (decisão do usuário em 30/10/2026: "pode descartar tudo, precisa migrar não"). Na primeira abertura da 2.0, se houver dados de uma versão anterior (arquivo sem `schemaVersion: 2`), a Íris apaga todos: contas, servidores, contatos, preferências, senhas e a chave local, e os órfãos (`history.json`, `scenarios.json`, `sdr.json`, `messages.json`). O app começa limpo, com as contas de exemplo do simulado. As seções abaixo que falam em migração valem como "o formato novo", não como conversão.
 
 Na especificação, os requisitos que saíram vão para uma seção "Retirados em 29/10/2026", com o motivo, em vez de sumirem sem rastro; as tabelas de RF ficam só com o que vale. O critério de saída do M4 passa a considerar só os requisitos que ficaram.
 

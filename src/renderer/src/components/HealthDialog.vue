@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isSimulated } from '@shared/servers'
 import { t } from '@renderer/i18n'
 import { useDialog } from '@renderer/lib/dialog'
 import { computed, onMounted, ref } from 'vue'
@@ -130,9 +131,9 @@ async function run(): Promise<void> {
     const outputs = devices.filter((d) => d.kind === 'audiooutput').length
     list.push({ ok: outputs > 0, text: t('healthDialog.saidas_de_audio_encontradas', { outputs }) })
 
-    if (!a.simulated) await network(a, list)
+    if (!isSimulated(a)) await network(a, list)
 
-    if (!a.simulated && !isNativeAccount(a)) {
+    if (!isSimulated(a) && !isNativeAccount(a)) {
         const hasTurn = /turns?:/i.test(a.iceServers)
         list.push({
             ok: hasTurn ? true : null,

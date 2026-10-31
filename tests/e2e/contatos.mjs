@@ -31,7 +31,6 @@ try {
     await form.getByText('Dê um nome ao contato').waitFor()
     await form.getByLabel('Nome').fill('Ana do Financeiro')
     await form.getByLabel('Número ou ramal').fill('1002')
-    await form.getByLabel('Empresa').fill('Matriz')
     await form.getByRole('button', { name: 'Salvar' }).click()
     await page.locator('.contact', { hasText: 'Ana do Financeiro' }).waitFor()
     await page.getByText('Contato Ana do Financeiro criado').waitFor()
@@ -46,7 +45,6 @@ try {
     await page.getByRole('searchbox').fill('')
     step('busca por nome, sem diferenciar maiúscula')
 
-    await page.getByRole('button', { name: 'Favorito: Ana do Financeiro' }).click()
     await page.getByRole('button', { name: 'Ligar para Ana do Financeiro' }).click()
     await page.getByRole('tab', { name: 'Telefone' }).waitFor()
     const call = page.locator('.call', { hasText: /1001\s*→\s*1002/ })
@@ -59,7 +57,7 @@ try {
         .locator('.dialer')
         .getByRole('button', { name: /Ana do Financeiro/ })
         .waitFor()
-    step('o favorito aparece como atalho no discador')
+    step('o contato da conta aparece como atalho no discador')
     await call.getByRole('button', { name: 'Desligar' }).click()
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
 

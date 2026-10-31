@@ -10,33 +10,34 @@ import type { AccountTransport, SipTransportKind } from './sip-target'
 import type { RingtoneId } from './ringtones'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
-export type SipProviderName = 'sipjs' | 'jssip'
 export type DtmfMode = 'auto' | 'sip-info' | 'rtp-event'
 
-export interface QuickDial {
-    label: string
-    number: string
-}
-
+/**
+ * Conta, esquema 2 (Íris 2.0). Os dados de conexão são uma cópia dos do servidor (RF-51): o resto do
+ * código continua lendo a conta. O motor simulado é escolhido por `serverId === SIMULATED_SERVER_ID` (RF-32).
+ */
 export interface Account {
     id: string
     name: string
     color: string
-    preset: Preset
-    provider: SipProviderName
-    domain: string
+    /** Servidor de onde vêm os dados de conexão; `SIMULATED_SERVER_ID` para o PBX simulado. */
+    serverId: string
+    tagIds: string[]
     extension: string
     authUsername?: string
     displayName?: string
+    domain: string
+    /** UDP, TCP e TLS usam o motor próprio (RF-39); `ws` é WebRTC por WebSocket. */
+    transport: AccountTransport
     wssUrl: string
-    /** Sem o campo vale `ws` (WebRTC por WebSocket). UDP, TCP e TLS usam o motor próprio (RF-39). */
-    transport?: AccountTransport
     /** SIP puro: host e porta do PBX, ex.: "10.0.0.5:5080". Vazio usa o domínio e a porta padrão. */
     sipServer?: string
+    /** Não aparece na tela; vem do servidor e o `easysip-engine` ainda usa. */
+    preset: Preset
+    /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */
+    iceServers: string
     /** SIP puro: exige áudio cifrado (SRTP) nas chamadas. */
     srtp?: boolean
-    /** Servidor cadastrado de onde vêm os dados de conexão (RF-51). */
-    serverId?: string
     /**
      * WebRTC: ouvir o áudio que o PBX manda antes do atendimento (early media, RF-20). Desligado por
      * padrão: com ele, o SIP.js derruba a chamada se o PBX bifurcar o INVITE. Em SIP puro vale sempre.
@@ -44,25 +45,18 @@ export interface Account {
     earlyMedia?: boolean
     /** Toque das chamadas recebidas nesta conta (RF-55). Sem o campo, vale o clássico. */
     ringtone?: RingtoneId
-    /** URLs de STUN/TURN separadas por vírgula, ex.: "stun:stun.l.google.com:19302". */
-    iceServers: string
     dtmfMode: DtmfMode
     autoRegister: boolean
     autoAnswer: { enabled: boolean; delayMs: number }
-    /** Liga o modo debug do easy-sipjs e mostra o SIP bruto no log. */
-    rawSipLog: boolean
-    /** Usa o motor simulado em vez de um PBX real. */
-    simulated: boolean
-    quickDials: QuickDial[]
 }
 
 export interface AccountsFile {
-    schemaVersion: 1
+    schemaVersion: 2
     accounts: Account[]
 }
 
 export interface Settings {
-    schemaVersion: 1
+    schemaVersion: 2
     /** Hosts cujo certificado TLS inválido o usuário aceitou explicitamente (RF-37). */
     trustedHosts: string[]
     audioInputId?: string
@@ -183,7 +177,7 @@ export interface NativeSipHealth {
 /** Formato do arquivo de exportação de contas (RF-07). */
 export interface AccountsExport {
     format: 'iris/accounts'
-    schemaVersion: 1
+    schemaVersion: 2
     exportedAt: string
     accounts: Array<Account & { password?: string }>
 }

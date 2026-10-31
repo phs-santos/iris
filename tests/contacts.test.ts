@@ -15,11 +15,12 @@ const contact = (name: string, number: string, extra: Partial<Contact> = {}): Co
     id: name,
     name,
     number,
+    accountId: 'c1',
     ...extra
 })
 const book = [
-    contact('Ana Souza', '+55 (11) 4000-1002', { company: 'Matriz' }),
-    contact('Bruno', '1003', { favorite: true }),
+    contact('Ana Souza', '+55 (11) 4000-1002', { notes: 'Matriz' }),
+    contact('Bruno', '1003'),
     contact('Céu Lima', '8000', { notes: 'URA de testes' })
 ]
 
@@ -34,8 +35,8 @@ describe('agenda de contatos (RF-50)', () => {
         expect(findContact(book, '')).toBeUndefined()
     })
 
-    it('busca sem acento e sem maiúscula, em nome, número, empresa e observação, com favoritos primeiro', () => {
-        expect(searchContacts(book, '').map((c) => c.name)).toEqual(['Bruno', 'Ana Souza', 'Céu Lima'])
+    it('busca sem acento e sem maiúscula, em nome, número e observação, em ordem de nome', () => {
+        expect(searchContacts(book, '').map((c) => c.name)).toEqual(['Ana Souza', 'Bruno', 'Céu Lima'])
         expect(searchContacts(book, 'ceu').map((c) => c.name)).toEqual(['Céu Lima'])
         expect(searchContacts(book, 'matriz').map((c) => c.name)).toEqual(['Ana Souza'])
         expect(searchContacts(book, 'ura').map((c) => c.name)).toEqual(['Céu Lima'])
@@ -45,30 +46,32 @@ describe('agenda de contatos (RF-50)', () => {
     it('planilha CSV: ida e volta, com aspas e ponto e vírgula dentro do campo', () => {
         const withQuote = [...book, contact('Fila "Vendas"; noite', '2001')]
         let n = 0
-        const { contacts, skipped } = parseContactsCsv(contactsToCsv(withQuote), () => `novo-${n++}`)
+        const { contacts, skipped } = parseContactsCsv(contactsToCsv(withQuote), 'c2', () => `novo-${n++}`)
         expect(skipped).toBe(0)
-        expect(contacts.map((c) => [c.name, c.number, c.company, c.notes, c.favorite])).toEqual(
-            withQuote.map((c) => [c.name, c.number, c.company, c.notes, c.favorite])
+        expect(contacts.map((c) => [c.name, c.number, c.notes])).toEqual(
+            withQuote.map((c) => [c.name, c.number, c.notes])
         )
         expect(contacts[0]!.id).toBe('novo-0')
+        expect(contacts.every((c) => c.accountId === 'c2')).toBe(true)
     })
 
     it('planilha CSV: aceita outros nomes de coluna e pula linhas sem nome ou número', () => {
         const { contacts, skipped } = parseContactsCsv(
-            'Name,Phone,Company\nAna,1002,X\n,1004,\nSem número,,',
+            'Name,Phone,Notes\nAna,1002,X\n,1004,\nSem número,,',
+            'c1',
             () => 'x'
         )
-        expect(contacts).toEqual([
-            { id: 'x', name: 'Ana', number: '1002', company: 'X', notes: undefined, favorite: undefined }
-        ])
+        expect(contacts).toEqual([{ id: 'x', name: 'Ana', number: '1002', notes: 'X', accountId: 'c1' }])
         expect(skipped).toBe(2)
-        expect(() => parseContactsCsv('nome;empresa\nAna;X', () => 'x')).toThrow(/colunas nome e numero/)
-        expect(() => parseContactsCsv('nome;numero', () => 'x')).toThrow(/pelo menos um contato/)
+        expect(() => parseContactsCsv('nome;observacao\nAna;X', 'c1', () => 'x')).toThrow(/colunas nome e numero/)
+        expect(() => parseContactsCsv('nome;numero', 'c1', () => 'x')).toThrow(/pelo menos um contato/)
     })
 
     it('confere o formato que vem da interface', () => {
         expect(isContact(book[0])).toBe(true)
-        expect(isContact({ ...book[0], favorite: 'sim' })).toBe(false)
+        // O contato sempre pertence a uma conta (esquema 2).
+        const { accountId: _sem, ...withoutAccount } = book[0]!
+        expect(isContact(withoutAccount)).toBe(false)
         expect(isContact({ ...book[0], number: 'x'.repeat(101) })).toBe(false)
         expect(isContact(null)).toBe(false)
     })

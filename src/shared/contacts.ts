@@ -5,15 +5,13 @@ export interface Contact {
     name: string
     /** Número ou ramal, como é discado. */
     number: string
-    company?: string
     notes?: string
-    favorite?: boolean
-    /** Conta de onde ligar; sem ela, vale a conta escolhida no discador. */
-    accountId?: string
+    /** Conta a que o contato pertence e de onde se liga para ele. */
+    accountId: string
 }
 
 export interface ContactsFile {
-    schemaVersion: 1
+    schemaVersion: 2
     contacts: Contact[]
 }
 
@@ -26,13 +24,7 @@ export function isContact(v: unknown): v is Contact {
     if (!v || typeof v !== 'object') return false
     const c = v as Record<string, unknown>
     return (
-        text(c.id, 200) &&
-        text(c.name, 200) &&
-        text(c.number, 100) &&
-        optional(c.company, 200) &&
-        optional(c.notes, 2000) &&
-        (c.favorite === undefined || typeof c.favorite === 'boolean') &&
-        optional(c.accountId, 200)
+        text(c.id, 200) && text(c.name, 200) && text(c.number, 100) && optional(c.notes, 2000) && text(c.accountId, 200)
     )
 }
 
@@ -58,22 +50,19 @@ export function findContact(contacts: Contact[], number: string): Contact | unde
 
 export const plain = (value: string): string => value.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 
-/** Busca por nome, número, empresa ou observação, sem diferenciar acento nem maiúscula; favoritos primeiro. */
+/** Busca por nome, número ou observação, sem diferenciar acento nem maiúscula, em ordem de nome. */
 export function searchContacts(contacts: Contact[], query: string): Contact[] {
     const q = plain(query.trim())
     const found = q
-        ? contacts.filter((c) =>
-              [c.name, c.number, c.company ?? '', c.notes ?? ''].some((field) => plain(field).includes(q))
-          )
+        ? contacts.filter((c) => [c.name, c.number, c.notes ?? ''].some((field) => plain(field).includes(q)))
         : contacts
-    return [...found].sort(
-        (a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)) || a.name.localeCompare(b.name, 'pt-BR')
-    )
+    return [...found].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
 }
 
 // ─── CSV ───────────────────────────────────────────────────────────────────
 
-const COLUMNS: Record<string, keyof Contact> = {
+type CsvColumn = 'name' | 'number' | 'notes'
+const COLUMNS: Record<string, CsvColumn> = {
     nome: 'name',
     name: 'name',
     numero: 'number',
@@ -81,14 +70,10 @@ const COLUMNS: Record<string, keyof Contact> = {
     telefone: 'number',
     phone: 'number',
     ramal: 'number',
-    empresa: 'company',
-    company: 'company',
     observacao: 'notes',
-    notes: 'notes',
-    favorito: 'favorite',
-    favorite: 'favorite'
+    notes: 'notes'
 }
-export const CONTACTS_CSV_HEADER = 'nome;numero;empresa;observacao;favorito'
+export const CONTACTS_CSV_HEADER = 'nome;numero;observacao'
 
 export function splitLine(line: string, separator: string): string[] {
     const out: string[] = []
@@ -114,8 +99,12 @@ export function splitLine(line: string, separator: string): string[] {
 
 export class ContactsCsvError extends Error {}
 
-/** Lê uma planilha de contatos; linhas sem nome ou sem número são ignoradas e contadas. */
-export function parseContactsCsv(csv: string, newId: () => string): { contacts: Contact[]; skipped: number } {
+/** Lê uma planilha de contatos para uma conta; linhas sem nome ou sem número são ignoradas e contadas. */
+export function parseContactsCsv(
+    csv: string,
+    accountId: string,
+    newId: () => string
+): { contacts: Contact[]; skipped: number } {
     const lines = csv
         .replace(/^\uFEFF/, '')
         .split(/\r?\n/)
@@ -131,7 +120,7 @@ export function parseContactsCsv(csv: string, newId: () => string): { contacts: 
     const contacts: Contact[] = []
     let skipped = 0
     for (const line of lines.slice(1, CONTACTS_LIMIT + 1)) {
-        const row: Partial<Record<keyof Contact, string>> = {}
+        const row: Partial<Record<CsvColumn, string>> = {}
         splitLine(line, separator).forEach((value, i) => {
             if (columns[i]) row[columns[i]!] = value
         })
@@ -139,9 +128,8 @@ export function parseContactsCsv(csv: string, newId: () => string): { contacts: 
             id: newId(),
             name: (row.name ?? '').slice(0, 200),
             number: (row.number ?? '').slice(0, 100),
-            company: row.company?.slice(0, 200) || undefined,
             notes: row.notes?.slice(0, 2000) || undefined,
-            favorite: /^(s|sim|y|yes|1|true|x)$/i.test(row.favorite ?? '') || undefined
+            accountId
         }
         if (contact.name && digits(contact.number)) contacts.push(contact)
         else skipped++
@@ -155,8 +143,6 @@ export const csvField = (value: string | undefined): string => {
 }
 
 export function contactsToCsv(contacts: Contact[]): string {
-    const rows = contacts.map((c) =>
-        [c.name, c.number, c.company, c.notes, c.favorite ? 'sim' : ''].map(csvField).join(';')
-    )
+    const rows = contacts.map((c) => [c.name, c.number, c.notes].map(csvField).join(';'))
     return `${[CONTACTS_CSV_HEADER, ...rows].join('\r\n')}\r\n`
 }

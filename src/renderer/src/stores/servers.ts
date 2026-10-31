@@ -42,8 +42,7 @@ export const useServersStore = defineStore('servers', () => {
     async function remove(id: string): Promise<void> {
         const accounts = useAccountsStore()
         for (const account of accounts.accounts.filter((a) => a.serverId === id)) {
-            const { serverId: _unused, ...rest } = account
-            await accounts.save(rest, undefined, false)
+            await accounts.save({ ...account, serverId: '' }, undefined, false)
         }
         servers.value = servers.value.filter((s) => s.id !== id)
         await persist()

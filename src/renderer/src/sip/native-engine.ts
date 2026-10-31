@@ -156,9 +156,8 @@ export class NativeSipEngine implements SipEngine {
         if (event.type === 'status') return this.emitter.emit('status', event.status)
         if (event.type === 'audio') return this.calls.get(event.callId)?.play(event.pcm)
         if (event.type === 'log') {
-            // Sem "Mostrar SIP bruto no log", ficam só os eventos.
-            if (event.kind !== 'sip' || this.account.rawSipLog)
-                this.emitter.emit('log', { level: event.level, kind: event.kind, text: event.text })
+            // O SIP bruto vai sempre para o log (RF-22).
+            this.emitter.emit('log', { level: event.level, kind: event.kind, text: event.text })
             return
         }
         const call = this.calls.get(event.callId)

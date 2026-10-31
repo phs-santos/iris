@@ -2,9 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MockEngine, MOCK_TIMING, resetMockNetwork } from '@renderer/sip/mock-engine'
 import type { CallEnd, EngineCall } from '@renderer/sip/engine'
 import { newAccount } from '@renderer/lib/accounts'
+import { SIMULATED_SERVER_ID } from '@shared/servers'
 
 const make = (extension: string): MockEngine =>
-    new MockEngine(newAccount({ name: extension, extension, domain: 'demo.local', simulated: true }), '1234')
+    new MockEngine(
+        newAccount({ name: extension, extension, domain: 'demo.local', serverId: SIMULATED_SERVER_ID }),
+        '1234'
+    )
 
 async function registered(engine: MockEngine): Promise<void> {
     const p = engine.connect()

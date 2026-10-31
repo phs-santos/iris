@@ -18,7 +18,7 @@ writeFileSync(
     importFile,
     JSON.stringify({
         format: 'iris/accounts',
-        schemaVersion: 1,
+        schemaVersion: 2,
         exportedAt: '',
         accounts: exts.map((ext, i) => ({
             id: `rec-${ext}`,
@@ -26,7 +26,6 @@ writeFileSync(
             domain: DOMAIN,
             extension: ext,
             wssUrl: WSS,
-            rawSipLog: false,
             autoAnswer: { enabled: i === 1, delayMs: 300 },
             password: '1234'
         }))

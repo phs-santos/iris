@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isSimulated } from '@shared/servers'
 import { t } from '@renderer/i18n'
 import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
@@ -139,7 +140,7 @@ async function remove(id: string): Promise<void> {
                                 :title="$t('accountsPane.auto_atender')"
                                 >{{ $t('accountsPane.aa') }}</span
                             >
-                            <span v-if="account.simulated" class="tag" :title="$t('accountsPane.pbx_simulado')">{{
+                            <span v-if="isSimulated(account)" class="tag" :title="$t('accountsPane.pbx_simulado')">{{
                                 $t('accountsPane.sim')
                             }}</span>
                         </div>

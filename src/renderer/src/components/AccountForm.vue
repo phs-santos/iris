@@ -7,7 +7,7 @@ import { useAccountsStore } from '@renderer/stores/accounts'
 import { ACCOUNT_COLORS, describeStatus, validateAccount } from '@renderer/lib/accounts'
 import { createEngine, isNativeAccount, type RegStatus } from '@renderer/sip'
 import { useServersStore } from '@renderer/stores/servers'
-import { applyServer, serverFromAccount } from '@shared/servers'
+import { applyServer, isSimulated, serverFromAccount, SIMULATED_SERVER_ID } from '@shared/servers'
 import { ringer } from '@renderer/sip/audio'
 import { DEFAULT_RINGTONE, RINGTONE_IDS, type RingtoneId } from '@shared/ringtones'
 
@@ -27,7 +27,12 @@ const errors = ref<Record<string, string>>({})
 const testing = ref(false)
 const testResult = ref<{ ok: boolean; text: string } | null>(null)
 const saving = ref(false)
-const quickDialsText = ref(form.quickDials.map((q) => `${q.number} ${q.label}`).join('\n'))
+
+/** O PBX simulado é um servidor fixo (RF-32); a caixa liga e desliga a conta dele. */
+const simulated = computed<boolean>({
+    get: () => isSimulated(form),
+    set: (on) => (form.serverId = on ? SIMULATED_SERVER_ID : '')
+})
 
 /** Toque desta conta (RF-55). O clássico não é gravado: é o que vale sem o campo. */
 const ringtone = computed<RingtoneId>({
@@ -58,7 +63,7 @@ const serverSaved = ref('')
 function chooseServer(id: string): void {
     const server = servers.byId(id)
     if (server) Object.assign(form, applyServer(JSON.parse(JSON.stringify(form)), server))
-    else delete form.serverId
+    else form.serverId = ''
 }
 
 /** Cadastra os dados de conexão desta conta como servidor, para as próximas contas escolherem. */
@@ -78,19 +83,7 @@ async function effectivePassword(): Promise<string> {
     return isNew ? '' : ((await window.iris.secrets.get(form.id)) ?? '')
 }
 
-function applyQuickDials(): void {
-    form.quickDials = quickDialsText.value
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-            const [number, ...label] = line.split(/\s+/)
-            return { number, label: label.join(' ') || number }
-        })
-}
-
 async function validate(): Promise<boolean> {
-    applyQuickDials()
     errors.value = validateAccount(form, await effectivePassword())
     if (Object.keys(errors.value).some((k) => ['authUsername', 'iceServers'].includes(k))) showAdvanced.value = true
     return Object.keys(errors.value).length === 0
@@ -165,12 +158,12 @@ async function save(register: boolean): Promise<void> {
             </header>
 
             <div class="body">
-                <div v-if="!form.simulated" class="server">
+                <div v-if="!simulated" class="server">
                     <label class="field">
                         <span class="label">{{ $t('accountForm.servidor') }}</span>
                         <select
                             class="input"
-                            :value="form.serverId ?? ''"
+                            :value="form.serverId"
                             @change="chooseServer(($event.target as HTMLSelectElement).value)"
                         >
                             <option value="">{{ $t('accountForm.servidor_manual') }}</option>
@@ -239,7 +232,7 @@ async function save(register: boolean): Promise<void> {
                     </label>
                     <label class="field wide">
                         <span class="label">{{ $t('accountForm.transporte') }}</span>
-                        <select v-model="form.transport" class="input" :disabled="form.simulated || Boolean(linked)">
+                        <select v-model="form.transport" class="input" :disabled="simulated || Boolean(linked)">
                             <option value="ws">{{ $t('accountForm.websocket_seguro_webrtc') }}</option>
                             <option value="udp">{{ $t('accountForm.sip_por_udp') }}</option>
                             <option value="tcp">{{ $t('accountForm.sip_por_tcp') }}</option>
@@ -277,7 +270,7 @@ async function save(register: boolean): Promise<void> {
 
                 <div class="toggles">
                     <label class="check">
-                        <input v-model="form.simulated" type="checkbox" /> {{ $t('accountForm.pbx_simulado_sem_rede') }}
+                        <input v-model="simulated" type="checkbox" /> {{ $t('accountForm.pbx_simulado_sem_rede') }}
                     </label>
                     <label class="check">
                         <input v-model="form.autoRegister" type="checkbox" />
@@ -302,13 +295,9 @@ async function save(register: boolean): Promise<void> {
                         <input v-model="form.srtp" type="checkbox" :disabled="Boolean(linked)" />
                         {{ $t('accountForm.audio_cifrado') }}
                     </label>
-                    <label v-if="!native && !form.simulated" class="check" :title="$t('accountForm.early_media_dica')">
+                    <label v-if="!native && !simulated" class="check" :title="$t('accountForm.early_media_dica')">
                         <input v-model="form.earlyMedia" type="checkbox" />
                         {{ $t('accountForm.early_media') }}
-                    </label>
-                    <label class="check">
-                        <input v-model="form.rawSipLog" type="checkbox" />
-                        {{ $t('accountForm.mostrar_sip_bruto_no_log') }}
                     </label>
                 </div>
 
@@ -340,13 +329,6 @@ async function save(register: boolean): Promise<void> {
                             <option value="asterisk">{{ $t('accountForm.asterisk') }}</option>
                             <option value="kamailio">{{ $t('accountForm.kamailio') }}</option>
                             <option value="generic">{{ $t('accountForm.generico') }}</option>
-                        </select>
-                    </label>
-                    <label v-if="!native" class="field">
-                        <span class="label">{{ $t('accountForm.biblioteca_sip') }}</span>
-                        <select v-model="form.provider" class="input">
-                            <option value="sipjs">{{ $t('accountForm.sip_js_padrao') }}</option>
-                            <option value="jssip">{{ $t('accountForm.jssip') }}</option>
                         </select>
                     </label>
                     <label class="field">
@@ -396,15 +378,6 @@ async function save(register: boolean): Promise<void> {
                             class="input mono"
                             :placeholder="$t('accountForm.stun_stun_l_google_com')"
                         />
-                    </label>
-                    <label class="field wide">
-                        <span class="label">{{ $t('accountForm.atalhos_de_discagem_um_por') }}</span>
-                        <textarea
-                            v-model="quickDialsText"
-                            class="input mono"
-                            rows="3"
-                            :placeholder="$t('accountForm.t_8000_ura_97_correio_de')"
-                        ></textarea>
                     </label>
                 </div>
 

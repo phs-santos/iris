@@ -1,6 +1,7 @@
 import type { Account, AccountsExport, Preset } from '@shared/types'
 import type { RegStatus } from '@renderer/sip/engine'
 import { parseSipServer } from '@shared/sip-target'
+import { isSimulated, SIMULATED_SERVER_ID } from '@shared/servers'
 import { t } from '@renderer/i18n'
 
 export const ACCOUNT_COLORS = ['#3fcf86', '#6b9cf5', '#f0b13e', '#e879a6', '#5fd0d6', '#b48cf2', '#f08a5d']
@@ -10,8 +11,9 @@ export function newAccount(partial: Partial<Account> = {}): Account {
         id: crypto.randomUUID(),
         name: '',
         color: ACCOUNT_COLORS[Math.floor(Math.random() * ACCOUNT_COLORS.length)],
+        serverId: '',
+        tagIds: [],
         preset: 'asterisk',
-        provider: 'sipjs',
         domain: '',
         extension: '',
         authUsername: '',
@@ -23,16 +25,13 @@ export function newAccount(partial: Partial<Account> = {}): Account {
         dtmfMode: 'auto',
         autoRegister: false,
         autoAnswer: { enabled: false, delayMs: 1000 },
-        rawSipLog: true,
-        simulated: false,
-        quickDials: [],
         ...partial
     }
 }
 
 /** Contas de exemplo do primeiro uso, todas no PBX simulado. Senha de todas: 1234. */
 export function sampleAccounts(): Array<{ account: Account; password: string }> {
-    const demo = { simulated: true, autoRegister: true, preset: 'asterisk' as Preset }
+    const demo = { serverId: SIMULATED_SERVER_ID, autoRegister: true, preset: 'asterisk' as Preset }
     return [
         {
             account: newAccount({
@@ -41,8 +40,7 @@ export function sampleAccounts(): Array<{ account: Account; password: string }> 
                 color: ACCOUNT_COLORS[0],
                 domain: 'demo.local',
                 extension: '1001',
-                wssUrl: 'wss://demo.local:8089/ws',
-                quickDials: [{ label: 'URA', number: '8000' }]
+                wssUrl: 'wss://demo.local:8089/ws'
             }),
             password: '1234'
         },
@@ -119,7 +117,7 @@ export function explainRegError(status: RegStatus): RegErrorHelp | null {
 
 /** Host do PBX da conta, para casar com a lista de certificados aceitos (RF-37). */
 export function accountHost(account: Account): string | null {
-    if (account.simulated) return null
+    if (isSimulated(account)) return null
     const transport = account.transport ?? 'ws'
     if (transport !== 'ws') return parseSipServer(account.sipServer, account.domain, transport)?.host ?? null
     try {
@@ -135,7 +133,7 @@ export function validateAccount(account: Account, password: string): Record<stri
     if (!account.name.trim()) errors.name = t('accounts.valida_nome')
     if (!account.extension.trim()) errors.extension = t('accounts.valida_ramal')
     if (!account.domain.trim()) errors.domain = t('accounts.valida_dominio')
-    if (!account.simulated) {
+    if (!isSimulated(account)) {
         const transport = account.transport ?? 'ws'
         if (transport === 'ws') {
             if (!/^wss?:\/\/.+/i.test(account.wssUrl.trim())) errors.wssUrl = t('accounts.valida_wss')
@@ -153,10 +151,13 @@ export function validateAccount(account: Account, password: string): Record<stri
     return errors
 }
 
-/** Lê um arquivo de exportação e devolve contas completas, com ids novos quando faltarem. */
+/**
+ * Lê um arquivo de exportação e devolve contas completas, com ids novos quando faltarem. Só aceita o
+ * esquema 2: os dados das versões antigas são descartados, não migrados (decisão do usuário, Íris 2.0).
+ */
 export function normalizeImported(data: unknown): Array<{ account: Account; password?: string }> {
     const file = data as Partial<AccountsExport>
-    if (!file || file.format !== 'iris/accounts' || !Array.isArray(file.accounts)) {
+    if (!file || file.format !== 'iris/accounts' || file.schemaVersion !== 2 || !Array.isArray(file.accounts)) {
         throw new Error(t('accounts.importacao_invalida'))
     }
     return file.accounts.map((raw) => {

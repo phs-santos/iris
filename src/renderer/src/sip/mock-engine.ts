@@ -311,7 +311,6 @@ export class MockEngine implements SipEngine {
         dialog: { callId: string; seq: number; method: string },
         extra: string[] = []
     ): void {
-        if (!this.account.rawSipLog) return
         const lines = [
             `${dir === 'out' ? '→' : '←'} ${start}`,
             `Call-ID: ${dialog.callId}`,

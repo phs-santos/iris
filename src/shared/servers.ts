@@ -1,6 +1,6 @@
 // Cadastro de servidores (RF-51): os dados de conexão de um PBX, reaproveitados pelas contas.
 
-import type { Account, Preset } from './types'
+import type { Account, DtmfMode, Preset } from './types'
 import type { AccountTransport } from './sip-target'
 
 export interface SipServer {
@@ -13,14 +13,35 @@ export interface SipServer {
     /** Com SIP puro: host e porta, se diferentes do domínio. */
     sipServer: string
     iceServers: string
+    /** Não aparece no formulário; servidor novo vale `'asterisk'`. O `easysip-engine` ainda usa. */
     preset: Preset
     srtp?: boolean
+    outboundProxy?: string
+    dtmfMode?: DtmfMode
 }
 
 export interface ServersFile {
-    schemaVersion: 1
+    schemaVersion: 2
     servers: SipServer[]
 }
+
+/** Servidor fixo do PBX simulado (RF-32): não fica em servers.json, não se edita nem se apaga. */
+export const SIMULATED_SERVER_ID = 'simulado'
+
+export function simulatedServer(): SipServer {
+    return {
+        id: SIMULATED_SERVER_ID,
+        name: 'PBX simulado',
+        domain: 'demo.local',
+        transport: 'udp',
+        wssUrl: '',
+        sipServer: '',
+        iceServers: '',
+        preset: 'asterisk'
+    }
+}
+
+export const isSimulated = (account: Pick<Account, 'serverId'>): boolean => account.serverId === SIMULATED_SERVER_ID
 
 /** Campos da conta que vêm do servidor: os outros (ramal, senha, nome) são de cada conta. */
 export const SERVER_FIELDS = ['domain', 'transport', 'wssUrl', 'sipServer', 'iceServers', 'preset', 'srtp'] as const
@@ -39,7 +60,9 @@ export function isSipServer(v: unknown): v is SipServer {
         text(s.sipServer, 300) &&
         text(s.iceServers, 2000) &&
         ['asterisk', 'kamailio', 'generic'].includes(s.preset as string) &&
-        (s.srtp === undefined || typeof s.srtp === 'boolean')
+        (s.srtp === undefined || typeof s.srtp === 'boolean') &&
+        (s.outboundProxy === undefined || text(s.outboundProxy, 300)) &&
+        (s.dtmfMode === undefined || ['auto', 'sip-info', 'rtp-event'].includes(s.dtmfMode as string))
     )
 }
 

@@ -34,7 +34,7 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | Notificações | Chamada recebida (com Atender e Recusar no aviso, no macOS), chamada perdida, conta que caiu, correio de voz, cada um ligável em Configurações → Notificações, com botão de teste |
 | RF-55 | Toque de chamada por conta (clássico, digital, suave, sino ou nenhum), volume do toque em Configurações → Áudio e o botão do fone (tecla Tocar/Pausar) para atender e desligar |
 | RF-20 | Early media: o cartão diz se o som antes do atendimento é o toque local ou o áudio do PBX (183), e toca esse áudio. Em SIP puro sempre; em WebRTC por opção da conta |
-| RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, CSV, e o nome do contato nas chamadas |
+| RF-50 | Agenda de contatos por conta: busca, ligar com um clique, CSV, e o nome do contato nas chamadas |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
 | RF-39 | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde, liga e recebe chamadas com áudio G.711, DTMF por RTP ou SIP INFO, mudo, espera, transferência cega e assistida, SRTP (SDES, AES_CM_128_HMAC_SHA1_80) e qualidade com perda, jitter e tempo de ida e volta (RTCP). Não tem: RTCP cifrado (com SRTP o RTT fica em 0), INVITE sem SDP, temporizador de sessão e DNS SRV |
 | RNF-13 | Textos da interface em arquivo de tradução (`src/renderer/src/i18n`), em português |

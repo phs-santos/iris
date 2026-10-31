@@ -30,10 +30,8 @@ async function save(): Promise<void> {
         id: form.id,
         name: form.name.trim(),
         number: form.number.trim(),
-        company: form.company?.trim() || undefined,
         notes: form.notes?.trim() || undefined,
-        favorite: form.favorite || undefined,
-        accountId: form.accountId || undefined
+        accountId: form.accountId
     })
     useToastsStore().show(isNew ? t('contactForm.criado', { name: form.name.trim() }) : t('contactForm.salvo'))
     emit('close')
@@ -76,13 +74,8 @@ async function save(): Promise<void> {
                     <small v-if="tried && errors.number">{{ errors.number }}</small>
                 </label>
                 <label class="field">
-                    <span class="label">{{ $t('contactForm.empresa') }}</span>
-                    <input v-model="form.company" class="input" />
-                </label>
-                <label class="field">
                     <span class="label">{{ $t('contactForm.conta') }}</span>
                     <select v-model="form.accountId" class="input">
-                        <option :value="undefined">{{ $t('contactForm.conta_do_discador') }}</option>
                         <option v-for="a in accounts.accounts" :key="a.id" :value="a.id">
                             {{ a.name }} · {{ a.extension }}
                         </option>
@@ -91,9 +84,6 @@ async function save(): Promise<void> {
                 <label class="field wide">
                     <span class="label">{{ $t('contactForm.observacao') }}</span>
                     <textarea v-model="form.notes" class="input" rows="2"></textarea>
-                </label>
-                <label class="check wide">
-                    <input v-model="form.favorite" type="checkbox" /> {{ $t('contactForm.favorito') }}
                 </label>
             </div>
             <footer>

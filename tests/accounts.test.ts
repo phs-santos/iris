@@ -7,6 +7,7 @@ import {
     parseAccountsCsv,
     validateAccount
 } from '@renderer/lib/accounts'
+import { SIMULATED_SERVER_ID } from '@shared/servers'
 import { matches, type LogEntry } from '@renderer/stores/log'
 import { describeSipError } from '@renderer/sip/engine'
 
@@ -17,7 +18,10 @@ describe('validateAccount', () => {
     })
 
     it('não exige WSS nem senha em conta simulada', () => {
-        const errors = validateAccount(newAccount({ name: 'a', extension: '1', domain: 'd', simulated: true }), '')
+        const errors = validateAccount(
+            newAccount({ name: 'a', extension: '1', domain: 'd', serverId: SIMULATED_SERVER_ID }),
+            ''
+        )
         expect(errors).toEqual({})
     })
 })
@@ -26,7 +30,7 @@ describe('normalizeImported', () => {
     it('separa a senha e completa campos que faltam', () => {
         const [item] = normalizeImported({
             format: 'iris/accounts',
-            schemaVersion: 1,
+            schemaVersion: 2,
             exportedAt: '',
             accounts: [{ id: 'x', name: 'A', extension: '1', domain: 'd', password: 's3' }]
         })
@@ -38,6 +42,12 @@ describe('normalizeImported', () => {
 
     it('recusa arquivos que não são exportação da Íris', () => {
         expect(() => normalizeImported({ accounts: [] })).toThrow(/não é uma exportação/)
+    })
+
+    it('recusa exportações das versões antigas (esquema 1), que não são migradas', () => {
+        expect(() =>
+            normalizeImported({ format: 'iris/accounts', schemaVersion: 1, exportedAt: '', accounts: [] })
+        ).toThrow(/não é uma exportação/)
     })
 })
 

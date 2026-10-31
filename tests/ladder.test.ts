@@ -122,7 +122,6 @@ describe('diagrama de escada com o motor simulado', () => {
         const logs: LadderSource[] = []
         const engine = (accountId: string, extension: string): MockEngine => {
             const account = newAccount({ id: accountId, name: accountId, extension, domain: 'demo.local' })
-            account.rawSipLog = true
             const e = new MockEngine(account, '1234')
             e.on(
                 'log',

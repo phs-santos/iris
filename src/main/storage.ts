@@ -2,7 +2,6 @@ import { app } from 'electron'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { DEFAULT_ACCENT, DEFAULT_THEME, isHexColor, isTheme } from '@shared/appearance'
 import { isContact, type Contact, type ContactsFile } from '@shared/contacts'
 import { isSipServer, type ServersFile, type SipServer } from '@shared/servers'
 import type { Account, AccountsFile, SecretsStatus, Settings, SettingsPatch } from '@shared/types'
@@ -81,85 +80,97 @@ function writeJson(name: string, value: unknown): Promise<void> {
     return run
 }
 
+/** Arquivos de dados com esquema; um deles com esquema diferente de 2 indica dados de uma versão antiga. */
+const SCHEMA_FILES = ['accounts.json', 'servers.json', 'contacts.json', 'settings.json'] as const
+
+/**
+ * Tudo o que as versões antigas gravavam na pasta de dados. A 2.0 não migra: descarta (decisão do
+ * usuário em 30/10/2026). Entram as senhas e a chave delas, porque as contas a que elas pertencem somem.
+ */
+export const LEGACY_FILES = [
+    ...SCHEMA_FILES,
+    'senhas.json',
+    'chave-local.bin',
+    'history.json',
+    'scenarios.json',
+    'sdr.json',
+    'messages.json',
+    'secrets.json'
+] as const
+
+/** Um arquivo de dados é de versão antiga quando é um objeto sem `schemaVersion: 2`. */
+export function isLegacyFile(data: unknown): boolean {
+    return isObject(data) && data.schemaVersion !== 2
+}
+
+/**
+ * Roda na abertura, antes de qualquer leitura: se algum arquivo de dados é de uma versão anterior à 2.0,
+ * apaga todos os dados antigos e o app começa do zero. Instalação nova e arquivos da 2.0 ficam como estão.
+ * Um arquivo que não é JSON não conta: ele segue o caminho de arquivo estragado (RNF-19). Devolve se apagou.
+ */
+export async function discardLegacyData(): Promise<boolean> {
+    let legacy = false
+    for (const name of SCHEMA_FILES) {
+        const data = await readJson<unknown>(name).catch(() => null)
+        if (isLegacyFile(data)) legacy = true
+    }
+    if (!legacy) return false
+    for (const name of LEGACY_FILES) await fs.rm(file(name), { force: true })
+    memorySecrets.clear()
+    keyPromise = null
+    return true
+}
+
+const schema2 = (d: unknown): d is Record<string, unknown> => isObject(d) && d.schemaVersion === 2
+
 export async function loadAccounts(): Promise<Account[]> {
-    // Única versão até agora; novas versões de esquema migram aqui (RNF-19).
     const data = await readDataFile<AccountsFile>(
         'accounts.json',
         'contas',
-        (d) => isObject(d) && Array.isArray(d.accounts)
+        (d) => schema2(d) && Array.isArray(d.accounts)
     )
     return data?.accounts ?? []
 }
 
 export async function saveAccounts(accounts: Account[]): Promise<void> {
-    const data: AccountsFile = { schemaVersion: 1, accounts }
-    await writeJson('accounts.json', data)
+    await writeJson('accounts.json', { schemaVersion: 2, accounts } satisfies AccountsFile)
 }
 
 export async function loadContacts(): Promise<Contact[]> {
     const data = await readDataFile<ContactsFile>(
         'contacts.json',
         'contatos',
-        (d) => isObject(d) && Array.isArray(d.contacts)
+        (d) => schema2(d) && Array.isArray(d.contacts)
     )
     return (data?.contacts ?? []).filter(isContact)
 }
 
 export async function saveContacts(contacts: Contact[]): Promise<void> {
-    await writeJson('contacts.json', { schemaVersion: 1, contacts } satisfies ContactsFile)
+    await writeJson('contacts.json', { schemaVersion: 2, contacts } satisfies ContactsFile)
 }
 
 export async function loadServers(): Promise<SipServer[]> {
     const data = await readDataFile<ServersFile>(
         'servers.json',
         'servidores',
-        (d) => isObject(d) && Array.isArray(d.servers)
+        (d) => schema2(d) && Array.isArray(d.servers)
     )
     return (data?.servers ?? []).filter(isSipServer)
 }
 
 export async function saveServers(servers: SipServer[]): Promise<void> {
-    await writeJson('servers.json', { schemaVersion: 1, servers } satisfies ServersFile)
+    await writeJson('servers.json', { schemaVersion: 2, servers } satisfies ServersFile)
 }
 
-const defaultSettings: Settings = { schemaVersion: 1, trustedHosts: [] }
+const defaultSettings: Settings = { schemaVersion: 2, trustedHosts: [] }
 
 export async function loadSettings(): Promise<Settings> {
     const data = await readDataFile<Settings>(
         'settings.json',
         'preferências',
-        (d) => isObject(d) && (d.trustedHosts === undefined || Array.isArray(d.trustedHosts))
+        (d) => schema2(d) && (d.trustedHosts === undefined || Array.isArray(d.trustedHosts))
     )
-    return dropRemovedKeys({ ...defaultSettings, ...(data ?? {}) })
-}
-
-/**
- * Tira das preferências as chaves de recursos que deixaram de existir na 2.0 (modos, perfil, links tel:, atalhos globais,
- * botão do fone, ajuda da IA, câmera, avisos de mensagem de texto e de monitor, correio de voz) e deixa a aparência só com
- * tema e cor de destaque: arquivos antigos continuam valendo, e a validação dos canais não recusa o que a tela devolve (RNF-19).
- */
-export function dropRemovedKeys(settings: Settings): Settings {
-    const out = { ...settings } as Settings & Record<string, unknown> & { notifications?: { enabled?: object } }
-    // Os campos antigos somem do arquivo na próxima gravação.
-    for (const key of ['ai', 'videoInputId', 'profile', 'modes', 'links', 'shortcuts', 'mediaKey']) delete out[key]
-    if (out.notifications?.enabled) {
-        const removed = ['message', 'monitor', 'voicemail']
-        out.notifications = {
-            ...out.notifications,
-            enabled: Object.fromEntries(Object.entries(out.notifications.enabled).filter(([k]) => !removed.includes(k)))
-        }
-    }
-    if (out.appearance !== undefined) {
-        const old = (typeof out.appearance === 'object' && out.appearance !== null ? out.appearance : {}) as Record<
-            string,
-            unknown
-        >
-        out.appearance = {
-            theme: isTheme(old.theme) ? old.theme : DEFAULT_THEME,
-            accent: isHexColor(old.accent) ? old.accent : DEFAULT_ACCENT
-        }
-    }
-    return out
+    return { ...defaultSettings, ...(data ?? {}) }
 }
 
 let settingsQueue: Promise<unknown> = Promise.resolve()
@@ -176,7 +187,7 @@ export function updateSettings(
         const next: Settings = {
             ...current,
             ...(typeof patch === 'function' ? patch(current) : patch),
-            schemaVersion: 1
+            schemaVersion: 2
         }
         await writeJson('settings.json', next)
         return next

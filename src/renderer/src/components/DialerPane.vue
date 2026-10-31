@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isSimulated } from '@shared/servers'
 import { t } from '@renderer/i18n'
 import { computed, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
@@ -20,16 +21,18 @@ const input = ref<HTMLInputElement | null>(null)
 const from = computed(() => accounts.selected)
 const registered = computed(() => (from.value ? accounts.statusOf(from.value.id).state === 'registered' : false))
 
-/** Atalhos: as outras contas do mesmo PBX e os números salvos da conta. */
+/** Atalhos: as outras contas do mesmo PBX e os contatos da conta. */
 const shortcuts = computed(() => {
     const account = from.value
     if (!account) return []
     const peers = accounts.accounts
         .filter((a) => a.id !== account.id && a.domain === account.domain)
         .map((a) => ({ label: a.name, number: a.extension }))
-    // Favoritos da agenda (RF-50) também viram atalhos.
-    const favorites = contacts.contacts.filter((c) => c.favorite).map((c) => ({ label: c.name, number: c.number }))
-    return [...peers, ...account.quickDials, ...favorites]
+    // Os contatos da conta (RF-50) também viram atalhos.
+    const own = contacts.contacts
+        .filter((c) => c.accountId === account.id)
+        .map((c) => ({ label: c.name, number: c.number }))
+    return [...peers, ...own]
 })
 
 /** Teclas com as letras de um telefone; segurar o 0 escreve "+", como no celular. */
@@ -196,7 +199,7 @@ defineExpose({ focus: () => input.value?.focus() })
             ></textarea>
         </div>
 
-        <details v-if="from?.simulated" class="mock-help">
+        <details v-if="from && isSimulated(from)" class="mock-help">
             <summary>{{ $t('dialerPane.numeros_do_pbx_simulado') }}</summary>
             <ul>
                 <li v-for="m in MOCK_NUMBERS" :key="m.number">

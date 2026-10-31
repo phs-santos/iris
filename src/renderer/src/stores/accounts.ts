@@ -8,6 +8,7 @@ import { describeStatus, newAccount, normalizeImported, parseAccountsCsv, sample
 import { reconnectDelay, shouldReconnect } from '@shared/reconnect'
 import { usePreferencesStore } from './preferences'
 import { notify } from '@renderer/lib/notify'
+import { isSimulated } from '@shared/servers'
 
 interface Runtime {
     status: RegStatus
@@ -186,7 +187,7 @@ export const useAccountsStore = defineStore('accounts', () => {
             'info',
             'event',
             `Registrando ${account.extension}@${account.domain} via ${
-                account.simulated
+                isSimulated(account)
                     ? 'PBX simulado'
                     : account.transport && account.transport !== 'ws'
                       ? `SIP por ${account.transport.toUpperCase()} (${account.sipServer || account.domain})`
@@ -225,7 +226,7 @@ export const useAccountsStore = defineStore('accounts', () => {
     async function exportJson(includePasswords: boolean): Promise<string> {
         const data: AccountsExport = {
             format: 'iris/accounts',
-            schemaVersion: 1,
+            schemaVersion: 2,
             exportedAt: new Date().toISOString(),
             accounts: []
         }

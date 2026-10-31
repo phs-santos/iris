@@ -7,7 +7,7 @@ import { useContactsStore } from '@renderer/stores/contacts'
 import { t } from '@renderer/i18n'
 import ContactForm from './ContactForm.vue'
 
-/** Agenda de contatos (RF-50): busca, favoritos e ligar com um clique. */
+/** Agenda de contatos (RF-50): busca e ligar com um clique. */
 const emit = defineEmits<{ dialed: [] }>()
 const contacts = useContactsStore()
 const accounts = useAccountsStore()
@@ -19,7 +19,7 @@ const message = ref<{ ok: boolean; text: string } | null>(null)
 
 const list = computed(() => searchContacts(contacts.contacts, query.value))
 
-/** A conta preferida do contato, se estiver registrada; senão, a escolhida no discador. */
+/** A conta do contato, se estiver registrada; senão, a escolhida no discador. */
 function fromAccount(contact: Contact): string | null {
     const own = contact.accountId
     if (own && accounts.statusOf(own).state === 'registered') return own
@@ -36,14 +36,19 @@ async function call(contact: Contact): Promise<void> {
 }
 
 function create(): void {
-    editing.value = { id: crypto.randomUUID(), name: query.value.trim(), number: '' }
+    editing.value = { id: crypto.randomUUID(), name: query.value.trim(), number: '', accountId: defaultAccount() }
+}
+
+/** Contato novo ou importado vai para a conta escolhida no discador, ou para a primeira. */
+function defaultAccount(): string {
+    return accounts.selectedId ?? accounts.accounts[0]?.id ?? ''
 }
 
 async function importCsv(): Promise<void> {
     const text = await window.iris.files.openText('csv')
     if (text === null) return
     try {
-        const r = await contacts.importCsv(text)
+        const r = await contacts.importCsv(text, defaultAccount())
         message.value = { ok: true, text: t('contactsPane.importados', r) }
     } catch (error) {
         message.value = { ok: false, text: (error as Error).message }
@@ -82,20 +87,9 @@ async function remove(id: string): Promise<void> {
         <p v-else-if="list.length === 0" class="empty">{{ $t('contactsPane.nada', { query }) }}</p>
         <ul v-else class="list">
             <li v-for="c in list" :key="c.id" class="contact">
-                <button
-                    class="star"
-                    :class="{ on: c.favorite }"
-                    :aria-pressed="Boolean(c.favorite)"
-                    :aria-label="$t('contactsPane.favorito_de', { name: c.name })"
-                    @click="contacts.toggleFavorite(c.id)"
-                >
-                    ★
-                </button>
                 <span class="who">
                     <b>{{ c.name }}</b>
-                    <small class="mono"
-                        >{{ c.number }}<template v-if="c.company"> · {{ c.company }}</template></small
-                    >
+                    <small class="mono">{{ c.number }}</small>
                     <small v-if="c.notes" class="notes">{{ c.notes }}</small>
                 </span>
                 <span class="actions">
@@ -184,17 +178,6 @@ async function remove(id: string): Promise<void> {
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--panel);
-}
-.star {
-    border: 0;
-    background: transparent;
-    color: var(--muted);
-    font-size: 16px;
-    cursor: pointer;
-    padding: 2px 4px;
-}
-.star.on {
-    color: var(--warn);
 }
 .who {
     flex: 1;

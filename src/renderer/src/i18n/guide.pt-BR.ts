@@ -265,8 +265,7 @@ export const GUIDE: GuideSection[] = [
                 items: [
                     '**PBX simulado (sem rede)**: a conta usa a central falsa embutida. Bom para treinar.',
                     '**Registrar ao abrir o app**: a conta entra no ar sozinha quando a Íris abre.',
-                    '**Auto-atender após … ms**: a conta atende sozinha depois do tempo informado. É o que permite testar uma chamada entre dois ramais sem clicar em Atender.',
-                    '**Mostrar SIP bruto no log**: liga o registro das mensagens SIP completas dessa conta. Sem isso, a aba "SIP bruto" fica vazia para ela.'
+                    '**Auto-atender após … ms**: a conta atende sozinha depois do tempo informado. É o que permite testar uma chamada entre dois ramais sem clicar em Atender.'
                 ]
             },
             { type: 'h', text: 'Avançado' },
@@ -275,7 +274,6 @@ export const GUIDE: GuideSection[] = [
                 head: ['Campo', 'Quando mexer'],
                 rows: [
                     ['Preset', 'Ajusta detalhes para Asterisk, Kamailio ou uma central genérica'],
-                    ['Biblioteca SIP', 'SIP.js é o padrão. Troque para JsSIP se a central se comportar melhor com ela'],
                     ['Usuário de autenticação', 'Só quando o usuário de login é diferente do ramal'],
                     ['Nome de exibição', 'O nome que aparece para quem recebe a sua chamada'],
                     [
@@ -286,10 +284,6 @@ export const GUIDE: GuideSection[] = [
                     [
                         'STUN / TURN',
                         'Servidores para atravessar NAT, separados por vírgula. Sem TURN, a chamada pode ficar muda atrás de alguns roteadores'
-                    ],
-                    [
-                        'Atalhos de discagem',
-                        'Um por linha, número e descrição. Viram botões no discador quando a conta está selecionada'
                     ]
                 ]
             },
@@ -357,7 +351,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'list',
                 items: [
-                    '**Atalhos**: os botões com número e descrição ligam com um clique. Vêm dos "Atalhos de discagem" da conta e, no simulado, das outras contas e da URA.',
+                    '**Atalhos**: os botões com número e descrição ligam com um clique. Vêm das outras contas do mesmo PBX e dos contatos da conta.',
                     '**teclado**: abre um teclado de telefone para montar o número com o mouse, com o botão de ligar e o de apagar. Segurar o **0** escreve **+**.',
                     '**cabeçalhos SIP**: abre um campo para mandar cabeçalhos extras no INVITE, um por linha, como `X-Test-Id: teste-42`. Serve para testar regras da central que dependem de cabeçalho.'
                 ]
@@ -451,16 +445,16 @@ export const GUIDE: GuideSection[] = [
         blocks: [
             {
                 type: 'p',
-                text: 'A aba **Contatos**, ao lado de Telefone, guarda nome, número, empresa, observação e, se quiser, a conta pela qual ligar. **+ Novo contato** cadastra; a busca acha por nome, número, empresa ou observação, sem diferenciar acento.'
+                text: 'A aba **Contatos**, ao lado de Telefone, guarda nome, número, observação e a conta do contato. **+ Novo contato** cadastra; a busca acha por nome, número ou observação, sem diferenciar acento.'
             },
             {
                 type: 'list',
                 items: [
                     '**Ligar** disca pela conta do contato; se ela não estiver registrada, pela conta escolhida no discador. O botão fica apagado quando nenhuma das duas está no ar.',
-                    'A **estrela** marca o contato como favorito: ele aparece primeiro na lista e vira atalho no discador.',
+                    'Os contatos de uma conta viram atalhos no discador dela.',
                     'Quando um contato liga, ou quando você liga para ele, a chamada mostra o **nome** da agenda.',
                     'Ao digitar no discador, os números da agenda aparecem como sugestão.',
-                    '**Importar CSV** e **Exportar CSV** levam a agenda de e para uma planilha, com as colunas `nome;numero;empresa;observacao;favorito`. Contatos com um número que já existe não entram de novo.'
+                    '**Importar CSV** e **Exportar CSV** levam a agenda de e para uma planilha, com as colunas `nome;numero;observacao`. Os importados vão para a conta escolhida no discador. Contatos com um número que já existe não entram de novo.'
                 ]
             }
         ]
@@ -508,7 +502,7 @@ export const GUIDE: GuideSection[] = [
                 type: 'list',
                 items: [
                     '**Eventos**: frases curtas do que aconteceu ("Registro: registrada", "Chamada para 1002: 180 Ringing"). É a aba do dia a dia.',
-                    '**SIP bruto**: as mensagens SIP completas. Só aparece para contas com **Mostrar SIP bruto no log** ligado.',
+                    '**SIP bruto**: as mensagens SIP completas, sem senhas, sempre guardadas.',
                     '**Tudo**: as duas coisas misturadas, na ordem em que aconteceram.'
                 ]
             },
@@ -540,7 +534,7 @@ export const GUIDE: GuideSection[] = [
             },
             {
                 type: 'p',
-                text: 'Mostra o SIP bruto de cada chamada como setas entre a conta e o PBX, na ordem em que as mensagens passaram, com o tempo desde a primeira. Precisa de **Mostrar SIP bruto no log** ligado na conta.'
+                text: 'Mostra o SIP bruto de cada chamada como setas entre a conta e o PBX, na ordem em que as mensagens passaram, com o tempo desde a primeira.'
             },
             {
                 type: 'list',
@@ -923,11 +917,6 @@ export const GUIDE: GuideSection[] = [
                         'Troque o Modo DTMF da conta entre SIP INFO e RTP'
                     ],
                     [
-                        'A aba "SIP bruto" está vazia',
-                        'A opção não está ligada na conta',
-                        'Edite a conta e marque Mostrar SIP bruto no log'
-                    ],
-                    [
                         'Botão Ligar apagado',
                         'A conta de origem não está registrada',
                         'Registre a conta ou escolha outra em Discar de'
@@ -947,7 +936,7 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'note',
                 kind: 'dica',
-                text: 'Quando o motivo não estiver claro, ligue **Mostrar SIP bruto no log** na conta, repita o teste e leia a aba **Tudo**.'
+                text: 'Quando o motivo não estiver claro, repita o teste e leia a aba **Tudo**, que traz o SIP bruto.'
             }
         ]
     }

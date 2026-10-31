@@ -275,12 +275,14 @@ export class EasySipEngine implements SipEngine {
                 authorizationUsername: account.authUsername || undefined,
                 server: account.wssUrl,
                 iceServers: iceServers.length ? iceServers : undefined,
-                debug: account.rawSipLog,
+                // O SIP bruto, sem senhas, é sempre guardado: a depuração depende dele (RF-22).
+                debug: true,
                 userAgentString: 'Iris'
             },
             {
                 preset: account.preset,
-                provider: account.provider,
+                // O WebSocket usa sempre o SIP.js; a escolha pelo JsSIP saiu na 2.0.
+                provider: 'sipjs',
                 // O toque de quem recebe e o de quem liga são do app, um só para todas as contas.
                 sounds: { ringtone: SILENT_WAV, ringback: SILENT_WAV },
                 // Depois de uma queda, a biblioteca reconecta sozinha com espera crescente (RNF-06) e mantém

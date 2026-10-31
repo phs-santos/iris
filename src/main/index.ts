@@ -5,6 +5,7 @@ import appIcon from '../../resources/icon.png?asset'
 import { IPC, type Account, type SettingsPatch } from '@shared/types'
 import {
     getSecret,
+    discardLegacyData,
     loadAccounts,
     loadContacts,
     saveContacts,
@@ -359,6 +360,12 @@ app.whenReady().then(async () => {
     appLog(
         'info',
         `Íris ${app.getVersion()} abriu (${process.platform} ${process.arch}, Electron ${process.versions.electron})`
+    )
+    // Dados de versões anteriores à 2.0 são descartados antes de qualquer leitura. Uma falha aqui não
+    // impede a janela de abrir: os arquivos antigos caem no caminho de arquivo estragado (RNF-19).
+    await discardLegacyData().then(
+        (discarded) => discarded && appLog('info', 'Dados de uma versão anterior à 2.0 descartados'),
+        (error) => appLog('error', `Dados antigos não descartados: ${describeError(error)}`)
     )
     // Um erro ao ler as preferências não pode impedir a janela de abrir nem os canais de existir.
     const saved = await loadSettings().catch((error) => {
