@@ -328,7 +328,8 @@ export const ptBR = {
         servidor: 'Servidor',
         escolha_servidor: 'Escolha um servidor',
         novo_servidor: '+ Novo servidor…',
-        simulado_nota: 'Sem rede: os números 8000, 1002, 7000 e outros respondem sozinhos.',
+        simulado_nota:
+            'Sem rede: 8000 é uma URA, 486 dá ocupado, 408 não atende e as outras contas simuladas tocam aqui mesmo.',
         ramal: 'Ramal',
         senha: 'Senha',
         mantida_digite_para_trocar: 'mantida; digite para trocar',
@@ -471,15 +472,6 @@ export const ptBR = {
         sistema: 'Sistema',
         licenca: 'Licença',
         licenca_valor: 'MIT'
-    },
-    guideDialog: {
-        guia_da_iris: 'Guia da Íris',
-        fechar: 'Fechar',
-        secoes_do_guia: 'Seções do guia',
-        buscar_no_guia: 'Buscar no guia',
-        nada_encontrado_para: 'Nada encontrado para "{search}".',
-        dica: 'Dica',
-        atencao: 'Atenção'
     },
     debug: {
         tira: 'SIP · Fluxo · Log',
@@ -693,9 +685,7 @@ export const ptBR = {
         certificados: 'Certificados',
         importar_e_exportar: 'Importar e exportar',
         atualizacao: 'Atualização',
-        sobre: 'Sobre',
-        guia: 'Guia',
-        guia_dica: 'Guia (F1)'
+        sobre: 'Sobre'
     },
     updateSection: {
         atualizacao: 'Atualização',

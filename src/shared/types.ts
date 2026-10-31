@@ -288,7 +288,7 @@ export interface IrisApi {
         dial(engineId: string, destination: string, headers?: string[]): Promise<string>
         callAction(engineId: string, callId: string, action: NativeCallAction): Promise<void>
         callStats(engineId: string, callId: string): Promise<NativeCallStats | null>
-        /** Volume do áudio recebido nos últimos instantes, em dBFS (RF-41). */
+        /** Volume do áudio recebido nos últimos instantes, em dBFS (medidor da chamada, RF-26). */
         callLevel(engineId: string, callId: string): Promise<number | null>
         /** Liga ou desliga a gravação (RF-36). Devolve o caminho do arquivo, ou null se a chamada não existe. */
         record(engineId: string, callId: string, on: boolean): Promise<string | null>

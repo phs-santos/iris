@@ -66,9 +66,8 @@ try {
 
     // Telas que falam com o processo principal ao abrir: se um canal faltar, o erro aparece aqui.
     await abrirAjustes(page, /Atualização/)
-    await ajustes(page).getByRole('button', { name: 'Guia' }).click()
-    await page.locator('.dialog img').first().waitFor({ timeout: 10000 })
-    step('Ajustes e Guia abrem, com as imagens do pacote')
+    await ajustes(page).getByText(`Versão instalada: ${version}`).waitFor({ timeout: 10000 })
+    step('Ajustes › Atualização abre e mostra a versão instalada')
 
     const log = readFileSync(join(userData, 'logs', 'iris.log'), 'utf8')
     const bad = log.split('\n').filter((line) => / ERROR /.test(line))

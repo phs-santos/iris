@@ -1,5 +1,5 @@
 // Áudio em PCM de 16 bits a 8000 Hz, a forma em que ele passa pelo motor próprio: medir o volume
-// e escrever o cabeçalho da gravação em WAV (RF-36, RF-41).
+// (medidor da chamada, RF-26) e escrever o cabeçalho da gravação em WAV (RF-36).
 
 export const SAMPLE_RATE = 8000
 /** Volume de quem não está recebendo nada. */

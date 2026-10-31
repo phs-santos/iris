@@ -22,8 +22,7 @@
         "dist": true,
         "dist-diag": true,
         "coverage": true,
-        "package-lock.json": true,
-        "src/renderer/src/assets/guide": true
+        "package-lock.json": true
     },
     // Não vigia as pastas geradas: o build e os testes reescrevem milhares de arquivos nelas.
     "files.watcherExclude": {

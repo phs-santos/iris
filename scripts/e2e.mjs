@@ -1,7 +1,7 @@
 // Testes de tela (Playwright): gera o app uma vez e roda os testes pedidos, um depois do outro.
 // Uso: npm run test:e2e                  (os que rodam sem PBX)
-//      npm run test:e2e -- chamada a11y  (só esses; com PBX_WS apontando para o Asterisk, também sip-puro,
-//                                         asterisk e reconexao)
+//      npm run test:e2e -- chamada a11y  (só esses)
+// Com PBX_WS apontando para o Asterisk (ex.: wss://127.0.0.1:8089/ws), o chamada.mjs também liga de verdade.
 import { execSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'

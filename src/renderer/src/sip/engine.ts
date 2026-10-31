@@ -87,7 +87,7 @@ export interface EngineCall {
     /** Troca o microfone da chamada em andamento. "" volta para o padrão do sistema. */
     setInputDevice(deviceId: string): Promise<void>
     quality(): Promise<CallQuality | null>
-    /** Volume do áudio recebido nos últimos instantes, em dBFS, ou null se o motor não mede (RF-41). */
+    /** Volume do áudio recebido nos últimos instantes, em dBFS, ou null se o motor não mede (medidor, RF-26). */
     audioLevel(): Promise<number | null>
     /** Liga ou desliga a gravação da chamada e devolve o arquivo (RF-36). Só nos motores que gravam. */
     setRecording?(on: boolean): Promise<string | null>

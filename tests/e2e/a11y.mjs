@@ -222,35 +222,6 @@ try {
     if (!(await contacts.isVisible())) problems.push('[contatos] Esc no formulário fechou também a lista')
     await page.keyboard.press('Escape')
     await contacts.waitFor({ state: 'detached', timeout: 2000 }).catch(() => problems.push('[contatos] Esc não fecha'))
-    // Guia: todas as seções abrem, as capturas carregam e a busca filtra o índice.
-    await page.keyboard.press('F1')
-    const guide = page.getByRole('dialog', { name: 'Guia da Íris' })
-    await guide.waitFor()
-    await scan('guia')
-    const entries = guide.locator('.entry')
-    const total = await entries.count()
-    for (let i = 0; i < total; i++) {
-        await entries.nth(i).click()
-        const broken = await guide.locator('figure img').evaluateAll((imgs) =>
-            Promise.all(
-                imgs.map((img) =>
-                    img.decode().then(
-                        () => (img.naturalWidth ? null : img.alt),
-                        () => img.alt
-                    )
-                )
-            )
-        )
-        for (const alt of broken.filter(Boolean)) problems.push(`[guia] imagem não carregou: ${alt}`)
-    }
-    await guide.getByRole('button', { name: 'Seus dados e segurança', exact: true }).click()
-    await scan('guia, seção com tabela')
-    await guide.getByLabel('Buscar no guia').fill('chave-local')
-    if ((await entries.count()) !== 1)
-        problems.push('[guia] a busca por "chave-local" deveria deixar só a seção de dados')
-    await page.keyboard.press('Escape')
-    await guide.waitFor({ state: 'detached', timeout: 2000 }).catch(() => problems.push('[guia] Esc não fecha'))
-    step(`guia com ${total} seções, capturas carregadas e busca`)
 
     // Atalhos da especificação (RNF-12).
     await page.keyboard.press('ControlOrMeta+l')

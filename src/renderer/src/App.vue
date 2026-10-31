@@ -12,7 +12,6 @@ import CallsPanel from './components/shell/CallsPanel.vue'
 import DebugDrawer from './components/shell/DebugDrawer.vue'
 import AccountForm from './components/AccountForm.vue'
 import SettingsDialog from './components/settings/SettingsDialog.vue'
-import GuideDialog from './components/GuideDialog.vue'
 import ToastStack from './components/ToastStack.vue'
 import ContactsDialog from './components/ContactsDialog.vue'
 import { useContactsStore } from './stores/contacts'
@@ -31,7 +30,6 @@ const prefs = usePreferencesStore()
 const editing = ref<Account | null>(null)
 /** Seção aberta da tela de Configurações; null com a tela fechada. */
 const settingsAt = ref<SettingsSection | null>(null)
-const showGuide = ref(false)
 const update = ref<UpdateInfo | null>(null)
 // O botão da barra avisa quando há versão nova para baixar ou já baixada (RF-35).
 const updatePending = computed(() => ['available', 'ready'].includes(update.value?.status.state ?? ''))
@@ -113,12 +111,6 @@ function openSettings(): void {
     else settingsAt.value = 'audio'
 }
 
-/** O Guia fica no pé dos Ajustes: abre no lugar deles. */
-function openGuide(): void {
-    settingsAt.value = null
-    showGuide.value = true
-}
-
 /** Abre a tela já procurando: o resultado guardado pode ser de horas atrás (ex.: erro de quando não havia rede). */
 function openUpdate(): void {
     settingsAt.value = 'update'
@@ -133,10 +125,6 @@ async function setUpdateChannel(channel: UpdateChannel): Promise<void> {
 
 // Atalhos de teclado (ver especificação, seção Interface).
 function onKey(event: KeyboardEvent): void {
-    if (event.key === 'F1') {
-        showGuide.value = true
-        return event.preventDefault()
-    }
     const mod = event.ctrlKey || event.metaKey
     if (!mod) return
     if (event.key === ',') {
@@ -294,7 +282,6 @@ onUnmounted(() => {
             :prefill="contactsFor.prefill"
             @close="contactsFor = null"
         />
-        <GuideDialog v-if="showGuide" @close="showGuide = false" />
         <ToastStack />
         <SettingsDialog
             v-if="settingsAt"
@@ -302,7 +289,6 @@ onUnmounted(() => {
             :update="update"
             @close="settingsAt = null"
             @channel="setUpdateChannel"
-            @guide="openGuide"
         />
     </div>
 </template>

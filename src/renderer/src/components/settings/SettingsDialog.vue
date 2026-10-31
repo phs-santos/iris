@@ -17,11 +17,11 @@ import AboutSection from './AboutSection.vue'
 import Icon from '../icons/Icon.vue'
 
 /**
- * Janela de Ajustes: as seções à esquerda, na ordem da especificação, e Sobre e Guia no pé. Abre em Áudio; com
+ * Janela de Ajustes: as seções à esquerda, na ordem da especificação, e Sobre no pé. Abre em Áudio; com
  * uma atualização pendente, quem abre (App.vue) pede a seção Atualização.
  */
 const props = defineProps<{ section: SettingsSection; update: UpdateInfo | null }>()
-const emit = defineEmits<{ close: []; channel: [channel: UpdateChannel]; guide: [] }>()
+const emit = defineEmits<{ close: []; channel: [channel: UpdateChannel] }>()
 const dialogEl = ref<HTMLElement | null>(null)
 useDialog(dialogEl, () => emit('close'))
 
@@ -106,14 +106,6 @@ function onNavKey(event: KeyboardEvent): void {
                         >
                             {{ $t('settingsDialog.sobre') }}
                         </button>
-                        <button
-                            type="button"
-                            class="link"
-                            :title="$t('settingsDialog.guia_dica')"
-                            @click="emit('guide')"
-                        >
-                            <Icon name="book" />{{ $t('settingsDialog.guia') }}
-                        </button>
                     </div>
                 </nav>
                 <div
@@ -182,10 +174,6 @@ header .btn .icon {
 .link.on {
     background: var(--raise);
     color: var(--fg);
-}
-.link .icon {
-    width: 13px;
-    height: 13px;
 }
 nav {
     background: var(--panel-2);

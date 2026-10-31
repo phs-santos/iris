@@ -8,7 +8,7 @@ import Icon from '../icons/Icon.vue'
 
 /**
  * Barra de ícones à esquerda: a conta atual no topo (abre o seletor), as telas no meio e Ajustes no pé.
- * Hoje a única tela é o Telefone; Cenários entra aqui quando voltar. O Guia fica no pé dos Ajustes (F1 abre).
+ * Hoje a única tela é o Telefone; Cenários entra aqui quando voltar.
  */
 defineProps<{ pickerOpen: boolean; updatePending: boolean }>()
 const emit = defineEmits<{ picker: []; settings: [] }>()

@@ -21,7 +21,7 @@ function toneSamples(hz: number, ms: number, amplitude = 0.5): Int16Array {
     return out
 }
 
-describe('medida de volume (RF-41)', () => {
+describe('medida de volume (medidor da chamada, RF-26)', () => {
     it('mede silêncio, áudio fraco e áudio cheio', () => {
         expect(levelDb(new Int16Array(160))).toBe(SILENCE_DB)
         expect(levelDb(new Int16Array(0))).toBe(SILENCE_DB)

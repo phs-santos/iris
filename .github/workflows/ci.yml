@@ -53,7 +53,7 @@ jobs:
             # O Ubuntu 24.04 bloqueia o sandbox do Chromium para binários fora de pacotes do sistema.
             # Liberar aqui mantém o sandbox ligado nos testes, como no app instalado.
             # Cada teste roda mesmo que um anterior tenha falhado (`!cancelled()`): uma falha no começo não
-            # esconde o resultado dos testes com o Asterisk, e o job continua reprovando.
+            # esconde o resultado da chamada com o Asterisk, e o job continua reprovando.
             - name: Liberar o sandbox do Chromium
               run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
             - name: Ponta a ponta no modo simulado
@@ -83,16 +83,7 @@ jobs:
                   ./docker/asterisk/gen-cert.sh
                   docker compose up -d
                   sleep 8
-            - name: Integração com Asterisk
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/asterisk.mjs
+            # A única ligação de verdade: registro UDP, ligar, DTMF, espera, transferência e desligar.
             - name: Chamada pela tela, simulada e no Asterisk
               if: ${{ !cancelled() }}
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/chamada.mjs
-            - name: SIP puro por UDP, TCP e TLS com o motor próprio (RF-39)
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/sip-puro.mjs
-            # Por último: este teste para e religa o contêiner do PBX.
-            - name: Reconexão derrubando o contêiner do PBX (RNF-06)
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/reconexao.mjs

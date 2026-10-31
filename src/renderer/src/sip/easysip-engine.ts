@@ -210,7 +210,7 @@ class EasySipCall implements EngineCall {
         await this.session?.setAudioInput(deviceId || 'default')
     }
 
-    /** Volume do áudio que chega, medido no elemento da chamada (RF-41). */
+    /** Volume do áudio que chega, medido no elemento da chamada (medidor da chamada, RF-26). */
     async audioLevel(): Promise<number | null> {
         const stream = this.audio.srcObject
         if (!(stream instanceof MediaStream) || stream.getAudioTracks().length === 0) return null

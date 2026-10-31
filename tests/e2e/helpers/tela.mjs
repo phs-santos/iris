@@ -28,7 +28,7 @@ export async function abrir({ userData, prefixo = 'iris-e2e-', executablePath, a
  * A janela de teste não recebe o mouse de verdade do computador, só os cliques do Playwright (que entram
  * pelo Chromium, não pelo sistema). Sem isso, um clique de quem está usando a máquina, quando a janela
  * abre por baixo do ponteiro, fechava o seletor de contas no meio do teste (a falha que aparecia de vez
- * em quando no começo do test:chamada).
+ * em quando no começo do chamada.mjs).
  */
 export async function isolarDoMouse(app) {
     await app.evaluate(({ BrowserWindow }) => {

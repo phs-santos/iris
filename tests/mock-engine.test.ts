@@ -59,7 +59,7 @@ describe('MockEngine', () => {
         expect(inEnd).toEqual({ by: 'remote' })
     })
 
-    it('simula o áudio: voz dos dois lados e silêncio em mudo e em espera (RF-41)', async () => {
+    it('simula o áudio: voz dos dois lados e silêncio em mudo e em espera (medidor da chamada, RF-26)', async () => {
         const a = make('1001')
         const b = make('1002')
         await registered(a)

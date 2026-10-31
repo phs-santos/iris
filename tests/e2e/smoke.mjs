@@ -124,14 +124,8 @@ try {
     await audio.getByRole('radio', { name: 'Claro' }).click()
     await audio.getByRole('button', { name: 'Cor padrão' }).click()
     step('Ajustes › Aparência troca e salva o tema e a cor de destaque')
-    // O Guia fica no pé dos Ajustes (saiu da barra de ícones): abre no lugar deles.
-    if (await page.getByRole('navigation', { name: 'Navegação' }).getByRole('button', { name: 'Guia' }).count())
-        throw new Error('o Guia ainda está na barra de ícones')
-    await audio.getByRole('button', { name: 'Guia' }).click()
-    await page.getByRole('dialog', { name: 'Guia da Íris' }).waitFor()
-    await audio.waitFor({ state: 'detached' })
     await page.keyboard.press('Escape')
-    step('o Guia abre pelo pé dos Ajustes')
+    await audio.waitFor({ state: 'detached' })
 
     await abaDepuracao(page, 'SIP').click()
     await linhaDepuracao(page, 'INVITE sip:1002@demo.local').first().waitFor()

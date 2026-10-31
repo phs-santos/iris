@@ -175,8 +175,8 @@ class MockCall implements EngineCall {
     }
 
     /**
-     * Volume simulado (RF-41): sem ninguém em mudo ou em espera, cada ponta ouve a "voz" da outra, e a
-     * URA fala o tempo todo.
+     * Volume simulado (medidor da chamada, RF-26): sem ninguém em mudo ou em espera, cada ponta ouve a "voz" da
+     * outra, e a URA fala o tempo todo.
      */
     async audioLevel(): Promise<number | null> {
         if (this.state !== 'established' || this.held || this.peer?.held) return SILENCE_DB
