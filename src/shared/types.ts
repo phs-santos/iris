@@ -1,6 +1,7 @@
 // Tipos compartilhados entre o processo principal, o preload e a interface.
 
 import type { Appearance } from './appearance'
+import type { CodecPrefs } from './codecs'
 import type { TrayCounts } from './tray'
 import type { Contact } from './contacts'
 import type { SipServer } from './servers'
@@ -72,13 +73,22 @@ export interface Settings {
     reconnect?: ReconnectSettings
     /** Quais eventos viram notificação do sistema. */
     notifications?: NotificationSettings
+    /** Ordem dos codecs do SIP puro. Sem o campo, vale o padrão de `@shared/codecs`. */
+    codecs?: CodecPrefs
 }
 
 /** Campos que a interface pode mudar em `settings.json`; o canal de atualização tem canal próprio. */
 export type SettingsPatch = Partial<
     Pick<
         Settings,
-        'trustedHosts' | 'audioInputId' | 'audioOutputId' | 'ringVolume' | 'appearance' | 'reconnect' | 'notifications'
+        | 'trustedHosts'
+        | 'audioInputId'
+        | 'audioOutputId'
+        | 'ringVolume'
+        | 'appearance'
+        | 'reconnect'
+        | 'notifications'
+        | 'codecs'
     >
 >
 

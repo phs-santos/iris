@@ -3,6 +3,7 @@
 // cada pedido à chamada dona dele. O diálogo e o áudio de cada chamada ficam em call.ts.
 
 import { randomBytes } from 'node:crypto'
+import { DEFAULT_CODECS, type AudioCodecName } from '@shared/codecs'
 import type { SipTransportKind } from '@shared/sip-target'
 import { digestAuthorization, parseChallenge, type DigestChallenge } from './digest'
 import {
@@ -34,6 +35,8 @@ export interface UserAgentConfig {
     trusted?: boolean
     /** Exige áudio cifrado (SRTP) nas chamadas. */
     srtp?: boolean
+    /** Ordem dos codecs de áudio; sem o campo, o padrão. */
+    codecs?: AudioCodecName[]
     /** Validade pedida no registro, em segundos. */
     expires?: number
     userAgent?: string
@@ -91,6 +94,11 @@ interface Pending {
 }
 
 export class SipUserAgent {
+    /** Troca a ordem dos codecs das próximas chamadas, feitas ou recebidas. */
+    setCodecs(codecs: AudioCodecName[]): void {
+        this.config.codecs = codecs
+    }
+
     private transport?: SipTransport
     private pending = new Map<string, Pending>()
     private calls = new Map<string, SipCall>()
@@ -462,6 +470,7 @@ export class SipUserAgent {
             password,
             displayName,
             srtp: Boolean(this.config.srtp),
+            codecs: this.config.codecs?.length ? this.config.codecs : DEFAULT_CODECS,
             reliable: this.transport?.reliable ?? true,
             contactUri: () => `sip:${user}@${bracket(contact().host)}:${contact().port};transport=${transport}`,
             mediaAddress: () => contact().host,

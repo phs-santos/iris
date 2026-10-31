@@ -22,6 +22,7 @@ import {
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
 import { setupUpdater } from './updater'
 import { isAppearance } from '@shared/appearance'
+import { isCodecPrefs } from '@shared/codecs'
 import { isReconnect } from '@shared/reconnect'
 import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
@@ -227,7 +228,8 @@ function registerIpc(): void {
         'ringVolume',
         'appearance',
         'reconnect',
-        'notifications'
+        'notifications',
+        'codecs'
     ]
     const isDeviceId = (v: unknown): boolean => v === undefined || isString(v, 500)
     handle(IPC.settingsUpdate, async (_e, patch: SettingsPatch) => {
@@ -241,7 +243,8 @@ function registerIpc(): void {
                 isRingVolume(patch.ringVolume) &&
                 isAppearance(patch.appearance) &&
                 isReconnect(patch.reconnect) &&
-                isNotificationSettings(patch.notifications),
+                isNotificationSettings(patch.notifications) &&
+                isCodecPrefs(patch.codecs),
             'preferências'
         )
         const settings = await updateSettings(patch)

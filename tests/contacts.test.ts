@@ -6,6 +6,7 @@ import {
     isContact,
     parseContactsCsv,
     searchContacts,
+    suggestContacts,
     type Contact
 } from '@shared/contacts'
 import { applyServer, isSipServer, matchesServer, serverFromAccount, type SipServer } from '@shared/servers'
@@ -128,5 +129,40 @@ describe('servidores cadastrados (RF-51)', () => {
         expect(isSipServer(serverFromAccount(account, 'n'))).toBe(true)
         expect(isSipServer({ ...server, transport: 'sctp' })).toBe(false)
         expect(isSipServer({ ...server, preset: 'outro' })).toBe(false)
+    })
+})
+
+describe('sugestão de contatos no discador', () => {
+    it('sugere só da conta atual', () => {
+        const all = [...book, contact('Ana Outra', '1002', { accountId: 'c2' })]
+        expect(suggestContacts(all, 'c1', 'ana').map((c) => c.name)).toEqual(['Ana Souza'])
+        expect(suggestContacts(all, 'c2', 'ana').map((c) => c.name)).toEqual(['Ana Outra'])
+    })
+
+    it('sugere por dígitos e por nome sem acento', () => {
+        const people = [contact('João', '2000'), ...book]
+        expect(suggestContacts(people, 'c1', 'joao').map((c) => c.name)).toEqual(['João'])
+        expect(suggestContacts(people, 'c1', 'ceu').map((c) => c.name)).toEqual(['Céu Lima'])
+        expect(suggestContacts(people, 'c1', '4000').map((c) => c.name)).toEqual(['Ana Souza'])
+    })
+
+    it('prefixo vem antes de contém', () => {
+        const people = [contact('Luana', '1'), contact('Ana', '2'), contact('Anita', '3'), contact('Joana', '4')]
+        expect(suggestContacts(people, 'c1', 'an').map((c) => c.name)).toEqual(['Ana', 'Anita', 'Joana', 'Luana'])
+        expect(suggestContacts([contact('X', '9001'), contact('Y', '1900')], 'c1', '900').map((c) => c.name)).toEqual([
+            'X',
+            'Y'
+        ])
+    })
+
+    it('texto vazio não sugere nada', () => {
+        expect(suggestContacts(book, 'c1', '')).toEqual([])
+        expect(suggestContacts(book, 'c1', '   ')).toEqual([])
+    })
+
+    it('respeita o limite', () => {
+        const many = Array.from({ length: 10 }, (_, i) => contact(`Pessoa ${i}`, String(1000 + i)))
+        expect(suggestContacts(many, 'c1', 'pessoa')).toHaveLength(6)
+        expect(suggestContacts(many, 'c1', 'pessoa', 3)).toHaveLength(3)
     })
 })

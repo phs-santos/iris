@@ -146,3 +146,28 @@ export function contactsToCsv(contacts: Contact[]): string {
     const rows = contacts.map((c) => [c.name, c.number, c.notes].map(csvField).join(';'))
     return `${[CONTACTS_CSV_HEADER, ...rows].join('\r\n')}\r\n`
 }
+
+/**
+ * Sugestões do discador: só os contatos da conta, por nome (sem acento nem maiúscula) ou, se o texto for um
+ * número, pelos dígitos. Quem começa com o texto vem antes de quem só contém; no empate, ordem de nome.
+ */
+export function suggestContacts(contacts: Contact[], accountId: string, query: string, limit = 6): Contact[] {
+    const text = query.trim()
+    if (!text) return []
+    const wanted = /[^\d\s()+*#.-]/.test(text) ? '' : digits(text)
+    const name = plain(text)
+    const rank = (c: Contact): number => {
+        if (wanted) {
+            const number = digits(c.number)
+            if (number.startsWith(wanted)) return 0
+            if (number.includes(wanted)) return 1
+            return 2
+        }
+        const label = plain(c.name)
+        return label.startsWith(name) ? 0 : label.includes(name) ? 1 : 2
+    }
+    return contacts
+        .filter((c) => c.accountId === accountId && rank(c) < 2)
+        .sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name, 'pt-BR'))
+        .slice(0, limit)
+}

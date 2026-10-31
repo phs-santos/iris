@@ -53,6 +53,8 @@ export interface CallHost {
     readonly displayName?: string
     /** A conta exige áudio cifrado: oferece SRTP ao ligar e recusa quem liga sem ele. */
     readonly srtp: boolean
+    /** Codecs que a Íris oferece e aceita, na ordem de preferência (nunca vazia). */
+    readonly codecs: readonly AudioCodec[]
     /** Endereço que o outro lado alcança, para o Contact e o SDP. */
     contactUri(): string
     mediaAddress(): string
@@ -89,9 +91,8 @@ export class SipCall {
     private challenge?: { value: DigestChallenge; proxy: boolean; count: number }
     private rtp: RtpSession
     private rtpPort = 0
-    /** G.711 primeiro: o Opus só entra quando é o que o outro lado tem (RF-47). */
-    // O G.722 vem primeiro: quando o PBX aceita, a chamada sai em banda larga.
-    private codecs: AudioCodec[] = ['G722', 'PCMU', 'PCMA', 'opus']
+    /** Os codecs da oferta, na ordem escolhida pelo usuário (Configurações → Áudio). */
+    private codecs: AudioCodec[]
     /** Depois de negociar, os números de payload do outro lado, para a resposta usar os mesmos. */
     private negotiated?: { opusPayload?: number; dtmfPayload?: number; dtmf48Payload?: number }
     private sdpVersion = 1
@@ -126,6 +127,7 @@ export class SipCall {
         readonly remoteName: string | undefined,
         callId?: string
     ) {
+        this.codecs = [...host.codecs]
         this.callId = callId ?? `${token(12)}@iris`
         this.state = direction === 'out' ? 'calling' : 'ringing'
         this.rtp = new RtpSession({
@@ -389,7 +391,7 @@ export class SipCall {
         if (this.direction !== 'in' || this.state !== 'ringing' || !this.invite) return
         let media: RemoteMedia
         try {
-            media = parseSdp(this.invite.body)
+            media = parseSdp(this.invite.body, this.codecs)
         } catch (error) {
             const reason = error instanceof SdpError ? error.message : 'SDP inválido'
             this.send(488, 'Not Acceptable Here')

@@ -489,6 +489,39 @@ describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
         await agent.stop()
     })
 
+    it('a oferta segue a ordem dos codecs', async () => {
+        const { agent, transport } = await registered({ codecs: ['PCMA', 'PCMU'] })
+        agent.dial('600', callRecorder().events)
+        await until(() => sentOf(transport, 'INVITE').length === 1, 'INVITE enviado')
+        const body = sentOf(transport, 'INVITE')[0]!.body
+        expect(body).toContain('m=audio ')
+        expect(body).toMatch(/RTP\/AVP 8 0 101\r\n/)
+        expect(body).not.toContain('G722')
+        // Mudar a ordem vale para a próxima chamada.
+        agent.setCodecs(['PCMU'])
+        agent.dial('601', callRecorder().events)
+        await until(() => sentOf(transport, 'INVITE').length === 2, 'segundo INVITE')
+        expect(sentOf(transport, 'INVITE')[1]!.body).toMatch(/RTP\/AVP 0 101\r\n/)
+        await agent.stop()
+    })
+
+    it('chamada recebida: a resposta escolhe o primeiro codec da nossa ordem que a oferta tem', async () => {
+        const offer = PBX_SDP()
+            .replace('m=audio 30000 RTP/AVP 0 101', 'm=audio 30000 RTP/AVP 0 8 101')
+            .replace('a=rtpmap:0 PCMU/8000', 'a=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000')
+        const { agent, transport, incoming } = await registered({ codecs: ['PCMA', 'PCMU'] })
+        transport.onMessage(inbound('INVITE', 'entrada-codec', [], offer))
+        await incoming.call!.answer()
+        const ok = transport.raw
+            .map((text) => parseMessage(text))
+            .filter((m) => m.kind === 'response')
+            .at(-1)!
+        expect(ok).toMatchObject({ status: 200 })
+        expect(ok.body).toContain('RTP/AVP 8 101')
+        expect(ok.body).not.toContain('PCMU')
+        await agent.stop()
+    })
+
     it('em andamento: espera dos dois lados, DTMF por INFO, transferência cega e o BYE do outro lado', async () => {
         const { agent, transport } = await registered()
         const { seen, events } = callRecorder()

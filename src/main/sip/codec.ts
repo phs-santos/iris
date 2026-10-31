@@ -4,12 +4,14 @@
 // além dessa via de 8 kHz, tem a de 16 kHz, por onde passam o microfone e o alto-falante. O relógio do
 // RTP é o do codec: 8000 no G.711 e no G.722, 48000 no Opus.
 
+import type { AudioCodecName } from '@shared/codecs'
 import OpusScript from 'opusscript'
-import { decodeG711, encodeG711, type G711 } from './g711'
+import { decodeG711, encodeG711 } from './g711'
 import { G722Decoder, G722Encoder } from './g722'
 import { Downsampler, Upsampler } from './resample'
 
-export type AudioCodec = G711 | 'G722' | 'opus'
+// Um só tipo para os nomes: o mesmo da preferência do usuário (src/shared/codecs.ts).
+export type AudioCodec = AudioCodecName
 
 export interface CodecInstance {
     readonly name: AudioCodec

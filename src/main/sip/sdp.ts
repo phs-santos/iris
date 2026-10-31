@@ -73,8 +73,10 @@ export function buildSdp(media: LocalMedia): string {
     ].join('\r\n')
 }
 
-/** Lê o primeiro áudio do SDP. Lança SdpError se não houver codec em comum ou cifra que a Íris fale. */
-export function parseSdp(text: string): RemoteMedia {
+/**
+ * Lê o primeiro áudio do SDP. Sem `prefer`, vale a ordem de quem mandou; com `prefer` (oferta recebida), vale
+ * a nossa ordem entre os codecs que a oferta tem, e um codec fora da lista não é aceito. Lança SdpError se não houver codec em comum ou cifra que a Íris fale. */
+export function parseSdp(text: string, prefer?: AudioCodec[]): RemoteMedia {
     const lines = text.split(/\r?\n/).map((line) => line.trim())
     const start = lines.findIndex((line) => line.startsWith('m=audio '))
     if (start < 0) throw new SdpError('O outro lado não ofereceu áudio')
@@ -103,7 +105,7 @@ export function parseSdp(text: string): RemoteMedia {
         const map = /^a=rtpmap:(\d+) ([^/\s]+)\/(\d+)/.exec(line)
         if (map) names.set(Number(map[1]), `${map[2]!.toUpperCase()}/${map[3]}`)
     }
-    let codec: { name: AudioCodec; payload: number } | undefined
+    const found: { name: AudioCodec; payload: number }[] = []
     let dtmf8: number | undefined
     let dtmf48: number | undefined
     for (const format of formats.map(Number)) {
@@ -111,14 +113,16 @@ export function parseSdp(text: string): RemoteMedia {
         const name =
             names.get(format) ??
             (format === 0 ? 'PCMU/8000' : format === 8 ? 'PCMA/8000' : format === 9 ? 'G722/8000' : '')
-        // Vale a ordem de preferência de quem mandou o SDP.
-        if (!codec && (name === 'PCMU/8000' || name === 'PCMA/8000'))
-            codec = { name: name.slice(0, 4) as AudioCodec, payload: format }
-        if (!codec && name === 'G722/8000') codec = { name: 'G722', payload: format }
-        if (!codec && name === 'OPUS/48000') codec = { name: 'opus', payload: format }
+        if (name === 'PCMU/8000' || name === 'PCMA/8000')
+            found.push({ name: name.slice(0, 4) as AudioCodec, payload: format })
+        if (name === 'G722/8000') found.push({ name: 'G722', payload: format })
+        if (name === 'OPUS/48000') found.push({ name: 'opus', payload: format })
         if (name === 'TELEPHONE-EVENT/8000') dtmf8 ??= format
         if (name === 'TELEPHONE-EVENT/48000') dtmf48 ??= format
     }
+    const codec = prefer
+        ? prefer.map((wanted) => found.find((f) => f.name === wanted)).find((f) => f !== undefined)
+        : found[0]
     if (!codec) throw new SdpError('Nenhum codec em comum: a Íris fala G.722, G.711 (PCMU e PCMA) e Opus')
     // Com Opus, o DTMF usa o telephone-event do mesmo relógio (48000), se o outro lado ofereceu.
     const dtmfRate = codec.name === 'opus' && dtmf48 !== undefined ? 48000 : 8000

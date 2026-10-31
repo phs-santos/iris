@@ -5,6 +5,8 @@
 import { app, type WebContents } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { offerOrder } from '@shared/codecs'
+import { loadSettings } from './storage'
 import { WavRecorder } from './sip/recorder'
 import {
     IPC,
@@ -104,6 +106,7 @@ export function registerNativeSipIpc(options: Options): void {
         check(isEngineId(engineId) && isConfig(config) && isString(password, 1000), 'conta SIP')
         check(agents.has(engineId) || agents.size < MAX_AGENTS, 'limite de contas SIP')
         await agents.get(engineId)?.stop()
+        const codecs = offerOrder((await loadSettings()).codecs)
         const target = parseSipServer(config.server, config.domain, config.transport)!
         const sender = event.sender
         const agent = new SipUserAgent(
@@ -118,6 +121,7 @@ export function registerNativeSipIpc(options: Options): void {
                 port: target.port,
                 trusted: options.isTrustedHost(target.host),
                 srtp: config.srtp,
+                codecs,
                 userAgent: `Iris/${app.getVersion()}`
             },
             createTransport,
@@ -168,7 +172,7 @@ export function registerNativeSipIpc(options: Options): void {
         }
     }
 
-    handle(IPC.sipDial, (event, engineId: string, destination: string, headers?: string[]): string => {
+    handle(IPC.sipDial, async (event, engineId: string, destination: string, headers?: string[]): Promise<string> => {
         check(
             isEngineId(engineId) &&
                 isSipUser(destination) &&
@@ -178,6 +182,8 @@ export function registerNativeSipIpc(options: Options): void {
         )
         const agent = agents.get(engineId)
         if (!agent) throw new Error('Registre a conta antes de ligar')
+        // A ordem pode ter mudado nas Configurações depois do registro.
+        agent.setCodecs(offerOrder((await loadSettings()).codecs))
         // O id nasce aqui para os eventos já saírem com ele, antes de a interface receber a resposta.
         let callId = ''
         const call = agent.dial(
