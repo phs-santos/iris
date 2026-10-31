@@ -1,3 +1,10 @@
+## O que mudou na 2.0.1
+
+- **Saiu o guia de uso de dentro do app** (a janela, a tecla F1 e o botão nos Ajustes). A tela ficou simples o bastante para dispensar.
+- A nota do PBX simulado no cadastro de conta cita os números que existem (8000, 486 e 408).
+
+Vindo da 1.x, leia também o que mudou na 2.0, logo abaixo.
+
 ## O que mudou na 2.0
 
 A Íris ficou mais simples: uma tela só, clara, para ligar e depurar.
