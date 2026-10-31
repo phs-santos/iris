@@ -1,10 +1,22 @@
-// Agenda de contatos (RF-50) e servidores cadastrados (RF-51), no modo simulado.
+// Contatos por conta (RF-50) e servidores cadastrados (RF-51), no modo simulado.
 // Uso: npm run build && node tests/e2e/contatos.mjs   (Linux sem tela: xvfb-run -a node tests/e2e/contatos.mjs)
 import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { abrirSeletor, esperarContasSimuladas, linhaDaConta, seletor } from './helpers/tela.mjs'
+import {
+    abrirContatos,
+    abrirSeletor,
+    acao,
+    campoNumero,
+    chamadaAtiva,
+    esperarContasSimuladas,
+    estado,
+    janelaContatos,
+    linhaDaConta,
+    seletor,
+    sugestao
+} from './helpers/tela.mjs'
 
 const userData = mkdtempSync(join(tmpdir(), 'iris-contatos-'))
 const args = ['.']
@@ -23,46 +35,66 @@ let failed = false
 try {
     await esperarContasSimuladas(page)
 
-    // ─── Contatos (da conta, pelo clique direito no seletor) ───
-    await abrirSeletor(page)
-    await linhaDaConta(page, 'Suporte 1001').click({ button: 'right', position: { x: 16, y: 12 } })
-    await seletor(page).getByRole('menuitem', { name: 'Contatos' }).click()
-    const agenda = page.getByRole('dialog', { name: 'Contatos de Suporte 1001' })
+    // ─── Contatos da conta, pela janela aberta no menu da conta no seletor ───
+    const agenda = await abrirContatos(page, 'Suporte 1001')
     await agenda.getByRole('button', { name: '+ Novo contato' }).click()
-    let form = page.getByRole('dialog', { name: /contato/i }).last()
-    await form.getByRole('button', { name: 'Salvar' }).click()
-    await form.getByText('Dê um nome ao contato').waitFor()
-    await form.getByLabel('Nome').fill('Ana do Financeiro')
-    await form.getByLabel('Número ou ramal').fill('1002')
-    await form.getByRole('button', { name: 'Salvar' }).click()
-    await page.locator('.contact', { hasText: 'Ana do Financeiro' }).waitFor()
+    await agenda.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await agenda.getByText('Dê um nome ao contato').waitFor()
+    await agenda.getByLabel('Nome', { exact: true }).fill('Ana do Financeiro')
+    await agenda.getByLabel('Número ou ramal').fill('1002')
+    await agenda.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await agenda.locator('.contact', { hasText: 'Ana do Financeiro' }).waitFor()
     await page.getByText('Contato Ana do Financeiro criado').waitFor()
-    if (read('contacts.json').contacts[0]?.number !== '1002')
-        throw new Error('o contato não foi gravado em contacts.json')
-    step('contato criado, com a validação do formulário, o aviso na tela, e gravado em contacts.json')
+    const suporte = read('accounts.json').accounts.find((a) => a.name === 'Suporte 1001')
+    const gravado = read('contacts.json').contacts[0]
+    if (gravado?.number !== '1002' || gravado.accountId !== suporte.id)
+        throw new Error(`o contato não foi gravado na conta em contacts.json: ${JSON.stringify(gravado)}`)
+    step('contato criado na conta, com a validação do formulário, o aviso e gravado em contacts.json')
 
-    await page.getByRole('searchbox').fill('financeiro')
-    await page.locator('.contact', { hasText: 'Ana' }).waitFor()
-    await page.getByRole('searchbox').fill('zzz')
-    await page.getByText('Nenhum contato com "zzz".').waitFor()
-    await page.getByRole('searchbox').fill('')
+    await agenda.getByRole('searchbox').fill('financeiro')
+    await agenda.locator('.contact', { hasText: 'Ana' }).waitFor()
+    await agenda.getByRole('searchbox').fill('zzz')
+    await agenda.getByText('Nenhum contato com "zzz".').waitFor()
+    await agenda.getByRole('searchbox').fill('')
     step('busca por nome, sem diferenciar maiúscula')
 
-    await page.getByRole('button', { name: 'Ligar para Ana do Financeiro' }).click()
+    await agenda.getByRole('button', { name: 'Ligar para Ana do Financeiro' }).click()
     await agenda.waitFor({ state: 'detached' })
-    const call = page.locator('.call', { hasText: /1001\s*→\s*1002/ })
-    await call.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 8000 })
-    // Quem recebe vê o nome que está na agenda, não só o número.
-    await page.locator('.call', { hasText: /1002\s*←\s*1001/ }).waitFor()
+    const call = chamadaAtiva(page, /1001\s*→\s*1002/)
+    await estado(call, 'em chamada').waitFor({ timeout: 8000 })
     await call.getByText('Ana do Financeiro').waitFor()
-    step('Ligar disca pela agenda, e o cartão mostra o nome do contato')
-    await page
-        .locator('.dialer')
-        .getByRole('button', { name: /Ana do Financeiro/ })
-        .waitFor()
-    step('o contato da conta aparece como atalho no discador')
-    await call.getByRole('button', { name: 'Desligar' }).click()
-    await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
+    step('Ligar disca pela janela de contatos, e a linha da chamada mostra o nome do contato')
+    await acao(page, /1001\s*→\s*1002/, 'Desligar').click()
+    await page.getByText('0 ativas').waitFor()
+
+    // "+ Salvar como contato" no discador abre a janela da conta com o número já preenchido.
+    await campoNumero(page).fill('7001')
+    await sugestao(page, 'Salvar "7001" como contato').click()
+    const nova = janelaContatos(page, 'Suporte 1001')
+    await nova.waitFor()
+    if ((await nova.getByLabel('Número ou ramal').inputValue()) !== '7001')
+        throw new Error('o número digitado não veio para o contato novo')
+    await nova.getByLabel('Nome', { exact: true }).fill('Fila suporte')
+    await nova.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await nova.locator('.contact', { hasText: 'Fila suporte' }).waitFor()
+    step('"+ Salvar como contato" no discador cria o contato na conta atual')
+
+    await nova.getByRole('button', { name: 'Editar Fila suporte' }).click()
+    await nova.getByLabel('Nome', { exact: true }).fill('Fila do suporte')
+    await nova.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await nova.locator('.contact', { hasText: 'Fila do suporte' }).waitFor()
+    await nova.getByRole('button', { name: 'Excluir Fila do suporte' }).click()
+    await nova.getByRole('button', { name: 'Excluir mesmo' }).click()
+    await nova.locator('.contact', { hasText: 'Fila do suporte' }).waitFor({ state: 'detached' })
+    await page.keyboard.press('Escape')
+    await nova.waitFor({ state: 'detached' })
+    step('editar e excluir um contato')
+
+    // Contato de uma conta não aparece em outra.
+    const vendas = await abrirContatos(page, 'Vendas 1002')
+    await vendas.getByText('Nenhum contato nesta conta.', { exact: false }).waitFor()
+    await page.keyboard.press('Escape')
+    step('a janela de outra conta não mostra os contatos de Suporte 1001')
 
     // ─── Servidores ───
     await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
@@ -121,13 +153,18 @@ try {
         throw new Error('as contas não mudaram com o servidor')
     step('editar o servidor atualiza as duas contas ligadas a ele')
 
+    // Servidor em uso não pode ser excluído (canDeleteServer): as duas contas continuam ligadas a ele.
     await settings.getByRole('button', { name: 'Excluir PBX da Matriz' }).click()
     await settings.getByRole('button', { name: 'Excluir mesmo' }).click()
-    await settings.getByText('Servidor excluído').waitFor()
-    const loose = await matriz((list) => !list.some((a) => a.serverId))
-    if (loose.some((a) => a.serverId) || !loose.every((a) => a.wssUrl === 'wss://novo.matriz.com/ws'))
-        throw new Error('excluir o servidor deveria soltar as contas sem perder os dados')
-    step('excluir o servidor solta as contas, que mantêm os dados de conexão')
+    await page.waitForTimeout(300)
+    if (await settings.getByText('Servidor excluído').count())
+        throw new Error('a tela disse que excluiu um servidor em uso')
+    await settings.getByRole('button', { name: 'Editar PBX da Matriz' }).waitFor()
+    if (!read('servers.json').servers.some((sv) => sv.name === 'PBX da Matriz'))
+        throw new Error('o servidor em uso sumiu de servers.json')
+    const ligadas = await matriz((list) => list.every((a) => a.serverId))
+    if (!ligadas.every((a) => a.serverId)) throw new Error('as contas perderam o servidor')
+    step('excluir um servidor em uso é recusado e as contas continuam ligadas a ele')
 
     if (errors.length) throw new Error(`erros na interface:\n${errors.join('\n')}`)
 } catch (error) {

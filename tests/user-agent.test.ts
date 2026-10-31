@@ -212,6 +212,17 @@ describe('motor próprio: registro por SIP puro (RF-39)', () => {
         await agent.stop()
     })
 
+    it('detalhes da conta: endereço local, validade e hora da renovação', async () => {
+        const { agent } = setup({}, (t) => (t.answer = withAuth()))
+        expect(agent.details).toEqual({ local: undefined, server: undefined })
+        await agent.start()
+        const details = agent.details
+        expect(details.local).toBe('192.168.0.10:50600')
+        expect(details.expiresS).toBe(120)
+        expect(details.renewsAt! - Date.now()).toBe(102_000)
+        await agent.stop()
+    })
+
     it('em UDP repete o pedido em 0,5 s, 1 s, 2 s… e desiste com 408', async () => {
         const { agent, statuses, transport } = setup({}, (t) => (t.answer = () => null))
         const started = agent.start()

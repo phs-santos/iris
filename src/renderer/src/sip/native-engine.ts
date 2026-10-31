@@ -225,7 +225,11 @@ export class NativeSipEngine implements SipEngine {
             registered: h.registered,
             latencyMs: h.latencyMs,
             error: h.error,
-            checkedAt: new Date()
+            checkedAt: new Date(),
+            local: h.local,
+            server: h.server,
+            expiresS: h.expiresS,
+            renewsAt: h.renewsAt
         }
     }
 

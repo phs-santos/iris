@@ -124,28 +124,65 @@ export async function abrirDepuracao(page) {
     if (await tiraDepuracao(page).isVisible()) await tiraDepuracao(page).click()
 }
 
+/** Campo do número do discador (combobox com as sugestões dos contatos da conta atual). */
+export const campoNumero = (page) => page.getByRole('combobox', { name: 'Número' })
+
+/** Lista de sugestões aberta embaixo do campo. */
+export const sugestoes = (page) => page.getByRole('listbox', { name: /^Contatos de / })
+
+/** Opção da lista de sugestões, pelo texto. */
+export const sugestao = (page, texto) => sugestoes(page).getByRole('option', { name: texto })
+
+/** Abre a janela de contatos de uma conta pelo menu dela no seletor. */
+export async function abrirContatos(page, conta) {
+    await abrirSeletor(page)
+    await linhaDaConta(page, conta).click({ button: 'right', position: { x: 16, y: 12 } })
+    await seletor(page).getByRole('menuitem', { name: 'Contatos' }).click()
+    const janela = janelaContatos(page, conta)
+    await janela.waitFor()
+    return janela
+}
+
+/** Janela de contatos de uma conta. */
+export const janelaContatos = (page, conta) => page.getByRole('dialog', { name: `Contatos de ${conta}` })
+
+/** Cadastra um contato na conta pela janela de contatos e fecha a janela. */
+export async function criarContato(page, conta, nome, numero) {
+    const janela = await abrirContatos(page, conta)
+    await janela.getByRole('button', { name: '+ Novo contato' }).click()
+    await janela.getByLabel('Nome', { exact: true }).fill(nome)
+    await janela.getByLabel('Número ou ramal').fill(numero)
+    await janela.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await janela.locator('.contact', { hasText: nome }).waitFor()
+    await page.keyboard.press('Escape')
+    await janela.waitFor({ state: 'detached' })
+}
+
+/** Detalhes da conta atual, que a coluna de chamadas mostra quando não há chamada. */
+export const detalhesDaConta = (page, conta) => page.getByRole('heading', { name: `Detalhes de ${conta}` })
+
 /** Digita o número e liga. */
 export async function discar(page, numero) {
-    await page.getByLabel('Número').fill(numero)
+    await campoNumero(page).fill(numero)
     await page.getByRole('button', { name: 'Ligar', exact: true }).click()
 }
 
-/** Cartão de uma chamada que ainda não terminou, achado pelo número ("conta → número" ou "conta ← número"). */
+/** Linha de uma chamada que ainda não terminou, achada pelo número ("ramal → número" ou "ramal ← número"). */
 export function chamadaAtiva(page, numero) {
     return page.locator('.call:not(.ended)', { hasText: numero })
 }
 
-/** Cartão de uma chamada já encerrada. */
+/** Linha de uma chamada já encerrada. */
 export function chamadaEncerrada(page, numero) {
     return page.locator('.call.ended', { hasText: numero })
 }
 
-/** Estado do cartão ("em chamada", "em espera"...). */
+/** Estado da linha ("em chamada", "em espera"...). */
 export function estado(cartao, texto) {
     return cartao.locator('.pill', { hasText: texto })
 }
 
-/** Botão de ação do cartão: 'Mudo', 'Espera', 'Retomar', 'DTMF', 'Transferir' ou 'Desligar'. */
+/** Botão de ação da linha: 'Mudo', 'Espera', 'Retomar', 'DTMF', 'Transferir' ou 'Desligar'. */
 export function acao(page, numero, nome) {
     return chamadaAtiva(page, numero).getByRole('button', { name: nome, exact: true })
 }

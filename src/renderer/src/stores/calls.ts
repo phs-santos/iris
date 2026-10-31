@@ -95,8 +95,8 @@ export const useCallsStore = defineStore('calls', () => {
             accountId,
             direction: call.direction,
             remote: call.remote,
-            // Sem nome vindo do PBX, vale o da agenda (RF-50).
-            remoteName: call.remoteName ?? useContactsStore().nameOf(call.remote),
+            // Sem nome vindo do PBX, vale o da agenda, só com os contatos da conta da chamada (RF-50).
+            remoteName: call.remoteName ?? useContactsStore().nameOf(call.remote, accountId),
             state,
             muted: false,
             held: false,

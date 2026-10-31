@@ -21,6 +21,11 @@ import {
     estado,
     etiquetar,
     filtrarPorEtiqueta,
+    campoNumero,
+    criarContato,
+    detalhesDaConta,
+    sugestao,
+    sugestoes,
     linhaDaConta,
     recolherDepuracao,
     seletor,
@@ -104,6 +109,34 @@ try {
     await esperarLinhaNova(page, LINHA_TRANSFERENCIA, antes, 10000)
     await chamadaAtiva(page, para1002).waitFor({ state: 'detached', timeout: 10000 })
     step('simulado: transferência cega para 1003 termina com 200 OK e libera a chamada')
+
+    // Sugestões do discador: só os contatos da conta atual; Enter liga o número do contato.
+    await detalhesDaConta(page, 'Suporte 1001').waitFor({ timeout: 10000 })
+    await criarContato(page, 'Suporte 1001', 'João Teste', '8000')
+    await escolherConta(page, 'Suporte 1001')
+    await campoNumero(page).fill('joao')
+    await sugestao(page, /João Teste/).waitFor()
+    await campoNumero(page).press('Enter')
+    await estado(chamadaAtiva(page, ura), 'em chamada').waitFor({ timeout: 5000 })
+    if ((await chamadaAtiva(page, ura).locator('.name').textContent())?.trim() !== 'João Teste')
+        throw new Error('a linha da chamada não mostra o nome do contato')
+    step('simulado: a sugestão "João Teste" liga para o 8000 do contato com Enter')
+    await desligar(ura)
+
+    await escolherConta(page, 'Vendas 1002')
+    await campoNumero(page).fill('joao')
+    await sugestao(page, /Salvar "joao" como contato/).waitFor()
+    if (
+        await sugestoes(page)
+            .getByRole('option', { name: /João Teste/ })
+            .count()
+    )
+        throw new Error('o contato de Suporte 1001 apareceu nas sugestões de Vendas 1002')
+    await campoNumero(page).press('Escape')
+    await sugestoes(page).waitFor({ state: 'hidden' })
+    await campoNumero(page).fill('')
+    step('simulado: o contato de outra conta não aparece nas sugestões')
+    await escolherConta(page, 'Suporte 1001')
 
     // ─── Asterisk (opcional) ───
     if (process.env.PBX_WS) {

@@ -22,6 +22,8 @@ export interface SipTransport {
     readonly reliable: boolean
     /** Endereço local, para o Via e o Contact. Só vale depois de `open`. */
     local: { address: string; port: number }
+    /** Endereço do PBX já resolvido, para os detalhes da conta. Só vale depois de `open`. */
+    remote?: { address: string; port: number }
     onMessage: (text: string) => void
     /** Fechou sem ninguém pedir. */
     onClose: (error?: Error) => void
@@ -49,6 +51,7 @@ class UdpTransport implements SipTransport {
     readonly kind = 'udp' as const
     readonly reliable = false
     local = { address: '0.0.0.0', port: 0 }
+    remote?: { address: string; port: number }
     onMessage: (text: string) => void = () => {}
     onClose: (error?: Error) => void = () => {}
     private socket?: UdpSocket
@@ -72,6 +75,7 @@ class UdpTransport implements SipTransport {
         })
         const { address: local, port } = socket.address()
         this.local = { address: local, port }
+        this.remote = { address, port: this.options.port }
         socket.on('message', (data) => {
             const text = data.toString('utf8')
             // CRLF soltos são keep-alive.
@@ -109,6 +113,7 @@ class UdpTransport implements SipTransport {
 class StreamTransport implements SipTransport {
     readonly reliable = true
     local = { address: '0.0.0.0', port: 0 }
+    remote?: { address: string; port: number }
     onMessage: (text: string) => void = () => {}
     onClose: (error?: Error) => void = () => {}
     private socket?: Socket
@@ -128,6 +133,7 @@ class StreamTransport implements SipTransport {
                 socket.setTimeout(0)
                 socket.off('error', failed)
                 this.local = { address: socket.localAddress ?? '0.0.0.0', port: socket.localPort ?? 0 }
+                this.remote = { address: socket.remoteAddress ?? host, port: socket.remotePort ?? port }
                 socket.on('error', (error) => this.fail(error))
                 socket.on('close', () => this.fail())
                 ok()

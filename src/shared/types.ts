@@ -183,6 +183,12 @@ export interface NativeSipHealth {
     registered: boolean
     latencyMs?: number
     error?: string
+    /** Endereço local e do PBX (IP:porta) da conexão aberta. */
+    local?: string
+    server?: string
+    /** Validade do registro em segundos e quando ele renova (milissegundos desde 1970). */
+    expiresS?: number
+    renewsAt?: number
 }
 
 /** Formato do arquivo de exportação de contas (RF-07). */

@@ -231,7 +231,7 @@ async function save(format: 'txt' | 'json'): Promise<void> {
     overflow-wrap: anywhere;
 }
 .line.warn .x {
-    color: #f3c56f;
+    color: var(--warn-text);
 }
 .line.error .x {
     color: var(--bad-text);

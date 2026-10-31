@@ -4,7 +4,7 @@ import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { abrirDepuracao, abrirSeletor, fecharSeletor, linhaDaConta, seletor } from './helpers/tela.mjs'
+import { abrirDepuracao, abrirSeletor, discar, fecharSeletor, linhaDaConta, seletor } from './helpers/tela.mjs'
 
 const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
 const shots = process.env.SHOTS_DIR
@@ -49,7 +49,7 @@ try {
         throw new Error('o avatar não diz que há 1 conta com erro além da atual')
     step('seletor explica o erro, busca, e o avatar conta as outras contas com erro')
 
-    await page.locator('.chip', { hasText: '1002' }).click()
+    await discar(page, '1002')
     await page.locator('.pill', { hasText: 'tocando' }).waitFor()
     step('1002 tocando')
     if (shots) await page.screenshot({ path: join(shots, '2-tocando.png') })
@@ -82,7 +82,7 @@ try {
 
     // Transferência assistida (RF-16): 1001 liga para 1002, que consulta a URA 8000 e transfere.
     const live = (text) => page.locator('.call:not(.ended)', { hasText: text })
-    await page.locator('.chip', { hasText: '1002' }).click()
+    await discar(page, '1002')
     await page.locator('.call:not(.ended) .pill', { hasText: 'em chamada' }).nth(1).waitFor({ timeout: 5000 })
     const received = live('←')
     await received.getByRole('button', { name: 'Transferir' }).click()

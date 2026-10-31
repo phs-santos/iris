@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { contactsToCsv, findContact, parseContactsCsv, type Contact } from '@shared/contacts'
+import { contactsToCsv, findContact, parseContactsCsv, suggestContacts, type Contact } from '@shared/contacts'
+import { useAccountsStore } from './accounts'
 
 /** Agenda de contatos (RF-50), guardada em contacts.json. */
 export const useContactsStore = defineStore('contacts', () => {
@@ -27,8 +28,18 @@ export const useContactsStore = defineStore('contacts', () => {
         await persist()
     }
 
-    /** O contato de um número, para mostrar o nome em vez do número. */
-    const nameOf = (number: string): string | undefined => findContact(contacts.value, number)?.name
+    /** Contatos de uma conta: contato de uma conta não aparece em outra. */
+    const forAccount = (accountId: string): Contact[] => contacts.value.filter((c) => c.accountId === accountId)
+
+    /** Sugestões do discador: só os contatos da conta atual. */
+    const suggest = (query: string): Contact[] => {
+        const current = useAccountsStore().current
+        return current ? suggestContacts(contacts.value, current.id, query) : []
+    }
+
+    /** O nome do contato de um número, procurado só nos contatos da conta da chamada. */
+    const nameOf = (number: string, accountId: string): string | undefined =>
+        findContact(forAccount(accountId), number)?.name
 
     /** Junta contatos de uma planilha na conta; o mesmo número não entra duas vezes. Devolve quantos entraram. */
     async function importCsv(
@@ -38,14 +49,14 @@ export const useContactsStore = defineStore('contacts', () => {
         const { contacts: found, skipped } = parseContactsCsv(text, accountId, () => crypto.randomUUID())
         let repeated = 0
         for (const contact of found) {
-            if (findContact(contacts.value, contact.number)?.number === contact.number) repeated++
+            if (findContact(forAccount(accountId), contact.number)?.number === contact.number) repeated++
             else contacts.value.push(contact)
         }
         await persist()
         return { added: found.length - repeated, skipped, repeated }
     }
 
-    const exportCsv = (): string => contactsToCsv(contacts.value)
+    const exportCsv = (accountId: string): string => contactsToCsv(forAccount(accountId))
 
-    return { contacts, load, save, remove, nameOf, importCsv, exportCsv }
+    return { contacts, load, save, remove, forAccount, suggest, nameOf, importCsv, exportCsv }
 })

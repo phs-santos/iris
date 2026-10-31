@@ -344,6 +344,9 @@ export class MockEngine implements SipEngine {
         return this.status.state === 'registered'
     }
 
+    /** Quando o registro de 600 s foi aceito: os detalhes da conta mostram a próxima renovação. */
+    private registeredAt = 0
+
     connect(): Promise<void> {
         this.setStatus({ state: 'connecting' })
         const first = this.register(600)
@@ -359,6 +362,7 @@ export class MockEngine implements SipEngine {
                 } else {
                     this.registerReply(this.register(600), '200 OK')
                     registry.add(this)
+                    this.registeredAt = Date.now()
                     this.setStatus({ state: 'registered' })
                 }
                 resolve()
@@ -466,8 +470,15 @@ export class MockEngine implements SipEngine {
             registered: this.registered,
             latencyMs: this.registered ? 20 + Math.round(Math.random() * 30) : undefined,
             error: this.registered ? undefined : 'Conta não registrada',
-            checkedAt: new Date()
+            checkedAt: new Date(),
+            // Como o SIP puro: renova aos 85% da validade, em ciclos desde o registro.
+            ...(this.registered ? { expiresS: 600, renewsAt: this.nextRenewal() } : {})
         }
+    }
+
+    private nextRenewal(): number {
+        const cycle = 510_000
+        return this.registeredAt + (Math.floor((Date.now() - this.registeredAt) / cycle) + 1) * cycle
     }
 
     async dispose(): Promise<void> {

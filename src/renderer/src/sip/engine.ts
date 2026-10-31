@@ -44,6 +44,12 @@ export interface HealthReport {
     latencyMs?: number
     error?: string
     checkedAt: Date
+    /** Endereço local e do PBX (IP:porta), quando o motor sabe (SIP puro). */
+    local?: string
+    server?: string
+    /** Validade do registro em segundos e quando ele renova (milissegundos desde 1970). */
+    expiresS?: number
+    renewsAt?: number
 }
 
 export type CallEvents = {

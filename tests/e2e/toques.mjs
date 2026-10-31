@@ -4,6 +4,7 @@ import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { abrirSeletor, esperarContasSimuladas, linhaDaConta, seletor } from './helpers/tela.mjs'
 
 const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
 const args = ['.']
@@ -16,7 +17,7 @@ const step = (msg) => console.log(`✓ ${msg}`)
 const settings = () => JSON.parse(readFileSync(join(userData, 'settings.json'), 'utf8'))
 
 try {
-    await page.locator('.dot.registered').nth(1).waitFor()
+    await esperarContasSimuladas(page)
 
     // Volume do toque: vale na hora e fica gravado.
     await page.keyboard.press('ControlOrMeta+,')
@@ -30,10 +31,10 @@ try {
     step('volume do toque gravado')
 
     // Toque por conta: a escolha vai para accounts.json; o clássico não grava campo nenhum.
-    const support = page.locator('.acc', { hasText: 'Suporte 1001' })
-    await support.locator('.row').click()
-    await support.getByRole('button', { name: 'Editar', exact: true }).click()
-    const form = page.getByRole('dialog')
+    await abrirSeletor(page)
+    await linhaDaConta(page, 'Suporte 1001').hover()
+    await seletor(page).getByRole('button', { name: 'Editar Suporte 1001' }).click()
+    const form = page.locator('form.dialog')
     await form.getByLabel('Toque das chamadas recebidas').selectOption('sino')
     await form.getByRole('button', { name: 'Ouvir' }).click()
     await form.getByRole('button', { name: 'Salvar', exact: true }).click()

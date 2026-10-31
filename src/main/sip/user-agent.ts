@@ -114,6 +114,8 @@ export class SipUserAgent {
     private keepalive?: ReturnType<typeof setInterval>
     private stopped = false
     private lastError?: string
+    /** Validade do último registro aceito e quando ele será renovado (detalhes da conta). */
+    private registration?: { expiresS: number; renewsAt: number }
 
     constructor(
         private config: UserAgentConfig,
@@ -136,6 +138,18 @@ export class SipUserAgent {
 
     get error(): string | undefined {
         return this.lastError
+    }
+
+    /** Endereços da conexão e validade do registro, para os detalhes da conta na tela. */
+    get details(): { local?: string; server?: string; expiresS?: number; renewsAt?: number } {
+        const t = this.transport
+        const at = (a?: { address: string; port: number }): string | undefined =>
+            a ? `${a.address.includes(':') ? `[${a.address}]` : a.address}:${a.port}` : undefined
+        return {
+            local: at(t?.local),
+            server: at(t?.remote),
+            ...(this.state === 'registered' ? this.registration : {})
+        }
     }
 
     private setStatus(status: UaStatus): void {
@@ -232,6 +246,7 @@ export class SipUserAgent {
                 const wait = Math.max(MIN_REFRESH_S, Math.round(granted * 0.85))
                 clearTimeout(this.refreshTimer)
                 this.refreshTimer = setTimeout(() => void this.register(), wait * 1000)
+                this.registration = { expiresS: granted, renewsAt: Date.now() + wait * 1000 }
                 this.events.log('debug', 'event', `Registro vale ${granted} s; renova em ${wait} s`)
             } else {
                 this.setStatus({ state: 'error', code: response.status, reason: response.reason })

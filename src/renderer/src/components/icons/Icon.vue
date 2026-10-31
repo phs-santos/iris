@@ -62,6 +62,18 @@ defineProps<{ name: IconName }>()
             <circle cx="12" cy="12" r="1" />
             <circle cx="19" cy="12" r="1" />
         </template>
+        <path
+            v-else-if="name === 'folder'"
+            d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+        />
+        <path
+            v-else-if="name === 'user-plus'"
+            d="M15 19a6 6 0 0 0-12 0M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM19 8v6M16 11h6"
+        />
+        <path
+            v-else-if="name === 'refresh'"
+            d="M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"
+        />
         <path v-else-if="name === 'erase'" d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1zM12 9l6 6M18 9l-6 6" />
     </svg>
 </template>
@@ -85,6 +97,9 @@ export type IconName =
     | 'book'
     | 'more'
     | 'check'
+    | 'folder'
+    | 'user-plus'
+    | 'refresh'
 
 /** Os nove pontos do teclado de DTMF. */
 const GRID = [6, 12, 18].flatMap((y) => [6, 12, 18].map((x) => [x, y]))

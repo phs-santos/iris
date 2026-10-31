@@ -264,7 +264,11 @@ export function registerNativeSipIpc(options: Options): void {
         check(isEngineId(engineId), 'id do motor SIP')
         const agent = agents.get(engineId)
         if (!agent) return { connected: false, registered: false, error: 'Conta não registrada' }
-        const health: NativeSipHealth = { connected: agent.connected, registered: agent.currentState === 'registered' }
+        const health: NativeSipHealth = {
+            connected: agent.connected,
+            registered: agent.currentState === 'registered',
+            ...agent.details
+        }
         if (!agent.connected) return { ...health, error: agent.error }
         try {
             health.latencyMs = await Promise.race([

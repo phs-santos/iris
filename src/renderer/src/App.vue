@@ -7,8 +7,8 @@ import { useCallsStore } from './stores/calls'
 import { useLogStore } from './stores/log'
 import IconRail from './components/shell/IconRail.vue'
 import AccountPicker from './components/shell/AccountPicker.vue'
-import DialerPane from './components/DialerPane.vue'
-import CallCard from './components/CallCard.vue'
+import DialPanel from './components/shell/DialPanel.vue'
+import CallsPanel from './components/shell/CallsPanel.vue'
 import LogPane from './components/LogPane.vue'
 import AccountForm from './components/AccountForm.vue'
 import HealthDialog from './components/HealthDialog.vue'
@@ -38,10 +38,11 @@ const update = ref<UpdateInfo | null>(null)
 const updatePending = computed(() => ['available', 'ready'].includes(update.value?.status.state ?? ''))
 const healthFor = ref<string | null>(null)
 const certError = ref<CertificateErrorEvent | null>(null)
-const dialer = ref<InstanceType<typeof DialerPane> | null>(null)
+const dialer = ref<InstanceType<typeof DialPanel> | null>(null)
 const rail = ref<InstanceType<typeof IconRail> | null>(null)
 const pickerOpen = ref(false)
-const contactsFor = ref<string | null>(null)
+/** Janela de contatos aberta: a conta e, vindo de "+ Salvar como contato", o número ou nome digitado. */
+const contactsFor = ref<{ accountId: string; prefill?: string } | null>(null)
 /** Painel de depuração: começa recolhido numa tira fina. */
 const debugOpen = ref(false)
 
@@ -248,42 +249,14 @@ onUnmounted(() => {
             />
 
             <section class="col dial-col" :aria-label="$t('app.discar')">
-                <DialerPane ref="dialer" />
+                <DialPanel
+                    ref="dialer"
+                    @save-contact="(id, text) => (contactsFor = { accountId: id, prefill: text })"
+                />
             </section>
 
             <section class="col calls-col" :aria-label="$t('app.chamadas')">
-                <!-- Chamada recebida em destaque, no alto, de qualquer conta (RF-10). -->
-                <div
-                    v-for="call in calls.ringingIncoming"
-                    :key="call.id"
-                    class="incoming"
-                    :style="{ '--account': accounts.byId(call.accountId)?.color }"
-                    role="region"
-                    :aria-label="$t('app.chamada_recebida_de', { p: call.remoteName || call.remote })"
-                >
-                    <span class="ring-dot" aria-hidden="true"></span>
-                    <span class="incoming-text">
-                        <b>{{ call.remoteName || call.remote }}</b>
-                        <span class="mono">{{ call.remote }} → {{ accounts.nameOf(call.accountId) }}</span>
-                    </span>
-                    <button class="btn go" @click="calls.answer(call.id)">{{ $t('app.atender') }}</button>
-                    <button class="btn stop" @click="calls.reject(call.id)">{{ $t('app.recusar') }}</button>
-                </div>
-                <header class="col-head">
-                    <h2>{{ $t('app.chamadas') }}</h2>
-                    <span class="tabular">{{
-                        calls.active.length === 1
-                            ? $t('app.ativa_1')
-                            : $t('app.ativas', { length: calls.active.length })
-                    }}</span>
-                </header>
-                <!-- Rola quando há muitos cartões, inclusive os de chamadas encerradas, que não têm botão: o teclado precisa alcançar (RNF-12). -->
-                <div class="calls" tabindex="0" role="region" :aria-label="$t('app.lista_de_chamadas')">
-                    <CallCard v-for="call in calls.calls" :key="call.id" :call="call" />
-                    <p v-if="calls.calls.length === 0" class="empty">
-                        {{ $t('app.nenhuma_chamada') }}
-                    </p>
-                </div>
+                <CallsPanel @save-contact="(id, number) => (contactsFor = { accountId: id, prefill: number })" />
             </section>
 
             <aside class="col debug-col">
@@ -325,14 +298,19 @@ onUnmounted(() => {
                     @new="fromPicker(newAccount)"
                     @edit="(a) => fromPicker(() => (editing = a))"
                     @health="(id) => fromPicker(() => (healthFor = id))"
-                    @contacts="(id) => fromPicker(() => (contactsFor = id))"
+                    @contacts="(id) => fromPicker(() => (contactsFor = { accountId: id }))"
                 />
             </template>
         </main>
 
         <AccountForm v-if="editing" :account="editing" @close="editing = null" />
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
-        <ContactsDialog v-if="contactsFor" :account-id="contactsFor" @close="contactsFor = null" />
+        <ContactsDialog
+            v-if="contactsFor"
+            :account-id="contactsFor.accountId"
+            :prefill="contactsFor.prefill"
+            @close="contactsFor = null"
+        />
         <GuideDialog v-if="showGuide" @close="showGuide = false" />
         <ToastStack />
         <SettingsDialog
@@ -408,64 +386,6 @@ onUnmounted(() => {
     font-weight: 600;
     color: var(--fg);
 }
-.calls {
-    flex: 1;
-    overflow: auto;
-    padding: 8px 10px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-.empty {
-    color: var(--muted);
-    margin: 4px 2px;
-}
-
-/* Chamada recebida */
-.incoming {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--line);
-    background: color-mix(in srgb, var(--account, var(--accent)) 14%, var(--panel));
-    box-shadow: inset 3px 0 0 var(--account, var(--accent));
-}
-@media (prefers-reduced-motion: no-preference) {
-    .incoming {
-        animation: ring-band 1.4s ease-in-out infinite;
-    }
-}
-@keyframes ring-band {
-    50% {
-        background: color-mix(in srgb, var(--account, var(--accent)) 24%, var(--panel));
-    }
-}
-.incoming-text {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    line-height: 1.3;
-}
-.incoming-text .mono {
-    font-size: 11px;
-    color: var(--muted);
-}
-.ring-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--account, var(--accent));
-    flex: none;
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--account, var(--accent)) 25%, transparent);
-}
-@media (prefers-reduced-motion: no-preference) {
-    .ring-dot {
-        animation: pulse 1.2s ease-in-out infinite;
-    }
-}
-
 /* Depuração: tira vertical recolhida, ou o painel aberto */
 .debug-col {
     border-left: 1px solid var(--line);

@@ -7,6 +7,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
     abrirDepuracao,
+    campoNumero,
+    discar,
+    escolherConta,
+    sugestoes,
     abrirSeletor,
     esperarContasSimuladas,
     fecharSeletor,
@@ -82,11 +86,35 @@ try {
     if (!(await focused(() => /^Conta atual/.test(document.activeElement?.getAttribute('aria-label') ?? ''))))
         problems.push('[seletor] ao fechar, o foco não volta ao avatar')
 
-    await page.locator('.chip', { hasText: '1002' }).click()
+    await discar(page, '1002')
     await page.locator('.pill', { hasText: 'em chamada' }).nth(1).waitFor({ timeout: 5000 })
     await page.locator('.call', { hasText: '→' }).getByRole('button', { name: 'DTMF' }).click()
     await scan('chamadas em andamento')
     await page.locator('.call', { hasText: '→' }).getByRole('button', { name: 'Desligar' }).click()
+
+    // Chamada recebida no alto da coluna: Vendas 1002 liga para Suporte 1001, que não atende sozinha.
+    await escolherConta(page, 'Vendas 1002')
+    await discar(page, '1001')
+    const tocando = page.getByRole('region', { name: /^Chamada recebida de/ })
+    await tocando.waitFor({ timeout: 5000 })
+    await scan('chamada recebida')
+    await tocando.getByRole('button', { name: 'Recusar' }).click()
+    await escolherConta(page, 'Suporte 1001')
+
+    // Sugestões do discador (RNF-12): combobox com lista, setas marcam a opção, Esc fecha.
+    await campoNumero(page).fill('70')
+    await sugestoes(page).waitFor({ timeout: 2000 })
+    if ((await campoNumero(page).getAttribute('aria-expanded')) !== 'true')
+        problems.push('[discador] o campo não diz que a lista de sugestões está aberta')
+    await campoNumero(page).press('ArrowDown')
+    if (!(await campoNumero(page).getAttribute('aria-activedescendant')))
+        problems.push('[discador] seta para baixo não marca uma sugestão')
+    await scan('sugestões do discador')
+    await campoNumero(page).press('Escape')
+    await sugestoes(page)
+        .waitFor({ state: 'hidden', timeout: 2000 })
+        .catch(() => problems.push('[discador] Esc não fecha as sugestões'))
+    await campoNumero(page).fill('')
 
     await abrirSeletor(page)
     await seletor(page).getByRole('button', { name: 'Nova conta' }).click()
@@ -236,9 +264,20 @@ try {
     await linhaDaConta(page, 'Suporte 1001').locator('.pick').focus()
     await scan('tema escuro › seletor de contas')
     await fecharSeletor(page)
-    await page.getByRole('button', { name: 'teclado' }).click()
-    await scan('tema escuro › teclado do discador')
-    await page.getByRole('button', { name: 'teclado' }).click()
+    await campoNumero(page).fill('70')
+    await sugestoes(page).waitFor({ timeout: 2000 })
+    await scan('tema escuro › discador com sugestões')
+    await campoNumero(page).press('Escape')
+    await campoNumero(page).fill('')
+    await discar(page, '1002')
+    await page.locator('.call:not(.ended) .pill', { hasText: 'em chamada' }).nth(1).waitFor({ timeout: 5000 })
+    await page.locator('.call', { hasText: '→' }).getByRole('button', { name: 'Espera' }).click()
+    await page.locator('.call .pill', { hasText: 'em espera' }).first().waitFor({ timeout: 3000 })
+    await scan('tema escuro › chamadas, uma em espera')
+    await page.locator('.call:not(.ended)', { hasText: '→' }).getByRole('button', { name: 'Desligar' }).click()
+    await page.getByText('0 ativas').waitFor({ timeout: 3000 })
+    await page.locator('.call.ended').first().waitFor({ state: 'detached', timeout: 10000 })
+    await scan('tema escuro › detalhes da conta')
     await menuDe('Suporte 1001')
     await page.getByRole('menuitem', { name: 'Contatos' }).click()
     await scan('tema escuro › contatos')
