@@ -2,7 +2,7 @@
 import { isSimulated } from '@shared/servers'
 import { digits, plain, type Contact } from '@shared/contacts'
 import { t } from '@renderer/i18n'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
 import { useContactsStore } from '@renderer/stores/contacts'
@@ -56,6 +56,15 @@ function typed(): void {
     open.value = true
     active.value = isName.value && suggestions.value.length ? 0 : -1
 }
+
+// A lista pode chegar depois do que foi digitado (contato recém-salvo, contatos ainda carregando): com nome
+// digitado e nada marcado, a primeira sugestão que aparecer já vem marcada, para o Enter ligar para ela.
+watch(
+    () => suggestions.value.length,
+    (count, before) => {
+        if (open.value && isName.value && count && !before && active.value < 0) active.value = 0
+    }
+)
 
 function onKey(event: KeyboardEvent): void {
     const total = options.value.length
