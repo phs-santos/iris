@@ -51,6 +51,21 @@ function closePicker(): void {
     void nextTick(() => rail.value?.focusAvatar())
 }
 
+/**
+ * Clicar fora do seletor fecha ele, e o clique continua valendo para o que foi clicado (Atender, Ligar...).
+ * Por isso é um ouvinte na fase de captura, sem impedir o evento, e não um fundo clicável. O avatar fica de
+ * fora: o clique dele já abre e fecha o seletor.
+ */
+function onPointerOutside(event: PointerEvent): void {
+    const target = event.target as Element | null
+    if (target?.closest('.picker, [aria-haspopup="dialog"].me')) return
+    pickerOpen.value = false
+}
+watch(pickerOpen, (open) => {
+    if (open) document.addEventListener('pointerdown', onPointerOutside, true)
+    else document.removeEventListener('pointerdown', onPointerOutside, true)
+})
+
 /** Ações do seletor que abrem uma janela: o seletor fecha antes. */
 function fromPicker(open: () => void): void {
     pickerOpen.value = false
@@ -198,6 +213,7 @@ onMounted(async () => {
 })
 onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
+    document.removeEventListener('pointerdown', onPointerOutside, true)
     offCert?.()
     offNotification?.()
     offUpdate?.()
@@ -303,7 +319,7 @@ onUnmounted(() => {
             </aside>
 
             <template v-if="pickerOpen">
-                <div class="shade" aria-hidden="true" @mousedown="closePicker"></div>
+                <div class="shade" aria-hidden="true"></div>
                 <AccountPicker
                     @close="closePicker"
                     @new="fromPicker(newAccount)"
@@ -507,10 +523,12 @@ onUnmounted(() => {
 }
 
 /* Fundo do seletor de contas: um véu leve; clicar nele fecha. */
+/* Só visual: o clique passa para o que está por baixo (ver onPointerOutside). */
 .shade {
     position: absolute;
     inset: 0;
     z-index: 20;
+    pointer-events: none;
     background: var(--shade);
 }
 @media (prefers-reduced-motion: no-preference) {

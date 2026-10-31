@@ -60,10 +60,11 @@ defineExpose({ focusAvatar: () => avatar.value?.focus() })
 
         <hr />
 
-        <a class="item on" aria-current="page" href="#" @click.prevent>
+        <!-- A única tela por enquanto: marca onde a pessoa está, sem ser um botão a mais no Tab. -->
+        <span class="item on" aria-current="page">
             <Icon name="phone" />
             <span>{{ $t('rail.telefone') }}</span>
-        </a>
+        </span>
 
         <span class="spacer"></span>
 
@@ -219,7 +220,6 @@ hr {
     background: transparent;
     color: var(--muted);
     font-size: 10.5px;
-    text-decoration: none;
     cursor: pointer;
     transition:
         background 120ms,
@@ -234,6 +234,7 @@ hr {
 }
 /* Tela aberta: fundo de seleção, cor de destaque e texto em negrito. */
 .item.on {
+    cursor: default;
     background: var(--selected);
     color: var(--accent-text);
     font-weight: 600;

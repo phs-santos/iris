@@ -55,10 +55,16 @@ try {
     await page.keyboard.press('ArrowDown')
     const row = await focused(() => document.activeElement?.closest('.row')?.querySelector('.name')?.textContent)
     if (!row) problems.push('[seletor] seta para baixo não foi para uma conta')
-    const actsVisible = await focused(
-        () => getComputedStyle(document.activeElement?.closest('.row')?.querySelector('.acts')).visibility
+    const actsWidth = await focused(
+        () => document.activeElement?.closest('.row')?.querySelector('.act:not(.why)')?.offsetWidth ?? 0
     )
-    if (actsVisible !== 'visible') problems.push('[seletor] as ações da linha não aparecem com o foco do teclado')
+    if (actsWidth === 0) problems.push('[seletor] as ações da linha não aparecem com o foco do teclado')
+    // As ações escondidas continuam no Tab: Shift+Tab a partir da linha seguinte chega na ação da anterior.
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Shift+Tab')
+    if (!(await focused(() => document.activeElement?.classList.contains('act'))))
+        problems.push('[seletor] Shift+Tab não chega nas ações da linha de cima')
+    await page.keyboard.press('ArrowUp')
     await scan('seletor de contas')
     await page.keyboard.press('Shift+F10')
     await seletor(page)

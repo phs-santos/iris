@@ -22,7 +22,9 @@ import {
     etiquetar,
     filtrarPorEtiqueta,
     linhaDaConta,
+    recolherDepuracao,
     seletor,
+    tiraDepuracao,
     tituloDiscar,
     transferirCega
 } from './helpers/tela.mjs'
@@ -74,6 +76,14 @@ try {
 
     await escolherConta(page, 'Suporte 1001')
     await tituloDiscar(page).filter({ hasText: 'Suporte 1001' }).waitFor()
+
+    // Clicar fora fecha o seletor sem engolir o clique: um clique na tira abre a depuração e fecha o seletor.
+    await abrirSeletor(page)
+    await tiraDepuracao(page).click()
+    await seletor(page).waitFor({ state: 'detached', timeout: 2000 })
+    await recolherDepuracao(page).waitFor({ timeout: 2000 })
+    await recolherDepuracao(page).click()
+    step('simulado: com o seletor aberto, um clique na tira abre a depuração e fecha o seletor')
 
     const ura = /→\s*8000/
     await ligar('8000', 5000)

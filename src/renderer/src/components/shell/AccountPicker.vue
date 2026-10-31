@@ -504,9 +504,13 @@ ul {
     margin: 0;
     padding: 0 4px;
 }
+/* Linha em flex: a conta à esquerda e as ações à direita, que só ocupam espaço quando aparecem. */
 .row {
-    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     border-radius: var(--radius);
+    transition: background 100ms;
 }
 .row + .row {
     margin-top: 1px;
@@ -515,7 +519,8 @@ ul {
     display: flex;
     align-items: center;
     gap: 9px;
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     min-height: 40px;
     padding: 5px 8px;
     border: 0;
@@ -525,8 +530,8 @@ ul {
     cursor: pointer;
     transition: background 100ms;
 }
-.row:hover .pick,
-.pick:focus-visible {
+.row:hover,
+.row:focus-within {
     background: var(--panel-2);
 }
 .pick:focus-visible {
@@ -534,7 +539,7 @@ ul {
     outline-offset: -2px;
 }
 /* Conta atual: fundo de seleção, barra à esquerda e o ✓ (cor e forma). */
-.row.current .pick {
+.row.current {
     background: var(--selected);
     box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -568,11 +573,15 @@ ul {
     gap: 4px;
     min-width: 0;
 }
+/* Sem espaço, a etiqueta encolhe antes do nome. */
 .name {
-    flex: 0 1 auto;
+    flex: 0 0 auto;
+    max-width: 100%;
 }
 .tag {
-    flex: none;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -601,35 +610,26 @@ ul {
     white-space: nowrap;
 }
 
-/* Ações da linha: por cima do lado direito, só com o mouse ou o foco do teclado na linha. */
+/* Ações da linha: aparecem com o mouse ou com o foco do teclado na linha (RNF-12). Escondidas, ficam com
+   largura zero mas continuam na ordem do Tab, para o Shift+Tab também chegar nelas. "Por quê?" fica
+   sempre à vista numa conta com erro: é o estado dela, não uma ação escondida. */
 .acts {
-    position: absolute;
-    right: 6px;
-    top: 8px;
     display: flex;
-    gap: 3px;
-    padding-left: 18px;
-    background: linear-gradient(to right, transparent, var(--panel-2) 16px);
-    visibility: hidden;
+    align-items: center;
+    padding-right: 6px;
 }
-.row.current .acts {
-    background: linear-gradient(to right, transparent, var(--selected) 16px);
-}
-.row:hover .acts,
-.row:focus-within .acts {
-    visibility: visible;
-}
-/* "Por quê?" fica sempre à vista numa conta com erro: é o estado dela, não uma ação escondida. */
-.row.failed .acts {
-    visibility: visible;
-    background: none;
-}
-.row.failed:not(:hover, :focus-within) .act:not(.why) {
-    display: none;
+.row:not(:hover, :focus-within) .act:not(.why) {
+    width: 0;
+    padding: 0;
+    margin: 0;
+    border-width: 0;
+    opacity: 0;
+    overflow: hidden;
 }
 .act {
     display: inline-flex;
     align-items: center;
+    margin-left: 3px;
     height: 24px;
     padding: 0 8px;
     border: 1px solid var(--line);
@@ -655,6 +655,7 @@ ul {
 }
 .why-box,
 .confirm {
+    flex-basis: calc(100% - 36px);
     margin: 2px 8px 6px 28px;
     padding: 7px 9px;
     border-radius: var(--radius-sm);

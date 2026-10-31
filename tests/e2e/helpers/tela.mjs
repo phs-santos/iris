@@ -115,10 +115,13 @@ export async function clicarConta(page, nome) {
     await seletor(page).waitFor({ state: 'detached' })
 }
 
+/** Tira fina da depuração recolhida, e o botão que recolhe o painel aberto. */
+export const tiraDepuracao = (page) => page.getByRole('button', { name: /^Abrir a depuração/ })
+export const recolherDepuracao = (page) => page.getByRole('button', { name: 'Recolher a depuração' })
+
 /** Abre o painel de depuração (SIP · Fluxo · Log), que começa recolhido. */
 export async function abrirDepuracao(page) {
-    const tira = page.getByRole('button', { name: /^Abrir a depuração/ })
-    if (await tira.isVisible()) await tira.click()
+    if (await tiraDepuracao(page).isVisible()) await tiraDepuracao(page).click()
 }
 
 /** Digita o número e liga. */
