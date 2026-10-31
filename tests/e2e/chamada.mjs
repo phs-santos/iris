@@ -97,6 +97,13 @@ try {
     await enviarDtmf(page, ura, '123')
     await esperarLinhaNova(page, linhaDtmf(3), antes, 5000)
     step('simulado: o log mostra o DTMF')
+    // Com a chamada escolhida, o teclado do discador só manda o tom: o campo do número não muda.
+    antes = await contarLinhas(page, linhaDtmf(5))
+    await page.getByRole('group', { name: 'Teclado' }).getByRole('button', { name: '5', exact: true }).click()
+    await esperarLinhaNova(page, linhaDtmf(5), antes, 5000)
+    if ((await campoNumero(page).inputValue()) !== '8000')
+        throw new Error('o teclado escreveu no campo durante a chamada')
+    step('simulado: em chamada, o teclado do discador manda DTMF sem escrever no campo')
     await esperaERetomada(ura)
     step('simulado: "em espera" aparece e some')
     await desligar(ura)

@@ -133,7 +133,16 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
         <div class="line">
             <div class="who">
                 <div class="title">
-                    <b class="name">{{ call.remoteName || call.remote }}</b>
+                    <!-- Escolher a chamada pelo teclado também: o teclado do discador manda DTMF para a escolhida. -->
+                    <button
+                        type="button"
+                        class="name"
+                        :aria-pressed="calls.selectedId === call.id"
+                        :title="$t('callRow.escolher')"
+                        @click.stop="calls.selectedId = call.id"
+                    >
+                        {{ call.remoteName || call.remote }}
+                    </button>
                     <span class="pill" :class="stateInfo.cls">{{ stateInfo.text }}</span>
                     <span v-if="call.recording" class="rec" :title="call.recording">
                         <i aria-hidden="true"></i>{{ $t('callRow.gravando') }}
@@ -214,7 +223,6 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                         class="btn small"
                         :class="{ on: panel === 'transfer' }"
                         :aria-expanded="panel === 'transfer'"
-                        aria-haspopup="true"
                         :disabled="Boolean(consulting) || Boolean(consultOf)"
                         @click="toggle('transfer')"
                     >
@@ -372,6 +380,14 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
     min-width: 0;
 }
 .name {
+    min-width: 0;
+    padding: 0 2px;
+    margin-left: -2px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    cursor: pointer;
+    text-align: left;
     font-size: 13.5px;
     font-weight: 600;
     overflow: hidden;

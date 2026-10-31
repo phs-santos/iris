@@ -112,7 +112,7 @@ let plusTyped = false
 
 function keyDown(key: string): void {
     plusTyped = false
-    if (key !== '0') return
+    if (key !== '0' || dtmfTarget.value) return
     plusTimer = setTimeout(() => {
         destination.value += '+'
         plusTyped = true
@@ -122,12 +122,12 @@ function keyDown(key: string): void {
 
 function keyUp(key: string): void {
     clearTimeout(plusTimer)
-    // O clique que vem depois de segurar o 0 já escreveu o "+".
-    if (!plusTyped) {
+    // Com uma chamada escolhida em andamento, o teclado só manda o DTMF para ela (RF-13); o campo fica para a
+    // próxima chamada. O clique que vem depois de segurar o 0 já escreveu o "+".
+    if (dtmfTarget.value) void calls.sendDtmf(dtmfTarget.value.id, key).catch(() => undefined)
+    else if (!plusTyped) {
         destination.value += key
         typed()
-        // Com uma chamada escolhida em andamento, o dígito vai também como DTMF (RF-13).
-        if (dtmfTarget.value) void calls.sendDtmf(dtmfTarget.value.id, key).catch(() => undefined)
     }
     plusTyped = false
 }

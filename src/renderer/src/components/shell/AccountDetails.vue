@@ -8,6 +8,7 @@ import { isNativeAccount } from '@renderer/sip'
 import { isSimulated } from '@shared/servers'
 import { offerOrder, type AudioCodecName, type CodecPrefs } from '@shared/codecs'
 import { parseSipServer, type SipTransportKind } from '@shared/sip-target'
+import { isFresh, renewalState } from '@shared/registration'
 import Icon from '../icons/Icon.vue'
 
 /** Sem chamadas, a coluna mostra o que se sabe da conta atual: registro, endereços, codecs e o OPTIONS. */
@@ -17,7 +18,9 @@ const status = computed(() => (account.value ? accounts.statusOf(account.value.i
 const health = computed(() => (account.value ? accounts.runtime[account.value.id]?.health : undefined))
 const retry = computed(() => (account.value ? accounts.retryOf(account.value.id) : undefined))
 const codecPrefs = ref<CodecPrefs | undefined>()
-const measuring = ref(false)
+/** Conta que está sendo medida: a resposta atrasada de outra conta não mexe no botão desta. */
+const measuringId = ref<string | null>(null)
+const measuring = computed(() => Boolean(account.value) && measuringId.value === account.value?.id)
 
 // Nomes técnicos dos codecs, iguais em qualquer idioma.
 const CODEC_NAMES: Record<AudioCodecName, string> = {
@@ -27,26 +30,47 @@ const CODEC_NAMES: Record<AudioCodecName, string> = {
     opus: 'Opus' // i18n-ok
 }
 
-/** Mede de novo (OPTIONS) e relê a ordem dos codecs, que muda em Ajustes → Áudio. */
-async function measure(): Promise<void> {
+/**
+ * Mede de novo (OPTIONS) e relê a ordem dos codecs, que muda em Ajustes → Áudio. Sem `force`, uma medida
+ * da conta feita há menos de 10 s é reaproveitada: trocar de conta não manda outro OPTIONS.
+ */
+async function measure(force = false): Promise<void> {
     const a = account.value
     if (!a) return
-    measuring.value = true
+    measuringId.value = a.id
     try {
         codecPrefs.value = (await window.iris.settings.load()).codecs
-        if (accounts.statusOf(a.id).state === 'registered') await accounts.checkHealth(a.id)
+        const last = accounts.runtime[a.id]?.health?.checkedAt
+        if (accounts.statusOf(a.id).state === 'registered' && (force || !isFresh(last, Date.now())))
+            await accounts.checkHealth(a.id)
     } catch {
         // sem resposta: a linha do OPTIONS mostra o que havia
     } finally {
-        measuring.value = false
+        if (measuringId.value === a.id) measuringId.value = null
     }
 }
 
-// Mede ao mostrar, ao trocar de conta e quando a conta acaba de registrar.
+// Mede ao mostrar e ao trocar de conta; quando a mesma conta acaba de registrar, mede mesmo com medida recente.
 watch(
-    () => [account.value?.id, status.value?.state === 'registered'],
-    () => void measure(),
+    () => [account.value?.id, status.value?.state === 'registered'] as const,
+    (next, before) => void measure(Boolean(before && before[0] === next[0] && next[1])),
     { immediate: true }
+)
+
+/** Hora de renovação já usada para medir de novo: uma vez por ciclo. */
+let remeasuredFor: number | undefined
+const renewing = computed(() =>
+    status.value?.state === 'registered' ? renewalState(health.value?.renewsAt, now.value) : null
+)
+// Passada a renovação, a hora guardada vence: mede de novo para saber a próxima (o motor já renovou).
+watch(
+    () => renewing.value?.due,
+    (due) => {
+        const at = health.value?.renewsAt
+        if (!due || at === undefined || remeasuredFor === at) return
+        remeasuredFor = at
+        void measure(true)
+    }
 )
 
 const kind = computed(() => {
@@ -58,10 +82,12 @@ const kind = computed(() => {
 const stateCls = computed(() => status.value?.state ?? 'disconnected')
 
 const renewal = computed(() => {
-    const h = health.value
-    if (status.value?.state !== 'registered' || !h?.renewsAt) return ''
-    const parts = [t('accountDetails.renova_em', { t: duration(now.value, Math.max(now.value, h.renewsAt)) })]
-    if (h.expiresS) parts.push(t('accountDetails.vale_s', { s: h.expiresS }))
+    const r = renewing.value
+    if (!r) return ''
+    const parts = [
+        r.leftMs > 0 ? t('accountDetails.renova_em', { t: duration(0, r.leftMs) }) : t('accountDetails.renovando')
+    ]
+    if (health.value?.expiresS) parts.push(t('accountDetails.vale_s', { s: health.value.expiresS }))
     return parts.join(' · ')
 })
 
@@ -163,7 +189,7 @@ const rows = computed(() => {
             >
                 {{ $t('accountDetails.registrar') }}
             </button>
-            <button v-else class="btn small" :disabled="measuring" @click="measure">
+            <button v-else class="btn small" :disabled="measuring" @click="measure(true)">
                 <Icon name="refresh" class="ico" />{{
                     measuring ? $t('accountDetails.medindo') : $t('accountDetails.medir')
                 }}

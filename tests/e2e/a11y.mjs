@@ -90,6 +90,12 @@ try {
     await page.locator('.pill', { hasText: 'em chamada' }).nth(1).waitFor({ timeout: 5000 })
     await page.locator('.call', { hasText: '→' }).getByRole('button', { name: 'DTMF' }).click()
     await scan('chamadas em andamento')
+    // A chamada se escolhe pelo teclado: o nome é um botão com aria-pressed.
+    const nomeDaChamada = page.locator('.call', { hasText: '←' }).locator('button.name')
+    await nomeDaChamada.focus()
+    await page.keyboard.press('Enter')
+    if ((await nomeDaChamada.getAttribute('aria-pressed')) !== 'true')
+        problems.push('[chamadas] Enter no nome não escolhe a chamada')
     await page.locator('.call', { hasText: '→' }).getByRole('button', { name: 'Desligar' }).click()
 
     // Chamada recebida no alto da coluna: Vendas 1002 liga para Suporte 1001, que não atende sozinha.
