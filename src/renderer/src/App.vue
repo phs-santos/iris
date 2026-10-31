@@ -5,7 +5,8 @@ import type { Account, CertificateErrorEvent, UpdateChannel, UpdateInfo } from '
 import { useAccountsStore } from './stores/accounts'
 import { useCallsStore } from './stores/calls'
 import { useLogStore } from './stores/log'
-import AccountsPane from './components/AccountsPane.vue'
+import IconRail from './components/shell/IconRail.vue'
+import AccountPicker from './components/shell/AccountPicker.vue'
 import DialerPane from './components/DialerPane.vue'
 import CallCard from './components/CallCard.vue'
 import LogPane from './components/LogPane.vue'
@@ -13,15 +14,14 @@ import AccountForm from './components/AccountForm.vue'
 import HealthDialog from './components/HealthDialog.vue'
 import SettingsDialog from './components/settings/SettingsDialog.vue'
 import GuideDialog from './components/GuideDialog.vue'
-import PhoneIcon from './components/PhoneIcon.vue'
 import ToastStack from './components/ToastStack.vue'
-import ContactsPane from './components/ContactsPane.vue'
+import ContactsDialog from './components/ContactsDialog.vue'
+import Icon from './components/icons/Icon.vue'
 import { useContactsStore } from './stores/contacts'
 import { useServersStore } from './stores/servers'
+import { useTagsStore } from './stores/tags'
 import { useDevicesStore } from './stores/devices'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
-import logoMarkDark from './assets/logo-mark.svg'
-import logoMarkLight from './assets/logo-mark-light.svg'
 import { accountHost } from './lib/accounts'
 
 const accounts = useAccountsStore()
@@ -29,7 +29,6 @@ const calls = useCallsStore()
 const log = useLogStore()
 const devices = useDevicesStore()
 const prefs = usePreferencesStore()
-const centerTab = ref<'phone' | 'contacts'>('phone')
 const editing = ref<Account | null>(null)
 /** Seção aberta da tela de Configurações; null com a tela fechada. */
 const settingsAt = ref<SettingsSection | null>(null)
@@ -40,8 +39,23 @@ const updatePending = computed(() => ['available', 'ready'].includes(update.valu
 const healthFor = ref<string | null>(null)
 const certError = ref<CertificateErrorEvent | null>(null)
 const dialer = ref<InstanceType<typeof DialerPane> | null>(null)
+const rail = ref<InstanceType<typeof IconRail> | null>(null)
+const pickerOpen = ref(false)
+const contactsFor = ref<string | null>(null)
+/** Painel de depuração: começa recolhido numa tira fina. */
+const debugOpen = ref(false)
 
-const pbxCount = computed(() => accounts.groups.length)
+/** Fecha o seletor e devolve o foco ao avatar, de onde ele foi aberto (RNF-12). */
+function closePicker(): void {
+    pickerOpen.value = false
+    void nextTick(() => rail.value?.focusAvatar())
+}
+
+/** Ações do seletor que abrem uma janela: o seletor fecha antes. */
+function fromPicker(open: () => void): void {
+    pickerOpen.value = false
+    open()
+}
 
 const registeredCount = computed(
     () => accounts.accounts.filter((a) => accounts.statusOf(a.id).state === 'registered').length
@@ -103,16 +117,14 @@ function onKey(event: KeyboardEvent): void {
     }
     const selectedCall = calls.calls.find((c) => c.id === calls.selectedId && c.state !== 'ended')
     const key = event.key.toLowerCase()
-    if (key === 'l') {
-        centerTab.value = 'phone'
-        void nextTick(() => dialer.value?.focus())
-    } else if (key === 'enter' && calls.ringingIncoming[0]) void calls.answer(calls.ringingIncoming[0].id)
+    if (key === 'l') dialer.value?.focus()
+    else if (key === 'enter' && calls.ringingIncoming[0]) void calls.answer(calls.ringingIncoming[0].id)
     else if (key === 'e' && selectedCall) void calls.hangup(selectedCall.id)
     else if (key === 'm' && selectedCall) calls.toggleMute(selectedCall.id)
     else if (key === 'h' && selectedCall) void calls.toggleHold(selectedCall.id)
     else if (/^[1-9]$/.test(key)) {
         const target = accounts.accounts[Number(key) - 1]
-        if (target) accounts.selectedId = target.id
+        if (target) accounts.setCurrent(target.id)
     } else return
     event.preventDefault()
 }
@@ -180,6 +192,8 @@ onMounted(async () => {
     await accounts.load()
     await useContactsStore().load()
     await useServersStore().load()
+    // O seletor de contas filtra por etiqueta.
+    await useTagsStore().load()
     await accounts.refreshProblems()
 })
 onUnmounted(() => {
@@ -192,34 +206,6 @@ onUnmounted(() => {
 
 <template>
     <div class="shell">
-        <header class="topbar">
-            <span class="brand"
-                ><img class="brand-mark" :src="prefs.theme === 'light' ? logoMarkLight : logoMarkDark" alt="" />{{
-                    $t('app.iris')
-                }}</span
-            >
-            <span class="summary mono tabular">
-                {{
-                    $t('app.contas_pbx_registradas_chamadas', {
-                        length: accounts.accounts.length,
-                        pbxCount,
-                        registeredCount,
-                        length2: calls.active.length
-                    })
-                }}
-            </span>
-            <span class="spacer"></span>
-            <button v-if="updatePending" class="btn small primary" @click="openUpdate">
-                {{ $t('app.atualizacao_disponivel') }}
-            </button>
-            <button class="btn small" @click="showGuide = true">
-                <PhoneIcon name="book" class="top-icon" />{{ $t('app.guia') }}
-            </button>
-            <button class="btn small" :title="$t('app.configuracoes_ctrl_cmd')" @click="settingsAt = 'appearance'">
-                <PhoneIcon name="gear" class="top-icon" />{{ $t('app.configuracoes') }}
-            </button>
-        </header>
-
         <div v-if="certError" class="banner" role="alert">
             <span>
                 {{ $t('app.o_certificado_tls_de') }} <b class="mono">{{ certError.host }}</b>
@@ -234,32 +220,23 @@ onUnmounted(() => {
             <button class="btn small" @click="accounts.secretsProblem = null">{{ $t('app.entendi') }}</button>
         </div>
 
-        <main class="columns">
-            <AccountsPane @new="newAccount" @edit="(a) => (editing = a)" @health="(id) => (healthFor = id)" />
+        <!-- Barra de ícones | discar | chamadas | depuração (recolhida numa tira ou aberta). -->
+        <main class="workspace" :class="{ 'debug-open': debugOpen }">
+            <IconRail
+                ref="rail"
+                :picker-open="pickerOpen"
+                :update-pending="updatePending"
+                @picker="pickerOpen = !pickerOpen"
+                @settings="updatePending ? openUpdate() : (settingsAt = 'appearance')"
+                @guide="showGuide = true"
+            />
 
-            <section class="center">
-                <div class="center-tabs" role="tablist" :aria-label="$t('app.area_central')">
-                    <button
-                        role="tab"
-                        class="ctab"
-                        :class="{ on: centerTab === 'phone' }"
-                        :aria-selected="centerTab === 'phone'"
-                        @click="centerTab = 'phone'"
-                    >
-                        {{ $t('app.telefone') }}
-                        <span v-if="calls.active.length" class="count tabular">{{ calls.active.length }}</span>
-                    </button>
-                    <button
-                        role="tab"
-                        class="ctab"
-                        :class="{ on: centerTab === 'contacts' }"
-                        :aria-selected="centerTab === 'contacts'"
-                        @click="centerTab = 'contacts'"
-                    >
-                        {{ $t('app.contatos') }}
-                    </button>
-                </div>
-                <!-- Chamada recebida em destaque, acima de tudo, em qualquer aba (RF-10). -->
+            <section class="col dial-col" :aria-label="$t('app.discar')">
+                <DialerPane ref="dialer" />
+            </section>
+
+            <section class="col calls-col" :aria-label="$t('app.chamadas')">
+                <!-- Chamada recebida em destaque, no alto, de qualquer conta (RF-10). -->
                 <div
                     v-for="call in calls.ringingIncoming"
                     :key="call.id"
@@ -276,28 +253,70 @@ onUnmounted(() => {
                     <button class="btn go" @click="calls.answer(call.id)">{{ $t('app.atender') }}</button>
                     <button class="btn stop" @click="calls.reject(call.id)">{{ $t('app.recusar') }}</button>
                 </div>
-                <template v-if="centerTab === 'phone'">
-                    <DialerPane ref="dialer" />
-                    <div class="calls-head">
-                        <span class="label">{{ $t('app.chamadas') }}</span>
-                        <span class="label tabular">{{ $t('app.ativas', { length: calls.active.length }) }}</span>
-                    </div>
-                    <!-- Rola quando há muitos cartões, inclusive os de chamadas encerradas, que não têm botão: o teclado precisa alcançar (RNF-12). -->
-                    <div class="calls" tabindex="0" role="region" :aria-label="$t('app.chamadas')">
-                        <CallCard v-for="call in calls.calls" :key="call.id" :call="call" />
-                        <p v-if="calls.calls.length === 0" class="empty">
-                            {{ $t('app.nenhuma_chamada_escolha_uma_conta') }}
-                        </p>
-                    </div>
-                </template>
-                <ContactsPane v-else-if="centerTab === 'contacts'" @dialed="centerTab = 'phone'" />
+                <header class="col-head">
+                    <h2>{{ $t('app.chamadas') }}</h2>
+                    <span class="tabular">{{
+                        calls.active.length === 1
+                            ? $t('app.ativa_1')
+                            : $t('app.ativas', { length: calls.active.length })
+                    }}</span>
+                </header>
+                <!-- Rola quando há muitos cartões, inclusive os de chamadas encerradas, que não têm botão: o teclado precisa alcançar (RNF-12). -->
+                <div class="calls" tabindex="0" role="region" :aria-label="$t('app.lista_de_chamadas')">
+                    <CallCard v-for="call in calls.calls" :key="call.id" :call="call" />
+                    <p v-if="calls.calls.length === 0" class="empty">
+                        {{ $t('app.nenhuma_chamada') }}
+                    </p>
+                </div>
             </section>
 
-            <LogPane />
+            <aside class="col debug-col">
+                <button
+                    v-if="!debugOpen"
+                    type="button"
+                    class="strip"
+                    aria-controls="debug-panel"
+                    :aria-expanded="false"
+                    :aria-label="$t('app.abrir_depuracao')"
+                    @click="debugOpen = true"
+                >
+                    <Icon name="chevron" class="strip-chevron" />
+                    <span class="strip-text">{{ $t('app.depuracao') }}</span>
+                </button>
+                <div v-show="debugOpen" id="debug-panel" class="debug">
+                    <header class="col-head">
+                        <h2>{{ $t('app.depuracao_titulo') }}</h2>
+                        <button
+                            type="button"
+                            class="debug-close"
+                            :aria-expanded="true"
+                            aria-controls="debug-panel"
+                            :aria-label="$t('app.recolher_depuracao')"
+                            :title="$t('app.recolher_depuracao')"
+                            @click="debugOpen = false"
+                        >
+                            <Icon name="chevron" />
+                        </button>
+                    </header>
+                    <LogPane />
+                </div>
+            </aside>
+
+            <template v-if="pickerOpen">
+                <div class="shade" aria-hidden="true" @mousedown="closePicker"></div>
+                <AccountPicker
+                    @close="closePicker"
+                    @new="fromPicker(newAccount)"
+                    @edit="(a) => fromPicker(() => (editing = a))"
+                    @health="(id) => fromPicker(() => (healthFor = id))"
+                    @contacts="(id) => fromPicker(() => (contactsFor = id))"
+                />
+            </template>
         </main>
 
         <AccountForm v-if="editing" :account="editing" @close="editing = null" />
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
+        <ContactsDialog v-if="contactsFor" :account-id="contactsFor" @close="contactsFor = null" />
         <GuideDialog v-if="showGuide" @close="showGuide = false" />
         <ToastStack />
         <SettingsDialog
@@ -316,67 +335,85 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
 }
-.topbar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel);
-}
-.brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-}
-.brand-mark {
-    height: 14px;
-}
-.summary {
-    color: var(--muted);
-    font-size: 12px;
-}
-.spacer {
-    flex: 1;
-}
 .banner {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 14px;
-    background: rgba(240, 103, 94, 0.12);
-    border-bottom: 1px solid rgba(240, 103, 94, 0.4);
+    padding: 7px 14px;
+    background: var(--bad-soft);
+    border-bottom: 1px solid color-mix(in srgb, var(--bad) 35%, transparent);
 }
 .banner span {
     flex: 1;
 }
 .banner.warn {
-    background: rgba(240, 177, 62, 0.1);
-    border-bottom-color: rgba(240, 177, 62, 0.4);
+    background: var(--warn-soft);
+    border-bottom-color: color-mix(in srgb, var(--warn) 35%, transparent);
 }
-.columns {
+
+/* Quatro áreas fixas; só a de chamadas cresce. */
+.workspace {
+    position: relative;
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 260px minmax(380px, 1fr) minmax(340px, 0.9fr);
+    grid-template-columns: 60px 260px minmax(0, 1fr) 30px;
 }
-.center {
+.workspace.debug-open {
+    grid-template-columns: 60px 260px minmax(0, 1fr) 290px;
+}
+.col {
     display: flex;
     flex-direction: column;
     min-width: 0;
     min-height: 0;
-    border-right: 1px solid var(--line);
+    background: var(--panel);
 }
+.dial-col {
+    border-right: 1px solid var(--line);
+    overflow: auto;
+}
+.col-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--muted);
+    font-size: 12px;
+    flex: none;
+}
+.col-head h2 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fg);
+}
+.calls {
+    flex: 1;
+    overflow: auto;
+    padding: 8px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.empty {
+    color: var(--muted);
+    margin: 4px 2px;
+}
+
+/* Chamada recebida */
 .incoming {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--line);
-    background: color-mix(in srgb, var(--account, var(--accent)) 16%, var(--panel));
-    border-left: 4px solid var(--account, var(--accent));
+    background: color-mix(in srgb, var(--account, var(--accent)) 14%, var(--panel));
+    box-shadow: inset 3px 0 0 var(--account, var(--accent));
 }
 @media (prefers-reduced-motion: no-preference) {
     .incoming {
@@ -385,7 +422,7 @@ onUnmounted(() => {
 }
 @keyframes ring-band {
     50% {
-        background: color-mix(in srgb, var(--account, var(--accent)) 28%, var(--panel));
+        background: color-mix(in srgb, var(--account, var(--accent)) 24%, var(--panel));
     }
 }
 .incoming-text {
@@ -412,57 +449,78 @@ onUnmounted(() => {
         animation: pulse 1.2s ease-in-out infinite;
     }
 }
-.center-tabs {
+
+/* Depuração: tira vertical recolhida, ou o painel aberto */
+.debug-col {
+    border-left: 1px solid var(--line);
+}
+.strip {
+    flex: 1;
     display: flex;
-    gap: 2px;
-    padding: 8px 14px 0;
-    border-bottom: 1px solid var(--line);
-}
-.ctab {
-    border: 0;
-    border-bottom: 2px solid transparent;
-    background: transparent;
-    color: var(--muted);
-    padding: 6px 12px 8px;
-    cursor: pointer;
-    font: inherit;
-    font-weight: 600;
-    display: inline-flex;
-    gap: 6px;
+    flex-direction: column;
     align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border: 0;
+    background: var(--bg);
+    color: var(--muted);
+    cursor: pointer;
+    transition:
+        background 120ms,
+        color 120ms;
 }
-.ctab.on {
-    color: var(--fg);
-    border-bottom-color: var(--accent);
-}
-.count {
-    font-size: 11px;
-    padding: 0 6px;
-    border-radius: 8px;
+.strip:hover {
     background: var(--raise);
     color: var(--fg);
 }
-.calls-head {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 14px 6px;
+.strip-chevron {
+    transform: rotate(180deg);
+    font-size: 14px;
 }
-.calls {
+.strip-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+}
+.debug {
     flex: 1;
-    overflow: auto;
-    padding: 0 14px 14px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
 }
-.empty {
+.debug-close {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
     color: var(--muted);
-    margin: 8px 0;
+    cursor: pointer;
 }
-.top-icon {
-    width: 14px;
-    height: 14px;
-    margin-right: 5px;
-    vertical-align: -2px;
+.debug-close:hover {
+    color: var(--fg);
+    background: var(--panel-2);
+}
+
+/* Fundo do seletor de contas: um véu leve; clicar nele fecha. */
+.shade {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: var(--shade);
+}
+@media (prefers-reduced-motion: no-preference) {
+    .shade {
+        animation: fade-in 140ms ease-out;
+    }
+}
+@keyframes fade-in {
+    from {
+        opacity: 0;
+    }
 }
 </style>

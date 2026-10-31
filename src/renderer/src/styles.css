@@ -1,21 +1,32 @@
-/* Bancada escura: painéis lado a lado, estado sempre em cor + forma. */
+/* Tokens da tela: o escuro é a base e o claro (o padrão) troca as mesmas variáveis quando não é o escuro.
+   Estado sempre em cor e forma (RNF-12); textos com contraste AA nos dois temas. */
 :root {
     --bg: #0b1117;
     --panel: #111a23;
-    --panel-2: #17222d;
+    --panel-2: #16212b;
     --raise: #1d2a37;
-    --line: #263442;
+    --line: #243240;
+    --line-strong: #34465a;
     --fg: #dbe4ee;
-    --muted: #8597a9;
+    --muted: #8a9cae;
     /* Cinza mais claro com contraste AA (4,5:1) sobre o fundo e os painéis. */
     --faint: #7f8f9f;
     /* Cor de destaque: a pessoa escolhe em Configurações › Aparência; a tela troca as duas. */
     --accent: #4f8ff7;
     /* Mais escura que --accent, para o texto branco dos botões principais ter contraste AA. */
     --accent-strong: #2f6fd6;
+    /* Texto na cor de destaque sobre o painel: clareada no escuro, para o contraste AA. */
+    --accent-text: color-mix(in srgb, var(--accent) 55%, #fff);
+    /* Fundo de linha escolhida e anel de foco, tirados da cor de destaque. */
+    --selected: color-mix(in srgb, var(--accent) 16%, var(--panel));
+    --focus-ring: color-mix(in srgb, var(--accent) 35%, transparent);
     --ok: #3fcf86;
     --warn: #f0b13e;
     --bad: #f0675e;
+    /* Fundo de botão e selo vermelhos, com texto branco em AA. */
+    --bad-strong: #c9433a;
+    --bad-soft: rgb(240 103 94 / 0.12);
+    --warn-soft: rgb(240 177 62 / 0.1);
     /* Vermelho para texto de erro sobre o fundo avermelhado dos avisos. */
     --bad-text: #ff8f86;
     /* Texto de estado sobre fundo tingido: claro no tema escuro, escuro no claro (contraste AA). */
@@ -23,29 +34,43 @@
     --warn-text: #f3c56f;
     --info-text: #9fb6ff;
     --hold: #a9bcff;
+    --shade: rgb(3 7 11 / 0.35);
+    --shadow-pop: 0 14px 36px -10px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.3);
+    --radius-sm: 6px;
+    --radius: 8px;
+    --radius-lg: 12px;
     --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     --mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, Consolas, monospace;
     color-scheme: dark;
 }
 
-/* Tema claro: as mesmas variáveis, com estado em tons mais escuros para o contraste AA sobre o branco. */
-:root[data-theme='light'] {
-    --bg: #eef2f6;
+/* Tema claro (padrão): branco nos painéis, cinza-azulado frio no fundo e na barra, linhas finas.
+   Vale também antes de as preferências carregarem, quando ainda não há data-theme. */
+:root:not([data-theme='dark']) {
+    --bg: #f2f4f7;
     --panel: #ffffff;
-    --panel-2: #f4f6f9;
-    --raise: #e3e9ef;
-    --line: #d2dae3;
-    --fg: #16202a;
-    --muted: #4f5f70;
+    --panel-2: #f6f7f9;
+    --raise: #e9edf2;
+    --line: #e1e5eb;
+    --line-strong: #c9d0d9;
+    --fg: #151d27;
+    --muted: #536173;
     --faint: #56677a;
+    --accent-text: var(--accent-strong);
+    --selected: color-mix(in srgb, var(--accent) 9%, #fff);
+    --focus-ring: color-mix(in srgb, var(--accent) 22%, transparent);
     --ok: #157a47;
     --warn: #8a5700;
     --bad: #c0352c;
+    --bad-soft: #fdf0ef;
+    --warn-soft: #fdf6e9;
     --bad-text: #a3241c;
     --ok-text: #0f6b3c;
     --warn-text: #8a5700;
     --info-text: #3b4fc4;
     --hold: #4153b8;
+    --shade: rgb(15 23 42 / 0.06);
+    --shadow-pop: 0 16px 40px -12px rgb(15 23 42 / 0.28), 0 2px 6px rgb(15 23 42 / 0.06);
     color-scheme: light;
 }
 
@@ -65,7 +90,7 @@ body {
     color: var(--fg);
     font-family: var(--sans);
     font-size: 13px;
-    line-height: 1.45;
+    line-height: 1.4;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -107,13 +132,27 @@ textarea {
     min-height: 28px;
     padding: 4px 10px;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     background: var(--panel-2);
     cursor: pointer;
     white-space: nowrap;
+    transition:
+        background 120ms,
+        border-color 120ms,
+        filter 120ms;
 }
 .btn:hover:not(:disabled) {
     background: var(--raise);
+    border-color: var(--line-strong);
+}
+:root:not([data-theme='dark']) .btn:not(.ghost) {
+    box-shadow: 0 1px 1px rgb(15 23 42 / 0.04);
+}
+:root:not([data-theme='dark']) .btn:not(.primary, .go, .stop, .on, .ghost) {
+    background: var(--panel);
+}
+:root:not([data-theme='dark']) .btn:not(.primary, .go, .stop, .on, .ghost):hover:not(:disabled) {
+    background: var(--panel-2);
 }
 .btn:disabled {
     opacity: 0.45;
@@ -177,8 +216,16 @@ textarea.input {
     min-width: 0;
     padding: 6px 9px;
     border: 1px solid var(--line);
-    border-radius: 6px;
-    background: var(--bg);
+    border-radius: var(--radius-sm);
+    background: var(--panel-2);
+    transition:
+        border-color 120ms,
+        box-shadow 120ms;
+}
+.input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--focus-ring);
 }
 .input.mono {
     font-family: var(--mono);
@@ -368,6 +415,6 @@ textarea.input {
 }
 
 /* A cor de cada conta é viva, pensada para o fundo escuro; no claro, o texto dela escurece. */
-:root[data-theme='light'] .account-text {
+:root:not([data-theme='dark']) .account-text {
     color: color-mix(in srgb, var(--account) 45%, #000) !important;
 }

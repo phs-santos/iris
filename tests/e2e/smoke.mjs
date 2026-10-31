@@ -4,6 +4,7 @@ import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { abrirDepuracao, abrirSeletor, fecharSeletor, linhaDaConta, seletor } from './helpers/tela.mjs'
 
 const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
 const shots = process.env.SHOTS_DIR
@@ -29,21 +30,24 @@ await page.setViewportSize?.({ width: 1360, height: 820 }).catch(() => {})
 const step = (msg) => console.log(`✓ ${msg}`)
 
 try {
-    await page.getByText('3 contas · 2 PBX').waitFor()
+    await abrirSeletor(page)
+    await seletor(page).getByText('3 contas').waitFor()
     step('contas de exemplo carregadas')
-    await page.locator('.status', { hasText: '403 Forbidden' }).waitFor()
-    await page.locator('.dot.registered').nth(1).waitFor()
+    await linhaDaConta(page, 'Lab 2001').locator('.meta', { hasText: '403 Forbidden' }).waitFor()
+    await seletor(page).locator('.dot.registered').nth(1).waitFor()
     step('1001 e 1002 registradas, Lab 2001 com 403')
     if (shots) await page.screenshot({ path: join(shots, '1-inicio.png') })
 
-    // Grupos de PBX recolhem e mostram o resumo.
-    await page.getByRole('button', { name: /lab\.local/ }).click()
-    await page.getByRole('button', { name: /lab\.local.*0\/1 no ar/ }).waitFor()
-    if (await page.locator('.acc', { hasText: 'Lab 2001' }).count())
-        throw new Error('o grupo recolhido ainda mostra a conta')
-    await page.getByRole('button', { name: /lab\.local/ }).click()
-    await page.locator('.acc', { hasText: 'Lab 2001' }).waitFor()
-    step('grupo de PBX recolhe com o resumo e volta')
+    // "Por quê?" explica o erro em português; a busca filtra por nome ou ramal.
+    await seletor(page).getByRole('button', { name: 'Por que Lab 2001 não registrou?' }).click()
+    await linhaDaConta(page, 'Lab 2001').getByText('O PBX recusou o login').waitFor()
+    await seletor(page).getByRole('searchbox', { name: 'Procurar conta' }).fill('2001')
+    await linhaDaConta(page, 'Suporte 1001').waitFor({ state: 'detached' })
+    await seletor(page).getByRole('searchbox', { name: 'Procurar conta' }).fill('')
+    await fecharSeletor(page)
+    if ((await page.getByRole('button', { name: /^Conta atual: Suporte 1001.*1 conta com erro/ }).count()) !== 1)
+        throw new Error('o avatar não diz que há 1 conta com erro além da atual')
+    step('seletor explica o erro, busca, e o avatar conta as outras contas com erro')
 
     await page.locator('.chip', { hasText: '1002' }).click()
     await page.locator('.pill', { hasText: 'tocando' }).waitFor()
@@ -89,14 +93,15 @@ try {
     step('1002 pôs 1001 em espera e a URA atendeu a consulta')
     if (shots) await page.screenshot({ path: join(shots, '4-consulta.png') })
     await consult.getByRole('button', { name: 'Concluir transferência' }).click()
-    await page.getByText('1 chamadas').waitFor({ timeout: 5000 })
+    await page.getByText('1 ativa', { exact: true }).waitFor({ timeout: 5000 })
+    await abrirDepuracao(page)
     await page.locator('.line', { hasText: 'Agora em chamada com 8000' }).waitFor()
     step('transferência assistida ligou 1001 com a URA e liberou 1002')
     await live('→').getByRole('button', { name: 'Desligar' }).click()
-    await page.getByText('0 chamadas').waitFor()
+    await page.getByText('0 ativas').waitFor()
 
     // Escolha de áudio (RF-19).
-    await page.getByRole('button', { name: 'Configurações' }).click()
+    await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
     const audio = page.getByRole('dialog', { name: 'Configurações' })
     await audio.getByRole('tab', { name: 'Áudio' }).click()
     await audio.getByRole('meter', { name: 'Nível do microfone' }).waitFor()

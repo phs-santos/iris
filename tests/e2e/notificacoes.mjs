@@ -6,6 +6,7 @@ import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { escolherConta, esperarContasSimuladas } from './helpers/tela.mjs'
 
 const userData = mkdtempSync(join(tmpdir(), 'iris-notificacoes-'))
 const args = ['.']
@@ -20,11 +21,10 @@ const notices = () =>
     readFileSync(join(userData, 'logs', 'iris.log'), 'utf8')
         .split('\n')
         .filter((line) => line.includes(' Notificação '))
-const account = (name) => page.locator('.acc', { hasText: name })
 
 /** Liga de Vendas 1002 para Suporte 1001, que não tem auto-atender, e espera tocar. */
 async function ring() {
-    await account('Vendas 1002').locator('.row').click()
+    await escolherConta(page, 'Vendas 1002')
     await page.getByLabel('Número').fill('1001')
     await page.getByRole('button', { name: 'Ligar', exact: true }).click()
     await page.getByRole('region', { name: /Chamada recebida de/ }).waitFor({ timeout: 8000 })
@@ -32,8 +32,7 @@ async function ring() {
 
 let failed = false
 try {
-    await page.getByText('3 contas').waitFor()
-    await page.locator('.dot.registered').nth(1).waitFor()
+    await esperarContasSimuladas(page)
 
     await ring()
     await page.waitForTimeout(300)
@@ -69,7 +68,7 @@ try {
     step('desistir antes de atender gera "chamada perdida"')
 
     // Desligar o aviso de chamada recebida em Configurações → Notificações.
-    await page.getByRole('button', { name: 'Configurações' }).click()
+    await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
     const settings = page.getByRole('dialog')
     await settings.getByRole('tab', { name: 'Notificações' }).click()
     await settings
@@ -87,7 +86,6 @@ try {
     if (saved.notifications?.enabled?.incoming !== false) throw new Error('a escolha não foi salva')
 
     const before = notices().filter((line) => line.includes('incoming')).length
-    await page.getByRole('tab', { name: 'Telefone' }).click()
     await ring()
     await page.waitForTimeout(300)
     if (notices().filter((line) => line.includes('incoming')).length !== before)

@@ -14,9 +14,16 @@ import {
     criarConta,
     discar,
     enviarDtmf,
+    abrirSeletor,
+    clicarConta,
     escolherConta,
     esperarContasSimuladas,
     estado,
+    etiquetar,
+    filtrarPorEtiqueta,
+    linhaDaConta,
+    seletor,
+    tituloDiscar,
     transferirCega
 } from './helpers/tela.mjs'
 
@@ -52,7 +59,21 @@ let failed = false
 try {
     // ─── Modo simulado ───
     await esperarContasSimuladas(page)
+
+    // O seletor troca a conta atual: filtra por etiqueta, escolhe, e o título do discar muda.
+    await etiquetar(page, 'Comercial', ['Vendas 1002'])
+    await esperarContasSimuladas(page)
+    await abrirSeletor(page)
+    await filtrarPorEtiqueta(page, 'Comercial')
+    await linhaDaConta(page, 'Suporte 1001').waitFor({ state: 'detached' })
+    if ((await seletor(page).locator('.row').count()) !== 1)
+        throw new Error('o filtro por etiqueta não deixou só 1 conta')
+    await clicarConta(page, 'Vendas 1002')
+    await tituloDiscar(page).filter({ hasText: 'Vendas 1002' }).waitFor()
+    step('simulado: o seletor filtra por etiqueta e troca a conta atual (título do discar muda)')
+
     await escolherConta(page, 'Suporte 1001')
+    await tituloDiscar(page).filter({ hasText: 'Suporte 1001' }).waitFor()
 
     const ura = /→\s*8000/
     await ligar('8000', 5000)

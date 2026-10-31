@@ -24,7 +24,18 @@ walk(ROOT)
 
 const problems = []
 /** Nomes de teclas, que aparecem no código e não na tela. */
-const KEYS = new Set(['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Escape', 'Home', 'End', 'Tab', 'Enter'])
+const KEYS = new Set([
+    'ArrowDown',
+    'ArrowUp',
+    'ArrowLeft',
+    'ArrowRight',
+    'Escape',
+    'Home',
+    'End',
+    'Tab',
+    'Enter',
+    'ContextMenu'
+])
 
 /** Frases entre aspas num trecho de código, fora os nomes passados a t(), os imports e os comentários. */
 function literals(code, file, lineOf) {

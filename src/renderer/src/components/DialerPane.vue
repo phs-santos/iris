@@ -5,7 +5,7 @@ import { computed, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
 import { useContactsStore } from '@renderer/stores/contacts'
-import PhoneIcon from './PhoneIcon.vue'
+import Icon from './icons/Icon.vue'
 import { MOCK_NUMBERS } from '@renderer/sip/mock-engine'
 
 const accounts = useAccountsStore()
@@ -18,7 +18,7 @@ const showKeypad = ref(false)
 const error = ref('')
 const input = ref<HTMLInputElement | null>(null)
 
-const from = computed(() => accounts.selected)
+const from = computed(() => accounts.current)
 const registered = computed(() => (from.value ? accounts.statusOf(from.value.id).state === 'registered' : false))
 
 /** Atalhos: as outras contas do mesmo PBX e os contatos da conta. */
@@ -93,23 +93,19 @@ async function dial(number = destination.value): Promise<void> {
     }
 }
 
-defineExpose({ focus: () => input.value?.focus() })
+// Como a barra de endereço do navegador: Ctrl/Cmd+L foca e seleciona o número anterior, para digitar por cima.
+defineExpose({
+    focus: () => {
+        input.value?.focus()
+        input.value?.select()
+    }
+})
 </script>
 
 <template>
     <section class="dialer">
-        <div class="from">
-            <span class="label">{{ $t('dialerPane.discar_de') }}</span>
-            <select
-                v-model="accounts.selectedId"
-                class="input from-select"
-                :aria-label="$t('dialerPane.conta_de_origem')"
-            >
-                <option v-for="a in accounts.accounts" :key="a.id" :value="a.id">
-                    {{ a.name }} · {{ a.extension }}@{{ a.domain }}
-                </option>
-            </select>
-        </div>
+        <!-- A conta de origem é a conta atual, trocada pelo seletor da barra de ícones. -->
+        <h2 class="from">{{ from ? $t('dialerPane.discar_de', { name: from.name }) : $t('dialerPane.sem_conta') }}</h2>
 
         <form class="dial-row" @submit.prevent="dial()">
             <input
@@ -126,7 +122,7 @@ defineExpose({ focus: () => input.value?.focus() })
                 <option v-for="c in contacts.contacts" :key="c.id" :value="c.number">{{ c.name }}</option>
             </datalist>
             <button class="btn go big" type="submit" :disabled="!registered || !destination.trim()">
-                <PhoneIcon name="phone" class="dial-icon" />{{ $t('dialerPane.ligar') }}
+                <Icon name="phone" class="dial-icon" />{{ $t('dialerPane.ligar') }}
             </button>
         </form>
 
@@ -175,7 +171,7 @@ defineExpose({ focus: () => input.value?.focus() })
                 :aria-label="$t('dialerPane.ligar')"
                 @click="dial()"
             >
-                <PhoneIcon name="phone" />
+                <Icon name="phone" />
             </button>
             <button
                 class="key plain"
@@ -184,7 +180,7 @@ defineExpose({ focus: () => input.value?.focus() })
                 :aria-label="$t('dialerPane.apagar')"
                 @click="erase"
             >
-                <PhoneIcon name="erase" />
+                <Icon name="erase" />
             </button>
         </div>
 
@@ -219,12 +215,12 @@ defineExpose({ focus: () => input.value?.focus() })
     gap: 10px;
 }
 .from {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.from-select {
-    flex: 1;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .dial-row {
     display: flex;

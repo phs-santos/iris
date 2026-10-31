@@ -4,6 +4,7 @@ import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { abrirSeletor, esperarContasSimuladas, linhaDaConta, seletor } from './helpers/tela.mjs'
 
 const userData = mkdtempSync(join(tmpdir(), 'iris-contatos-'))
 const args = ['.']
@@ -20,13 +21,15 @@ page.on('pageerror', (error) => errors.push(error.message))
 
 let failed = false
 try {
-    await page.getByText('3 contas').waitFor()
-    await page.locator('.dot.registered').nth(1).waitFor()
+    await esperarContasSimuladas(page)
 
-    // ─── Contatos ───
-    await page.getByRole('tab', { name: 'Contatos' }).click()
-    await page.getByRole('button', { name: '+ Novo contato' }).click()
-    let form = page.getByRole('dialog')
+    // ─── Contatos (da conta, pelo clique direito no seletor) ───
+    await abrirSeletor(page)
+    await linhaDaConta(page, 'Suporte 1001').click({ button: 'right', position: { x: 16, y: 12 } })
+    await seletor(page).getByRole('menuitem', { name: 'Contatos' }).click()
+    const agenda = page.getByRole('dialog', { name: 'Contatos de Suporte 1001' })
+    await agenda.getByRole('button', { name: '+ Novo contato' }).click()
+    let form = page.getByRole('dialog', { name: /contato/i }).last()
     await form.getByRole('button', { name: 'Salvar' }).click()
     await form.getByText('Dê um nome ao contato').waitFor()
     await form.getByLabel('Nome').fill('Ana do Financeiro')
@@ -46,7 +49,7 @@ try {
     step('busca por nome, sem diferenciar maiúscula')
 
     await page.getByRole('button', { name: 'Ligar para Ana do Financeiro' }).click()
-    await page.getByRole('tab', { name: 'Telefone' }).waitFor()
+    await agenda.waitFor({ state: 'detached' })
     const call = page.locator('.call', { hasText: /1001\s*→\s*1002/ })
     await call.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 8000 })
     // Quem recebe vê o nome que está na agenda, não só o número.
@@ -62,7 +65,7 @@ try {
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
 
     // ─── Servidores ───
-    await page.getByRole('button', { name: 'Configurações' }).click()
+    await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
     const settings = page.getByRole('dialog')
     await settings.getByRole('tab', { name: 'Servidores' }).click()
     await settings.getByRole('button', { name: '+ Novo servidor' }).click()
@@ -76,7 +79,8 @@ try {
 
     // Duas contas novas ligadas ao servidor: só ramal e senha são digitados.
     for (const ext of ['3001', '3002']) {
-        await page.getByRole('button', { name: '+ Nova' }).click()
+        await abrirSeletor(page)
+        await seletor(page).getByRole('button', { name: 'Nova conta' }).click()
         const account = page.locator('form.dialog')
         await account.getByLabel('Servidor').selectOption({ label: 'PBX da Matriz · pbx.matriz.com · WS' })
         if (!(await account.getByRole('textbox', { name: 'Domínio SIP' }).isDisabled()))
@@ -85,7 +89,9 @@ try {
         await account.getByRole('textbox', { name: 'Ramal' }).fill(ext)
         await account.getByLabel('Senha').fill('1234')
         await account.getByRole('button', { name: 'Salvar', exact: true }).click()
-        await page.locator('.acc', { hasText: `Matriz ${ext}` }).waitFor()
+        await abrirSeletor(page)
+        await linhaDaConta(page, `Matriz ${ext}`).waitFor()
+        await page.keyboard.press('Escape')
     }
     // A tela muda antes de o arquivo ser gravado: numa máquina lenta (o CI), espera a gravação.
     const matriz = async (ready) => {
@@ -103,7 +109,7 @@ try {
     step('duas contas criadas a partir do servidor, só com ramal e senha')
 
     // Editar o servidor muda as duas contas de uma vez.
-    await page.getByRole('button', { name: 'Configurações' }).click()
+    await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
     await settings.getByRole('tab', { name: 'Servidores' }).click()
     await settings.getByText('usado por 2 conta(s)').waitFor()
     await settings.getByRole('button', { name: 'Editar PBX da Matriz' }).click()

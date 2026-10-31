@@ -74,3 +74,13 @@ export function isAppearance(value: unknown): value is Appearance {
         (a.accent === undefined || isHexColor(a.accent))
     )
 }
+
+/** Fundo da janela (--bg de cada tema), para ela não piscar em outra cor antes da interface desenhar. */
+export const WINDOW_BACKGROUND = { light: '#f2f4f7', dark: '#0b1117' } as const
+
+/** A cor de fundo da janela para o tema salvo; "sistema" e sem tema seguem `systemDark` e o padrão. */
+export function windowBackground(theme: Theme | undefined, systemDark: boolean): string {
+    const chosen = theme ?? DEFAULT_THEME
+    const dark = chosen === 'system' ? systemDark : chosen === 'dark'
+    return dark ? WINDOW_BACKGROUND.dark : WINDOW_BACKGROUND.light
+}

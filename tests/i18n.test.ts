@@ -5,7 +5,7 @@ import { t } from '@renderer/i18n'
 
 describe('texto da interface (RNF-13)', () => {
     it('t() devolve o texto e troca os parâmetros', () => {
-        expect(t('app.configuracoes')).toBe(ptBR.app.configuracoes)
+        expect(t('rail.ajustes')).toBe(ptBR.rail.ajustes)
         expect(t('app.versao_disponivel_abra_atualizacao_para', { version: '2.0.0' })).toContain('2.0.0')
     })
 

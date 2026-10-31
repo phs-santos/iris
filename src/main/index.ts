@@ -1,4 +1,15 @@
-import { app, BrowserWindow, dialog, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
+import {
+    app,
+    BrowserWindow,
+    dialog,
+    Menu,
+    nativeImage,
+    nativeTheme,
+    Notification,
+    session,
+    shell,
+    Tray
+} from 'electron'
 import { promises as fs } from 'node:fs'
 import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
@@ -21,7 +32,7 @@ import {
 } from './storage'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
 import { setupUpdater } from './updater'
-import { isAppearance } from '@shared/appearance'
+import { isAppearance, windowBackground, type Theme } from '@shared/appearance'
 import { isCodecPrefs } from '@shared/codecs'
 import { isReconnect } from '@shared/reconnect'
 import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
@@ -70,6 +81,9 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
 }
 
+/** Tema salvo, para a cor de fundo da janela antes de a interface carregar. */
+let savedTheme: Theme | undefined
+
 function createWindow(): void {
     mainWindow = new BrowserWindow({
         width: 1360,
@@ -78,7 +92,7 @@ function createWindow(): void {
         minHeight: BENCH_MIN.height,
         title: 'Íris',
         icon: appIcon,
-        backgroundColor: '#eef2f6',
+        backgroundColor: windowBackground(savedTheme, nativeTheme.shouldUseDarkColors),
         show: false,
         autoHideMenuBar: true,
         webPreferences: {
@@ -249,6 +263,7 @@ function registerIpc(): void {
         )
         const settings = await updateSettings(patch)
         trustedHosts = new Set(settings.trustedHosts)
+        savedTheme = settings.appearance?.theme
         return settings
     })
 
@@ -384,6 +399,7 @@ app.whenReady().then(async () => {
         return null
     })
     trustedHosts = new Set(saved?.trustedHosts ?? [])
+    savedTheme = saved?.appearance?.theme
     setupSecurity()
     registerIpc()
     // Empacotado, o macOS usa o .icns do bundle; em dev o Dock mostraria o ícone do Electron.

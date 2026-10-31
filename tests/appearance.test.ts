@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { accentTokens, contrast, DEFAULT_ACCENT, DEFAULT_THEME, isAppearance } from '@shared/appearance'
+import {
+    accentTokens,
+    contrast,
+    DEFAULT_ACCENT,
+    DEFAULT_THEME,
+    isAppearance,
+    WINDOW_BACKGROUND,
+    windowBackground
+} from '@shared/appearance'
 
 describe('cor de destaque', () => {
     it('sem cor salva, usa o azul da Íris', () => {
@@ -54,5 +62,15 @@ describe('aparência que chega pelo IPC', () => {
         expect(isAppearance({ theme: 'roxo' })).toBe(false)
         expect(isAppearance({ accent: 'red' })).toBe(false)
         expect(isAppearance({ accent: '#fff; background: url(x)' })).toBe(false)
+    })
+})
+
+describe('fundo da janela', () => {
+    it('segue o tema salvo, e o sistema quando o tema é "sistema"', () => {
+        expect(windowBackground(undefined, true)).toBe(WINDOW_BACKGROUND.light)
+        expect(windowBackground('light', true)).toBe(WINDOW_BACKGROUND.light)
+        expect(windowBackground('dark', false)).toBe(WINDOW_BACKGROUND.dark)
+        expect(windowBackground('system', true)).toBe(WINDOW_BACKGROUND.dark)
+        expect(windowBackground('system', false)).toBe(WINDOW_BACKGROUND.light)
     })
 })

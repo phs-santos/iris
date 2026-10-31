@@ -5,7 +5,7 @@ import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore, type CallView } from '@renderer/stores/calls'
 import { DtmfSyntaxError, parseDtmfSequence } from '@renderer/lib/dtmf'
 import { duration, now } from '@renderer/lib/now'
-import PhoneIcon from './PhoneIcon.vue'
+import Icon from './icons/Icon.vue'
 
 const props = defineProps<{ call: CallView }>()
 const accounts = useAccountsStore()
@@ -167,7 +167,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                     :disabled="!established"
                     @click="calls.toggleMute(call.id)"
                 >
-                    <PhoneIcon name="mic" />{{ call.muted ? $t('callCard.ativar_mic') : $t('callCard.mudo_2') }}
+                    <Icon name="mic" />{{ call.muted ? $t('callCard.ativar_mic') : $t('callCard.mudo_2') }}
                 </button>
                 <button
                     class="btn"
@@ -175,7 +175,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                     :disabled="!established"
                     @click="calls.toggleHold(call.id)"
                 >
-                    <PhoneIcon name="pause" />{{ call.held ? $t('callCard.retomar') : $t('callCard.espera') }}
+                    <Icon name="pause" />{{ call.held ? $t('callCard.retomar') : $t('callCard.espera') }}
                 </button>
                 <button
                     v-if="call.canRecord"
@@ -185,9 +185,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                     :title="call.recording ?? $t('callCard.gravar_dica')"
                     @click="calls.toggleRecording(call.id)"
                 >
-                    <PhoneIcon name="record" />{{
-                        call.recording ? $t('callCard.parar_gravacao') : $t('callCard.gravar')
-                    }}
+                    <Icon name="record" />{{ call.recording ? $t('callCard.parar_gravacao') : $t('callCard.gravar') }}
                 </button>
                 <button
                     v-if="call.canRecord"
@@ -199,7 +197,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                     {{ $t('callCard.pasta_gravacoes') }}
                 </button>
                 <button class="btn" :class="{ on: showDtmf }" :disabled="!established" @click="showDtmf = !showDtmf">
-                    <PhoneIcon name="grid" />{{ $t('callCard.dtmf') }}
+                    <Icon name="grid" />{{ $t('callCard.dtmf') }}
                 </button>
                 <button
                     class="btn"
@@ -207,10 +205,10 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                     :disabled="!established || Boolean(consulting) || Boolean(consultOf)"
                     @click="showTransfer = !showTransfer"
                 >
-                    <PhoneIcon name="transfer" />{{ $t('callCard.transferir') }}
+                    <Icon name="transfer" />{{ $t('callCard.transferir') }}
                 </button>
                 <button class="btn stop" @click="calls.hangup(call.id)">
-                    <PhoneIcon name="hangup" />{{ $t('callCard.desligar') }}
+                    <Icon name="hangup" />{{ $t('callCard.desligar') }}
                 </button>
             </template>
         </div>
@@ -496,8 +494,8 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
         transition: none;
     }
 }
-.actions .btn :deep(.phone-icon),
-.btn :deep(.phone-icon) {
+.actions .btn :deep(.icon),
+.btn :deep(.icon) {
     width: 15px;
     height: 15px;
     margin-right: 6px;

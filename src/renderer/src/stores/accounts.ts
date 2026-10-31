@@ -19,27 +19,40 @@ interface Runtime {
     retry?: { attempt: number; max: number }
 }
 
+const CURRENT_KEY = 'iris.conta-atual'
+
+/** Sem armazenamento (janela privada, teste de unidade), a conta atual vale só até fechar o app. */
+function readCurrent(): string | null {
+    try {
+        return globalThis.localStorage?.getItem(CURRENT_KEY) ?? null
+    } catch {
+        return null
+    }
+}
+
 export const useAccountsStore = defineStore('accounts', () => {
     const accounts = ref<Account[]>([])
     const runtime = reactive<Record<string, Runtime>>({})
-    const selectedId = ref<string | null>(null)
+    /** Conta atual (a do topo da barra de ícones): lembrada nesta máquina, em `localStorage`. */
+    const currentId = ref<string | null>(readCurrent())
     /** Aviso sobre o arquivo de senhas (RNF-07); null quando está tudo certo. */
     const secretsProblem = ref<string | null>(null)
     const loaded = ref(false)
 
-    const selected = computed(() => accounts.value.find((a) => a.id === selectedId.value) ?? null)
+    /** A conta atual, ou a primeira se a guardada não existe mais. */
+    const current = computed(() => accounts.value.find((a) => a.id === currentId.value) ?? accounts.value[0] ?? null)
     const byId = (id: string | null): Account | undefined => accounts.value.find((a) => a.id === id)
     const nameOf = (id: string | null): string => (id ? (byId(id)?.name ?? '?') : 'app')
 
-    /** Contas agrupadas por domínio do PBX, na ordem em que aparecem (RF-02). */
-    const groups = computed(() => {
-        const map = new Map<string, Account[]>()
-        for (const account of accounts.value) {
-            const key = account.domain || 'sem domínio'
-            map.set(key, [...(map.get(key) ?? []), account])
+    function setCurrent(id: string | null): void {
+        currentId.value = id
+        try {
+            if (id) localStorage.setItem(CURRENT_KEY, id)
+            else localStorage.removeItem(CURRENT_KEY)
+        } catch {
+            // sem armazenamento: vale só até fechar o app
         }
-        return [...map.entries()].map(([domain, list]) => ({ domain, accounts: list }))
-    })
+    }
 
     function statusOf(id: string): RegStatus {
         return runtime[id]?.status ?? { state: 'disconnected' }
@@ -99,7 +112,7 @@ export const useAccountsStore = defineStore('accounts', () => {
             await window.iris.accounts.save(list)
         }
         accounts.value = list
-        selectedId.value = list[0]?.id ?? null
+        if (!list.some((a) => a.id === currentId.value)) setCurrent(list[0]?.id ?? null)
         loaded.value = true
         for (const account of list) if (account.autoRegister) void register(account.id)
     }
@@ -121,7 +134,7 @@ export const useAccountsStore = defineStore('accounts', () => {
         else accounts.value.push(account)
         if (password !== undefined) await window.iris.secrets.set(account.id, password)
         await persist()
-        if (select) selectedId.value = account.id
+        if (select) setCurrent(account.id)
         // A conexão usa os dados antigos até ser refeita.
         if (wasRegistered) {
             await unregister(account.id)
@@ -135,7 +148,7 @@ export const useAccountsStore = defineStore('accounts', () => {
         delete runtime[id]
         await window.iris.secrets.set(id, null)
         await persist()
-        if (selectedId.value === id) selectedId.value = accounts.value[0]?.id ?? null
+        if (currentId.value === id) setCurrent(accounts.value[0]?.id ?? null)
     }
 
     /** Tira uma etiqueta apagada de todas as contas (RF de etiquetas). */
@@ -272,9 +285,9 @@ export const useAccountsStore = defineStore('accounts', () => {
     return {
         accounts,
         runtime,
-        selectedId,
-        selected,
-        groups,
+        currentId,
+        current,
+        setCurrent,
         loaded,
         secretsProblem,
         byId,

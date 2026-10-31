@@ -1,27 +1,14 @@
 <script setup lang="ts">
-/** Ícones de traço da Íris, desenhados aqui para não depender de fonte nem de emoji do sistema. */
-defineProps<{
-    name:
-        | 'phone'
-        | 'hangup'
-        | 'mic'
-        | 'pause'
-        | 'grid'
-        | 'transfer'
-        | 'plus'
-        | 'log'
-        | 'x'
-        | 'erase'
-        | 'record'
-        | 'gear'
-        | 'book'
-        | 'search'
-}>()
+/**
+ * Ícones de traço da Íris (SVG, sem fonte nem emoji do sistema). Sempre decorativos: o nome da ação
+ * fica no texto ou no `aria-label` do botão (RNF-12).
+ */
+defineProps<{ name: IconName }>()
 </script>
 
 <template>
     <svg
-        class="phone-icon"
+        class="icon"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -60,42 +47,54 @@ defineProps<{
             <rect x="9" y="2" width="6" height="12" rx="3" />
             <path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4M8 22h8" />
         </template>
-        <template v-else-if="name === 'pause'">
-            <path d="M9 5v14M15 5v14" />
-        </template>
+        <path v-else-if="name === 'pause'" d="M9 5v14M15 5v14" />
         <template v-else-if="name === 'grid'">
-            <circle cx="6" cy="6" r="1" />
-            <circle cx="12" cy="6" r="1" />
-            <circle cx="18" cy="6" r="1" />
-            <circle cx="6" cy="12" r="1" />
+            <circle v-for="(c, i) in GRID" :key="i" :cx="c[0]" :cy="c[1]" r="1" />
+        </template>
+        <path v-else-if="name === 'transfer'" d="M4 8h14l-4-4M20 16H6l4 4" />
+        <path v-else-if="name === 'flow'" d="M4 4h6v6H4zM14 14h6v6h-6zM7 10v4a2 2 0 0 0 2 2h5" />
+        <path v-else-if="name === 'plus'" d="M12 5v14M5 12h14" />
+        <path v-else-if="name === 'chevron'" d="M9 6l6 6-6 6" />
+        <path v-else-if="name === 'close'" d="M6 6l12 12M18 6L6 18" />
+        <path v-else-if="name === 'check'" d="M5 12.5l4.5 4.5L19 7.5" />
+        <template v-else-if="name === 'more'">
+            <circle cx="5" cy="12" r="1" />
             <circle cx="12" cy="12" r="1" />
-            <circle cx="18" cy="12" r="1" />
-            <circle cx="6" cy="18" r="1" />
-            <circle cx="12" cy="18" r="1" />
-            <circle cx="18" cy="18" r="1" />
+            <circle cx="19" cy="12" r="1" />
         </template>
-        <template v-else-if="name === 'transfer'">
-            <path d="M4 8h14l-4-4M20 16H6l4 4" />
-        </template>
-        <template v-else-if="name === 'plus'">
-            <path d="M12 5v14M5 12h14" />
-        </template>
-        <template v-else-if="name === 'log'">
-            <path d="M4 6h16M4 12h16M4 18h10" />
-        </template>
-        <template v-else-if="name === 'x'">
-            <path d="M6 6l12 12M18 6L6 18" />
-        </template>
-        <template v-else-if="name === 'erase'">
-            <path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1zM12 9l6 6M18 9l-6 6" />
-        </template>
+        <path v-else-if="name === 'erase'" d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1zM12 9l6 6M18 9l-6 6" />
     </svg>
 </template>
 
+<script lang="ts">
+export type IconName =
+    | 'phone'
+    | 'hangup'
+    | 'mic'
+    | 'pause'
+    | 'grid'
+    | 'transfer'
+    | 'record'
+    | 'gear'
+    | 'search'
+    | 'flow'
+    | 'plus'
+    | 'chevron'
+    | 'close'
+    | 'erase'
+    | 'book'
+    | 'more'
+    | 'check'
+
+/** Os nove pontos do teclado de DTMF. */
+const GRID = [6, 12, 18].flatMap((y) => [6, 12, 18].map((x) => [x, y]))
+</script>
+
 <style scoped>
-.phone-icon {
+.icon {
     width: 1em;
     height: 1em;
     display: block;
+    flex: none;
 }
 </style>

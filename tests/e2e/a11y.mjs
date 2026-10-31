@@ -5,6 +5,15 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import {
+    abrirDepuracao,
+    abrirSeletor,
+    esperarContasSimuladas,
+    fecharSeletor,
+    linhaDaConta,
+    seletor,
+    tituloDiscar
+} from './helpers/tela.mjs'
 
 const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
 const userData = mkdtempSync(join(tmpdir(), 'iris-a11y-'))
@@ -34,9 +43,38 @@ async function scan(name) {
 }
 
 try {
-    await page.getByText('3 contas').waitFor()
-    await page.locator('.dot.registered').nth(1).waitFor()
+    await esperarContasSimuladas(page)
     await scan('tela principal')
+
+    // Seletor de contas (RNF-12): foco na busca ao abrir, setas andam, ações à vista com o foco do teclado,
+    // Esc fecha e devolve o foco ao avatar.
+    await abrirSeletor(page)
+    const focused = (fn) => page.evaluate(fn)
+    if (!(await focused(() => document.activeElement?.getAttribute('aria-label') === 'Procurar conta')))
+        problems.push('[seletor] o foco não foi para a busca ao abrir')
+    await page.keyboard.press('ArrowDown')
+    const row = await focused(() => document.activeElement?.closest('.row')?.querySelector('.name')?.textContent)
+    if (!row) problems.push('[seletor] seta para baixo não foi para uma conta')
+    const actsVisible = await focused(
+        () => getComputedStyle(document.activeElement?.closest('.row')?.querySelector('.acts')).visibility
+    )
+    if (actsVisible !== 'visible') problems.push('[seletor] as ações da linha não aparecem com o foco do teclado')
+    await scan('seletor de contas')
+    await page.keyboard.press('Shift+F10')
+    await seletor(page)
+        .getByRole('menu')
+        .waitFor({ timeout: 2000 })
+        .catch(() => problems.push('[seletor] Shift+F10 não abre o menu'))
+    await scan('menu da conta')
+    await page.keyboard.press('Escape')
+    if (!(await focused(() => document.activeElement?.classList.contains('pick'))))
+        problems.push('[menu da conta] Esc não devolve o foco à conta')
+    await page.keyboard.press('Escape')
+    await seletor(page)
+        .waitFor({ state: 'detached', timeout: 2000 })
+        .catch(() => problems.push('[seletor] Esc não fecha'))
+    if (!(await focused(() => /^Conta atual/.test(document.activeElement?.getAttribute('aria-label') ?? ''))))
+        problems.push('[seletor] ao fechar, o foco não volta ao avatar')
 
     await page.locator('.chip', { hasText: '1002' }).click()
     await page.locator('.pill', { hasText: 'em chamada' }).nth(1).waitFor({ timeout: 5000 })
@@ -44,7 +82,8 @@ try {
     await scan('chamadas em andamento')
     await page.locator('.call', { hasText: '→' }).getByRole('button', { name: 'Desligar' }).click()
 
-    await page.getByRole('button', { name: '+ Nova' }).click()
+    await abrirSeletor(page)
+    await seletor(page).getByRole('button', { name: 'Nova conta' }).click()
     await scan('formulário de conta')
     await page.keyboard.press('Escape')
     await page
@@ -54,6 +93,8 @@ try {
     if (await page.locator('form.dialog').count())
         await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
 
+    await abrirDepuracao(page)
+    await scan('depuração aberta')
     await page.getByRole('button', { name: 'Fluxo SIP' }).click()
     await page
         .getByRole('dialog', { name: 'Fluxo SIP' })
@@ -87,23 +128,31 @@ try {
         .waitFor({ state: 'detached', timeout: 2000 })
         .catch(() => problems.push('[configurações] Esc não fecha'))
 
-    await page.getByRole('button', { name: /^Mais ações de / }).click()
-    await scan('menu de ações da conta')
+    const menuDe = async (nome) => {
+        await abrirSeletor(page)
+        await linhaDaConta(page, nome).locator('.pick').focus()
+        await seletor(page)
+            .getByRole('button', { name: `Mais ações de ${nome}` })
+            .click()
+    }
+    await menuDe('Suporte 1001')
     await page.keyboard.press('ArrowDown')
-    if (!(await page.evaluate(() => document.activeElement?.textContent?.trim() === 'Duplicar')))
+    if (!(await page.evaluate(() => document.activeElement?.textContent?.trim() === 'Saúde')))
         problems.push('[menu da conta] seta para baixo não anda pelos itens')
-    await page.keyboard.press('Escape')
-    if (!(await page.evaluate(() => document.activeElement?.getAttribute('aria-haspopup') === 'menu')))
-        problems.push('[menu da conta] Esc não devolve o foco ao botão')
-    await page.getByRole('button', { name: /^Mais ações de / }).click()
     await page.getByRole('menuitem', { name: 'Saúde' }).click()
     await scan('saúde da conta')
     await page.keyboard.press('Escape')
-    await page.getByRole('tab', { name: 'Contatos' }).click()
-    await page.getByRole('button', { name: '+ Novo contato' }).click()
+    await menuDe('Suporte 1001')
+    await page.getByRole('menuitem', { name: 'Contatos' }).click()
+    const contacts = page.getByRole('dialog', { name: 'Contatos de Suporte 1001' })
+    await contacts.waitFor()
+    await scan('contatos da conta')
+    await contacts.getByRole('button', { name: '+ Novo contato' }).click()
     await scan('novo contato')
     await page.keyboard.press('Escape')
-    await scan('agenda de contatos')
+    if (!(await contacts.isVisible())) problems.push('[contatos] Esc no formulário fechou também a lista')
+    await page.keyboard.press('Escape')
+    await contacts.waitFor({ state: 'detached', timeout: 2000 }).catch(() => problems.push('[contatos] Esc não fecha'))
     // Guia: todas as seções abrem, as capturas carregam e a busca filtra o índice.
     await page.keyboard.press('F1')
     const guide = page.getByRole('dialog', { name: 'Guia da Íris' })
@@ -135,7 +184,6 @@ try {
     step(`guia com ${total} seções, capturas carregadas e busca`)
 
     // Atalhos da especificação (RNF-12).
-    await page.getByRole('tab', { name: 'Telefone' }).click()
     await page.keyboard.press('ControlOrMeta+l')
     if (!(await page.evaluate(() => document.activeElement?.getAttribute('aria-label') === 'Número')))
         problems.push('[atalhos] Ctrl/Cmd+L não focou o discador')
@@ -155,13 +203,15 @@ try {
         .catch(() => problems.push('[atalhos] Ctrl/Cmd+H não pôs em espera'))
     await page.keyboard.press('ControlOrMeta+e')
     await page
-        .getByText('0 chamadas')
+        .getByText('0 ativas')
         .waitFor({ timeout: 3000 })
         .catch(() => problems.push('[atalhos] Ctrl/Cmd+E não desligou'))
     await page.keyboard.press('ControlOrMeta+2')
-    const origin = page.locator('.dialer').getByLabel('Conta de origem')
-    const chosen = await origin.locator(`option[value="${await origin.inputValue()}"]`).textContent()
-    if (!/Vendas 1002/.test(chosen)) problems.push('[atalhos] Ctrl/Cmd+2 não trocou a conta de origem')
+    await tituloDiscar(page)
+        .filter({ hasText: 'Vendas 1002' })
+        .waitFor({ timeout: 2000 })
+        .catch(() => problems.push('[atalhos] Ctrl/Cmd+2 não trocou a conta atual'))
+    await page.keyboard.press('ControlOrMeta+1')
     if (!problems.some((p) => p.startsWith('[atalhos]'))) step('atalhos Ctrl/Cmd + L, Enter, M, H, E e 1 a 9 funcionam')
 
     // Tema escuro: as mesmas telas principais, com o contraste conferido de novo (o claro é o padrão).
@@ -175,21 +225,26 @@ try {
         await scan(`tema escuro › configurações › ${name}`)
     }
     await page.keyboard.press('Escape')
-    await page.getByRole('tab', { name: 'Telefone' }).click()
     await scan('tema escuro › janela principal')
+    await abrirSeletor(page)
+    await linhaDaConta(page, 'Suporte 1001').locator('.pick').focus()
+    await scan('tema escuro › seletor de contas')
+    await fecharSeletor(page)
     await page.getByRole('button', { name: 'teclado' }).click()
     await scan('tema escuro › teclado do discador')
     await page.getByRole('button', { name: 'teclado' }).click()
-    await page.getByRole('tab', { name: 'Contatos' }).click()
+    await menuDe('Suporte 1001')
+    await page.getByRole('menuitem', { name: 'Contatos' }).click()
     await scan('tema escuro › contatos')
+    await page.keyboard.press('Escape')
     if (process.env.SHOTS_DIR) await page.screenshot({ path: join(process.env.SHOTS_DIR, 'tema-escuro.png') })
-    await page.getByRole('tab', { name: 'Telefone' }).click()
 
     if (problems.length) {
         console.error(problems.join('\n'))
         process.exitCode = 1
     } else console.log('Acessibilidade OK')
 } catch (error) {
+    if (process.env.SHOTS_DIR) await page.screenshot({ path: join(process.env.SHOTS_DIR, 'a11y-falha.png') })
     console.error(problems.join('\n'))
     console.error(error)
     process.exitCode = 1

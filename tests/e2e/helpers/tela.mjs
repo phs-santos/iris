@@ -18,18 +18,78 @@ export async function abrir() {
     return { app, page, userData }
 }
 
+/** Avatar da conta atual, no topo da barra de ícones: abre o seletor de contas. */
+export const avatar = (page) => page.getByRole('button', { name: /^(Conta atual|Nenhuma conta)/ })
+
+/** O seletor de contas aberto. */
+export const seletor = (page) => page.getByRole('dialog', { name: 'Contas' })
+
+/** Linha de uma conta no seletor. */
+export const linhaDaConta = (page, nome) => seletor(page).locator('.row', { hasText: nome })
+
+export async function abrirSeletor(page) {
+    if (!(await seletor(page).isVisible())) await avatar(page).click()
+    await seletor(page).waitFor()
+}
+
+export async function fecharSeletor(page) {
+    if (!(await seletor(page).isVisible())) return
+    await page.keyboard.press('Escape')
+    await seletor(page).waitFor({ state: 'detached' })
+}
+
+/** Espera a conta registrar, olhando a bolinha dela no seletor. */
+export async function esperarRegistro(page, nome, timeout = 15000) {
+    await abrirSeletor(page)
+    await linhaDaConta(page, nome).locator('.dot.registered').waitFor({ timeout })
+    await fecharSeletor(page)
+}
+
 /** Espera as contas de exemplo do modo simulado carregarem e as duas primeiras registrarem. */
 export async function esperarContasSimuladas(page) {
-    await page.getByText('3 contas').waitFor()
-    await page.locator('.dot.registered').nth(1).waitFor()
+    await abrirSeletor(page)
+    await seletor(page).getByText('3 contas').waitFor()
+    await seletor(page).locator('.dot.registered').nth(1).waitFor()
+    await fecharSeletor(page)
 }
+
+/**
+ * Cria uma etiqueta e põe nas contas indicadas, gravando direto pelos canais de dados e recarregando a tela.
+ * A tela de etiquetas (Ajustes → Etiquetas) ainda não existe.
+ */
+export async function etiquetar(page, etiqueta, contas) {
+    await page.evaluate(
+        async ({ etiqueta, contas }) => {
+            const tag = { id: crypto.randomUUID(), name: etiqueta, color: '#7c3aed' }
+            await window.iris.tags.save([...(await window.iris.tags.load()), tag])
+            const list = await window.iris.accounts.load()
+            await window.iris.accounts.save(
+                list.map((a) => (contas.includes(a.name) ? { ...a, tagIds: [...a.tagIds, tag.id] } : a))
+            )
+        },
+        { etiqueta, contas }
+    )
+    await page.reload()
+}
+
+/** No seletor aberto, liga (ou desliga) o filtro de uma etiqueta. */
+export async function filtrarPorEtiqueta(page, etiqueta) {
+    await seletor(page)
+        .getByRole('group', { name: 'Filtrar por etiqueta' })
+        .getByRole('button', { name: etiqueta, exact: true })
+        .click()
+}
+
+/** Título da coluna de discar ("Discar de …"). */
+export const tituloDiscar = (page) => page.getByRole('heading', { name: /^Discar de / })
 
 /** Cadastra uma conta de SIP puro (UDP por padrão) pelo formulário e espera registrar. */
 export async function criarConta(
     page,
     { nome, ramal, dominio, senha = '1234', transporte = 'UDP', autoAtender = false }
 ) {
-    await page.getByRole('button', { name: '+ Nova' }).click()
+    await abrirSeletor(page)
+    await seletor(page).getByRole('button', { name: 'Nova conta' }).click()
     const form = page.locator('form.dialog')
     await form.getByRole('textbox', { name: 'Nome' }).fill(nome)
     await form.getByRole('textbox', { name: 'Ramal' }).fill(ramal)
@@ -38,12 +98,27 @@ export async function criarConta(
     await form.getByLabel('Transporte').selectOption({ label: `SIP por ${transporte}` })
     if (autoAtender) await form.getByText('Auto-atender após').locator('input[type=checkbox]').check()
     await form.getByRole('button', { name: 'Salvar e registrar' }).click()
-    await page.locator('.acc', { hasText: nome }).locator('.dot.registered').waitFor({ timeout: 15000 })
+    await esperarRegistro(page, nome)
 }
 
-/** Seleciona a conta que vai ligar. */
+/** Torna a conta a atual pelo seletor: é dela que o discador liga. */
 export async function escolherConta(page, nome) {
-    await page.locator('.acc', { hasText: nome }).locator('.row').click()
+    await abrirSeletor(page)
+    await clicarConta(page, nome)
+}
+
+/** No seletor aberto, clica na conta (no lado do nome: as ações da linha ficam à direita) e espera fechar. */
+export async function clicarConta(page, nome) {
+    await linhaDaConta(page, nome)
+        .locator('.pick')
+        .click({ position: { x: 16, y: 12 } })
+    await seletor(page).waitFor({ state: 'detached' })
+}
+
+/** Abre o painel de depuração (SIP · Fluxo · Log), que começa recolhido. */
+export async function abrirDepuracao(page) {
+    const tira = page.getByRole('button', { name: /^Abrir a depuração/ })
+    if (await tira.isVisible()) await tira.click()
 }
 
 /** Digita o número e liga. */
@@ -90,6 +165,7 @@ export async function transferirCega(page, numero, destino) {
 
 /** Quantas linhas do log (aba "Tudo", com eventos e SIP bruto) casam com o texto. */
 export async function contarLinhas(page, texto) {
+    await abrirDepuracao(page)
     await page.getByRole('tab', { name: 'Tudo' }).click()
     return page.locator('.line', { hasText: texto }).count()
 }
