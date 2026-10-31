@@ -9,18 +9,17 @@ import IconRail from './components/shell/IconRail.vue'
 import AccountPicker from './components/shell/AccountPicker.vue'
 import DialPanel from './components/shell/DialPanel.vue'
 import CallsPanel from './components/shell/CallsPanel.vue'
-import LogPane from './components/LogPane.vue'
+import DebugDrawer from './components/shell/DebugDrawer.vue'
 import AccountForm from './components/AccountForm.vue'
-import HealthDialog from './components/HealthDialog.vue'
 import SettingsDialog from './components/settings/SettingsDialog.vue'
 import GuideDialog from './components/GuideDialog.vue'
 import ToastStack from './components/ToastStack.vue'
 import ContactsDialog from './components/ContactsDialog.vue'
-import Icon from './components/icons/Icon.vue'
 import { useContactsStore } from './stores/contacts'
 import { useServersStore } from './stores/servers'
 import { useTagsStore } from './stores/tags'
 import { useDevicesStore } from './stores/devices'
+import { useDebugStore } from './stores/debug'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
 import { accountHost } from './lib/accounts'
 
@@ -36,15 +35,13 @@ const showGuide = ref(false)
 const update = ref<UpdateInfo | null>(null)
 // O botão da barra avisa quando há versão nova para baixar ou já baixada (RF-35).
 const updatePending = computed(() => ['available', 'ready'].includes(update.value?.status.state ?? ''))
-const healthFor = ref<string | null>(null)
 const certError = ref<CertificateErrorEvent | null>(null)
 const dialer = ref<InstanceType<typeof DialPanel> | null>(null)
 const rail = ref<InstanceType<typeof IconRail> | null>(null)
 const pickerOpen = ref(false)
 /** Janela de contatos aberta: a conta e, vindo de "+ Salvar como contato", o número ou nome digitado. */
 const contactsFor = ref<{ accountId: string; prefill?: string } | null>(null)
-/** Painel de depuração: começa recolhido numa tira fina. */
-const debugOpen = ref(false)
+const debug = useDebugStore()
 
 /** Fecha o seletor e devolve o foco ao avatar, de onde ele foi aberto (RNF-12). */
 function closePicker(): void {
@@ -238,7 +235,7 @@ onUnmounted(() => {
         </div>
 
         <!-- Barra de ícones | discar | chamadas | depuração (recolhida numa tira ou aberta). -->
-        <main class="workspace" :class="{ 'debug-open': debugOpen }">
+        <main class="workspace">
             <IconRail
                 ref="rail"
                 :picker-open="pickerOpen"
@@ -256,40 +253,13 @@ onUnmounted(() => {
             </section>
 
             <section class="col calls-col" :aria-label="$t('app.chamadas')">
-                <CallsPanel @save-contact="(id, number) => (contactsFor = { accountId: id, prefill: number })" />
+                <CallsPanel
+                    @save-contact="(id, number) => (contactsFor = { accountId: id, prefill: number })"
+                    @contacts="(id) => (contactsFor = { accountId: id })"
+                />
             </section>
 
-            <aside class="col debug-col">
-                <button
-                    v-if="!debugOpen"
-                    type="button"
-                    class="strip"
-                    aria-controls="debug-panel"
-                    :aria-expanded="false"
-                    :aria-label="$t('app.abrir_depuracao')"
-                    @click="debugOpen = true"
-                >
-                    <Icon name="chevron" class="strip-chevron" />
-                    <span class="strip-text">{{ $t('app.depuracao') }}</span>
-                </button>
-                <div v-show="debugOpen" id="debug-panel" class="debug">
-                    <header class="col-head">
-                        <h2>{{ $t('app.depuracao_titulo') }}</h2>
-                        <button
-                            type="button"
-                            class="debug-close"
-                            :aria-expanded="true"
-                            aria-controls="debug-panel"
-                            :aria-label="$t('app.recolher_depuracao')"
-                            :title="$t('app.recolher_depuracao')"
-                            @click="debugOpen = false"
-                        >
-                            <Icon name="chevron" />
-                        </button>
-                    </header>
-                    <LogPane />
-                </div>
-            </aside>
+            <DebugDrawer />
 
             <template v-if="pickerOpen">
                 <div class="shade" aria-hidden="true"></div>
@@ -297,14 +267,13 @@ onUnmounted(() => {
                     @close="closePicker"
                     @new="fromPicker(newAccount)"
                     @edit="(a) => fromPicker(() => (editing = a))"
-                    @health="(id) => fromPicker(() => (healthFor = id))"
+                    @health="(id) => fromPicker(() => debug.show('health', id))"
                     @contacts="(id) => fromPicker(() => (contactsFor = { accountId: id }))"
                 />
             </template>
         </main>
 
         <AccountForm v-if="editing" :account="editing" @close="editing = null" />
-        <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
         <ContactsDialog
             v-if="contactsFor"
             :account-id="contactsFor.accountId"
@@ -351,10 +320,8 @@ onUnmounted(() => {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 60px 260px minmax(0, 1fr) 30px;
-}
-.workspace.debug-open {
-    grid-template-columns: 60px 260px minmax(0, 1fr) 290px;
+    /* A última coluna é a gaveta de depuração, com o tamanho dela (tira ou aberta). */
+    grid-template-columns: 60px 260px minmax(0, 1fr) auto;
 }
 .col {
     display: flex;
@@ -367,81 +334,6 @@ onUnmounted(() => {
     border-right: 1px solid var(--line);
     overflow: auto;
 }
-.col-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    height: 34px;
-    padding: 0 12px;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel-2);
-    color: var(--muted);
-    font-size: 12px;
-    flex: none;
-}
-.col-head h2 {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--fg);
-}
-/* Depuração: tira vertical recolhida, ou o painel aberto */
-.debug-col {
-    border-left: 1px solid var(--line);
-}
-.strip {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 0;
-    border: 0;
-    background: var(--bg);
-    color: var(--muted);
-    cursor: pointer;
-    transition:
-        background 120ms,
-        color 120ms;
-}
-.strip:hover {
-    background: var(--raise);
-    color: var(--fg);
-}
-.strip-chevron {
-    transform: rotate(180deg);
-    font-size: 14px;
-}
-.strip-text {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    font-size: 11.5px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-}
-.debug {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-.debug-close {
-    display: grid;
-    place-items: center;
-    width: 24px;
-    height: 24px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    background: var(--panel);
-    color: var(--muted);
-    cursor: pointer;
-}
-.debug-close:hover {
-    color: var(--fg);
-    background: var(--panel-2);
-}
-
 /* Fundo do seletor de contas: um véu leve; clicar nele fecha. */
 /* Só visual: o clique passa para o que está por baixo (ver onPointerOutside). */
 .shade {

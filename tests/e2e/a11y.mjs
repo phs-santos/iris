@@ -6,7 +6,10 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-    abrirDepuracao,
+    abaDepuracao,
+    isolarDoMouse,
+    recolherDepuracao,
+    verTodas,
     campoNumero,
     discar,
     escolherConta,
@@ -28,6 +31,7 @@ const app = await electron.launch({
     env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
 })
 const page = await app.firstWindow()
+await isolarDoMouse(app)
 const step = (msg) => console.log(`✓ ${msg}`)
 const problems = []
 
@@ -133,20 +137,27 @@ try {
     if (await page.locator('form.dialog').count())
         await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
 
-    await abrirDepuracao(page)
-    await scan('depuração aberta')
-    await page.getByRole('button', { name: 'Fluxo SIP' }).click()
+    // Gaveta de depuração: as quatro abas passam pela varredura; ←/→ trocam de aba (RNF-12).
+    await verTodas(page, 'SIP')
+    await scan('depuração › SIP')
+    await page.locator('#debug-tabpanel .line.sip', { hasText: 'INVITE' }).first().getByRole('button').first().click()
+    await scan('depuração › SIP com a mensagem aberta')
+    await abaDepuracao(page, 'SIP').focus()
+    await page.keyboard.press('ArrowRight')
+    if ((await abaDepuracao(page, 'Fluxo').getAttribute('aria-selected')) !== 'true')
+        problems.push('[depuração] seta para a direita não troca de aba')
     await page
-        .getByRole('dialog', { name: 'Fluxo SIP' })
+        .locator('#debug-tabpanel')
         .getByRole('button', { name: /^INVITE, / })
         .first()
         .click()
-    await scan('fluxo SIP')
-    await page.keyboard.press('Escape')
-    await page
-        .getByRole('dialog', { name: 'Fluxo SIP' })
-        .waitFor({ state: 'detached', timeout: 2000 })
-        .catch(() => problems.push('[fluxo SIP] Esc não fecha'))
+    await scan('depuração › Fluxo')
+    await abaDepuracao(page, 'Log').click()
+    await scan('depuração › Log')
+    await abaDepuracao(page, 'Saúde').click()
+    await page.locator('#debug-tabpanel .group').first().waitFor({ timeout: 5000 })
+    await scan('depuração › Saúde')
+    await recolherDepuracao(page).click()
 
     // Configurações: cada seção passa pela varredura; as setas trocam de seção (RNF-12).
     await page.keyboard.press('ControlOrMeta+,')
@@ -180,8 +191,9 @@ try {
     if (!(await page.evaluate(() => document.activeElement?.textContent?.trim() === 'Saúde')))
         problems.push('[menu da conta] seta para baixo não anda pelos itens')
     await page.getByRole('menuitem', { name: 'Saúde' }).click()
-    await scan('saúde da conta')
-    await page.keyboard.press('Escape')
+    if ((await abaDepuracao(page, 'Saúde').getAttribute('aria-selected')) !== 'true')
+        problems.push('[menu da conta] Saúde não abriu a gaveta na aba Saúde')
+    await recolherDepuracao(page).click()
     await menuDe('Suporte 1001')
     await page.getByRole('menuitem', { name: 'Contatos' }).click()
     const contacts = page.getByRole('dialog', { name: 'Contatos de Suporte 1001' })
@@ -284,6 +296,15 @@ try {
     await page.getByText('0 ativas').waitFor({ timeout: 3000 })
     await page.locator('.call.ended').first().waitFor({ state: 'detached', timeout: 10000 })
     await scan('tema escuro › detalhes da conta')
+    await verTodas(page, 'SIP')
+    await page.locator('#debug-tabpanel .line.sip').first().getByRole('button').first().click()
+    await scan('tema escuro › depuração › SIP com a mensagem aberta')
+    await abaDepuracao(page, 'Log').click()
+    await scan('tema escuro › depuração › Log')
+    await abaDepuracao(page, 'Saúde').click()
+    await page.locator('#debug-tabpanel .group').first().waitFor({ timeout: 5000 })
+    await scan('tema escuro › depuração › Saúde')
+    await recolherDepuracao(page).click()
     await menuDe('Suporte 1001')
     await page.getByRole('menuitem', { name: 'Contatos' }).click()
     await scan('tema escuro › contatos')

@@ -4,6 +4,7 @@
 import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import { verTodas } from './helpers/tela.mjs'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 
@@ -163,18 +164,14 @@ try {
 
     await page.locator('.call:not(.ended)', { hasText: '→' }).getByRole('button', { name: 'Desligar' }).click()
     await page.getByText('0 chamadas').waitFor()
+    await verTodas(page, 'Log')
     const lines = async () => Number((await page.getByText(/\d+ linhas/i).textContent()).replace(/\D/g, ''))
     const before = await lines()
     await page.waitForTimeout(10000)
     const after = await lines()
     console.log(`  log depois de desligar: ${before} → ${after} linhas em 10 s`)
-    await page.getByRole('tab', { name: 'Tudo' }).click()
-    await page
-        .getByLabel('Todas as contas')
-        .selectOption({ index: 0 })
-        .catch(() => {})
     const tail = await page
-        .locator('.line')
+        .locator('#debug-tabpanel .line')
         .evaluateAll((els) => els.slice(-6).map((e) => e.textContent.trim().slice(0, 160)))
     console.log(`  últimas linhas:\n    ${tail.join('\n    ')}`)
     if (process.env.PROFILE) {

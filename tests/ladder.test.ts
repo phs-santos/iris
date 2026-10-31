@@ -7,6 +7,7 @@ import {
     ladderHtml,
     layoutLadder,
     parseSipEntry,
+    sipHeadline,
     stripCredentials,
     type LadderSource
 } from '@renderer/lib/ladder'
@@ -77,6 +78,19 @@ describe('diagrama de escada: leitura do SIP bruto', () => {
         expect(reg!.messages[1]!.severity).toBe('auth')
         expect(describeDialog(reg!)).toBe('REGISTER → 200 OK')
         expect(dialogFailed(reg!)).toBe(false)
+    })
+})
+
+describe('lista do SIP na depuração', () => {
+    it('resume a mensagem pelo sentido e pela linha inicial, nos dois formatos', () => {
+        expect(sipHeadline(invite)).toEqual({
+            dir: 'out',
+            line: 'INVITE sip:1002@pbx.local SIP/2.0',
+            status: undefined
+        })
+        expect(sipHeadline(reply('486 Busy Here'))).toEqual({ dir: 'in', line: 'SIP/2.0 486 Busy Here', status: 486 })
+        expect(sipHeadline('← SIP/2.0 200 OK\nCall-ID: x')).toMatchObject({ dir: 'in', status: 200 })
+        expect(sipHeadline('texto solto')).toEqual({ dir: null, line: 'texto solto', status: undefined })
     })
 })
 

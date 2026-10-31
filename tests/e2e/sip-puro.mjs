@@ -6,6 +6,7 @@ import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
+import { verTodas } from './helpers/tela.mjs'
 import { join } from 'node:path'
 
 const HOST = process.env.PBX_DOMAIN ?? '127.0.0.1'
@@ -94,10 +95,9 @@ try {
         .getByRole('button', { name: /Mais ações|⋯/ })
         .click()
     await page.getByRole('menuitem', { name: 'Saúde' }).click()
-    const health = page.getByRole('dialog')
+    const health = page.locator('#debug-tabpanel')
     await health.getByText('Transporte UDP conectado').waitFor({ timeout: 10000 })
     await health.getByText(/OPTIONS respondeu em \d+ ms/).waitFor({ timeout: 10000 })
-    await health.getByRole('button', { name: 'Fechar' }).first().click()
     step('Saúde: transporte conectado e OPTIONS respondido')
 
     // Diagnóstico de rede (RF-46): numa conta TLS, a Saúde mostra o certificado que o PBX apresenta.
@@ -106,26 +106,27 @@ try {
         .getByRole('button', { name: /Mais ações|⋯/ })
         .click()
     await page.getByRole('menuitem', { name: 'Saúde' }).click()
-    const net = page.getByRole('dialog')
+    const net = page.locator('#debug-tabpanel')
     await net.getByText(/Certificado TLS não confiável: localhost/).waitFor({ timeout: 15000 })
     await net.getByText(/vale até .* nomes: localhost, 127\.0\.0\.1/).waitFor({ timeout: 5000 })
     await net.getByText('STUN: sem servidor na conta').waitFor({ timeout: 5000 })
-    await net.getByRole('button', { name: 'Fechar' }).first().click()
     step('Saúde mostra o certificado TLS do PBX: autoassinado, com validade e nomes')
 
-    await page.getByRole('tab', { name: 'SIP bruto' }).click()
-    const log = page.locator('.line.sip')
+    await verTodas(page, 'SIP')
+    const log = page.locator('#debug-tabpanel .line.sip')
     await log
-        .filter({ hasText: `REGISTER sip:${HOST} SIP/2.0` })
+        .filter({ hasText: `REGISTER sip:${HOST}` })
         .first()
         .waitFor({ timeout: 10000 })
-    await log.filter({ hasText: 'SIP/2.0 200 OK' }).first().waitFor({ timeout: 10000 })
+    await log.filter({ hasText: '200 OK' }).first().waitFor({ timeout: 10000 })
+    for (const head of (await log.filter({ hasText: 'REGISTER' }).all()).slice(0, 3))
+        await head.getByRole('button').first().click()
     const text = (await log.allInnerTexts()).join('\n')
     if (/response="[0-9a-f]{16,}"/.test(text)) throw new Error('a resposta do desafio apareceu no log (RNF-10)')
     step('SIP bruto mostra REGISTER e 200 OK, sem a resposta do desafio')
 
     // ─── Chamadas (segunda entrega) ───
-    await page.getByRole('tab', { name: 'Eventos' }).click()
+    await verTodas(page, 'Log')
     await dial('Puro UDP', '600')
     const echo = call(/2001\s*→\s*600/)
     await echo.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 20000 })
@@ -135,7 +136,7 @@ try {
     await page.waitForTimeout(1500)
     await echo.getByRole('button', { name: 'Parar gravação' }).click()
     const saved = page
-        .locator('.list')
+        .locator('#debug-tabpanel')
         .getByText(/Gravação salva em .*\.wav/)
         .first()
     await saved.waitFor({ timeout: 10000 })
@@ -331,9 +332,9 @@ try {
     step(
         `G.722 de um lado e G.711 do outro: ${(await wideCaller.locator('.quality').textContent()).trim().replace(/\s+/g, ' ')}`
     )
-    await page.getByRole('tab', { name: 'Eventos' }).click()
+    await verTodas(page, 'Log')
     const before = await page
-        .locator('.list')
+        .locator('#debug-tabpanel')
         .getByText(/Gravação salva em .*\.wav/)
         .count()
     await wideCaller.getByRole('button', { name: 'Gravar' }).click()

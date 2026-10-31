@@ -28,6 +28,10 @@ import {
     sugestoes,
     linhaDaConta,
     recolherDepuracao,
+    abrirDepuracao,
+    alcaDepuracao,
+    contaDepuracao,
+    mensagemSip,
     seletor,
     tiraDepuracao,
     tituloDiscar,
@@ -67,9 +71,27 @@ try {
     // ─── Modo simulado ───
     await esperarContasSimuladas(page)
 
+    // A gaveta de depuração começa recolhida na tira.
+    if ((await tiraDepuracao(page).getAttribute('aria-expanded')) !== 'false')
+        throw new Error('a gaveta de depuração não começou fechada')
+    // O tamanho muda pelas setas na alça e continua o mesmo depois de recarregar.
+    await abrirDepuracao(page)
+    const tamanho = async () => Number(await alcaDepuracao(page).getAttribute('aria-valuenow'))
+    const inicial = await tamanho()
+    await alcaDepuracao(page).focus()
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.press('ArrowLeft')
+    const maior = await tamanho()
+    if (maior !== inicial + 32) throw new Error(`as setas não mudaram o tamanho da gaveta (${inicial} → ${maior})`)
+
     // O seletor troca a conta atual: filtra por etiqueta, escolhe, e o título do discar muda.
     await etiquetar(page, 'Comercial', ['Vendas 1002'])
     await esperarContasSimuladas(page)
+    if ((await tamanho()) !== maior) throw new Error(`a gaveta não guardou o tamanho: ${await tamanho()}`)
+    await alcaDepuracao(page).dblclick()
+    if ((await tamanho()) !== inicial) throw new Error('o duplo clique na alça não voltou ao tamanho padrão')
+    await recolherDepuracao(page).click()
+    step('simulado: a gaveta começa fechada, muda de tamanho pelas setas e guarda o tamanho ao recarregar')
     await abrirSeletor(page)
     await filtrarPorEtiqueta(page, 'Comercial')
     await linhaDaConta(page, 'Suporte 1001').waitFor({ state: 'detached' })
@@ -93,6 +115,14 @@ try {
     const ura = /→\s*8000/
     await ligar('8000', 5000)
     step('simulado: a chamada para 8000 aparece "em chamada" em até 5 s')
+    await abrirDepuracao(page, 'SIP')
+    const invite = mensagemSip(page, 'INVITE sip:8000').last()
+    await invite.waitFor({ timeout: 5000 })
+    await invite.getByRole('button').first().click()
+    await invite.getByLabel('Mensagem SIP inteira').waitFor()
+    if (!/Call-ID:/.test(await invite.locator('pre').textContent()))
+        throw new Error('a mensagem SIP aberta não mostra os cabeçalhos')
+    step('simulado: a gaveta mostra o INVITE da chamada e abre a mensagem inteira ao clicar')
     let antes = await contarLinhas(page, linhaDtmf(3))
     await enviarDtmf(page, ura, '123')
     await esperarLinhaNova(page, linhaDtmf(3), antes, 5000)
@@ -111,6 +141,17 @@ try {
 
     const para1002 = /→\s*1002/
     await ligar('1002', 5000)
+    // Clicar na chamada recebida por Vendas 1002 troca o filtro da depuração para essa conta.
+    await chamadaAtiva(page, /1002\s*←\s*1001/)
+        .locator('.name')
+        .click()
+    await abrirDepuracao(page, 'SIP')
+    const filtro = async () => (await contaDepuracao(page).locator('option:checked').textContent())?.trim()
+    if (!(await filtro())?.startsWith('Vendas 1002')) throw new Error(`o filtro ficou em ${await filtro()}`)
+    await mensagemSip(page, 'INVITE sip:1002').first().waitFor({ timeout: 5000 })
+    if (await page.locator('#debug-tabpanel .chip').count())
+        throw new Error('com uma conta só no filtro, as linhas não deveriam repetir a conta')
+    step('simulado: clicar numa chamada filtra o SIP pela conta dela')
     antes = await contarLinhas(page, LINHA_TRANSFERENCIA)
     await transferirCega(page, para1002, '1003')
     await esperarLinhaNova(page, LINHA_TRANSFERENCIA, antes, 10000)

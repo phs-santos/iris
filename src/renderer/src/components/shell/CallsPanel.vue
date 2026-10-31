@@ -6,7 +6,7 @@ import IncomingRow from './IncomingRow.vue'
 import AccountDetails from './AccountDetails.vue'
 
 /** Coluna de chamadas: as recebidas no alto, depois as outras em linhas; sem chamada, os detalhes da conta. */
-const emit = defineEmits<{ 'save-contact': [accountId: string, number: string] }>()
+const emit = defineEmits<{ 'save-contact': [accountId: string, number: string]; contacts: [accountId: string] }>()
 const calls = useCallsStore()
 const ringing = computed(() => calls.ringingIncoming)
 const others = computed(() => calls.calls.filter((c) => !(c.direction === 'in' && c.state === 'ringing')))
@@ -31,8 +31,14 @@ const activeCount = computed(() => calls.active.length - ringing.value.length)
                 </template>
             </span>
         </header>
-        <!-- Rola com muitas chamadas, inclusive as encerradas, que não têm botão: o teclado precisa alcançar (RNF-12). -->
-        <div class="list" tabindex="0" role="region" :aria-label="$t('callsPanel.lista')">
+        <!-- Rola com muitas chamadas, inclusive as encerradas, que não têm botão: o teclado precisa alcançar (RNF-12).
+             Sem chamadas, os detalhes da conta rolam por conta própria e a lista não entra no Tab. -->
+        <div
+            class="list"
+            :tabindex="calls.calls.length ? 0 : undefined"
+            role="region"
+            :aria-label="$t('callsPanel.lista')"
+        >
             <IncomingRow v-for="call in ringing" :key="call.id" :call="call" />
             <CallRow
                 v-for="call in others"
@@ -40,7 +46,7 @@ const activeCount = computed(() => calls.active.length - ringing.value.length)
                 :call="call"
                 @save-contact="(id, n) => emit('save-contact', id, n)"
             />
-            <AccountDetails v-if="calls.calls.length === 0" />
+            <AccountDetails v-if="calls.calls.length === 0" @contacts="(id) => emit('contacts', id)" />
         </div>
     </div>
 </template>
@@ -80,6 +86,14 @@ const activeCount = computed(() => calls.active.length - ringing.value.length)
     flex: 1;
     min-height: 0;
     overflow: auto;
+    display: flex;
+    flex-direction: column;
+}
+.list > * {
+    flex: none;
+}
+.list > .details {
+    flex: 1;
 }
 .list:focus-visible {
     outline-offset: -2px;

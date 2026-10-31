@@ -7,6 +7,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
+import { linhaDepuracao, verTodas } from './helpers/tela.mjs'
 
 const WSS = process.env.PBX_WS ?? 'wss://127.0.0.1:8089/ws'
 const DOMAIN = process.env.PBX_DOMAIN ?? '127.0.0.1'
@@ -195,18 +196,20 @@ try {
     await page.getByText('0 chamadas').waitFor({ timeout: 15000 })
     step('desligar 1001 encerrou também 1003')
 
-    await page.getByRole('tab', { name: 'SIP bruto' }).click()
-    await page.locator('.line.sip', { hasText: 'SIP/2.0 200 OK' }).first().waitFor()
+    await verTodas(page, 'SIP')
+    await linhaDepuracao(page, '200 OK').first().waitFor()
     // RNF-10: nem a tela nem os arquivos exportados podem ter Authorization, hash, nonce ou senha.
     const secret = /Authorization:\s*Digest|\b(response|nonce|cnonce|password|secret)="?(?!\[REDACTED\])[\w/+=.-]{6,}/i
-    const shown = (await page.locator('.line').allTextContents()).filter((l) => secret.test(l))
+    // A mensagem inteira só aparece ao abrir: abre as primeiras para conferir o texto completo.
+    for (const head of (await linhaDepuracao(page, 'REGISTER').all()).slice(0, 3))
+        await head.getByRole('button').first().click()
+    const shown = (await page.locator('#debug-tabpanel .line').allTextContents()).filter((l) => secret.test(l))
     if (shown.length) throw new Error(`O log mostrou dado de autenticação:\n${shown.slice(0, 3).join('\n')}`)
     const logFile = join(userData, 'log-exportado')
     await app.evaluate(({ dialog }, file) => {
         let n = 0
         dialog.showSaveDialog = async () => ({ canceled: false, filePath: `${file}-${++n}` })
     }, logFile)
-    await page.getByRole('tab', { name: 'Tudo' }).click()
     await page.getByRole('button', { name: 'Salvar .txt' }).click()
     await page.getByRole('button', { name: 'Salvar .json' }).click()
     await page.getByText(/Salvo em .*log-exportado-2/).waitFor()

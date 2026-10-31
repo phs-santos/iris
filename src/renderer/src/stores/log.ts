@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { shallowRef, triggerRef } from 'vue'
+import { ref, shallowRef, triggerRef } from 'vue'
 import type { LogKind, LogLevel } from '@renderer/sip/engine'
 
 export interface LogEntry {
@@ -23,8 +23,9 @@ export const LOG_LIMIT = 50_000
 
 const levelRank: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 }
 
+/** Linha sem conta é do app (certificado, versão, microfone): aparece com qualquer filtro de conta. */
 export function matches(entry: LogEntry, filter: LogFilter): boolean {
-    if (filter.accountId && entry.accountId !== filter.accountId) return false
+    if (filter.accountId && entry.accountId && entry.accountId !== filter.accountId) return false
     if (filter.kind !== 'all' && entry.kind !== filter.kind) return false
     if (levelRank[entry.level] < levelRank[filter.minLevel]) return false
     if (filter.text && !entry.text.toLowerCase().includes(filter.text.toLowerCase())) return false
@@ -47,10 +48,19 @@ export const useLogStore = defineStore('log', () => {
     // shallowRef: milhares de linhas sem custo de reatividade profunda.
     const entries = shallowRef<LogEntry[]>([])
     let scheduled = false
+    /**
+     * Conta da depuração (RF-21); null mostra todas. Acompanha a conta atual e muda ao clicar numa
+     * chamada: quem liga os dois é a gaveta de depuração, porque este store não pode importar os outros
+     * (eles escrevem no log).
+     */
+    const accountFilter = ref<string | null>(null)
+    /** Quantos erros já chegaram: a tira da depuração recolhida compara com o que já foi visto. */
+    const errorCount = ref(0)
 
     function add(accountId: string | null, level: LogLevel, kind: LogKind, text: string): void {
         const list = entries.value
         list.push({ id: nextId++, ts: Date.now(), accountId, level, kind, text })
+        if (level === 'error') errorCount.value++
         if (list.length > LOG_LIMIT) list.splice(0, list.length - LOG_LIMIT)
         // Agrupa várias linhas num único redesenho.
         if (!scheduled) {
@@ -70,5 +80,5 @@ export const useLogStore = defineStore('log', () => {
         return entries.value.filter((e) => matches(e, filter))
     }
 
-    return { entries, add, clear, filtered }
+    return { entries, accountFilter, errorCount, add, clear, filtered }
 })

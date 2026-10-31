@@ -15,7 +15,20 @@ export async function abrir() {
         env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
     })
     const page = await app.firstWindow()
+    await isolarDoMouse(app)
     return { app, page, userData }
+}
+
+/**
+ * A janela de teste não recebe o mouse de verdade do computador, só os cliques do Playwright (que entram
+ * pelo Chromium, não pelo sistema). Sem isso, um clique de quem está usando a máquina, quando a janela
+ * abre por baixo do ponteiro, fechava o seletor de contas no meio do teste (a falha que aparecia de vez
+ * em quando no começo do test:chamada).
+ */
+export async function isolarDoMouse(app) {
+    await app.evaluate(({ BrowserWindow }) => {
+        for (const win of BrowserWindow.getAllWindows()) win.setIgnoreMouseEvents(true)
+    })
 }
 
 /** Avatar da conta atual, no topo da barra de ícones: abre o seletor de contas. */
@@ -115,14 +128,28 @@ export async function clicarConta(page, nome) {
     await seletor(page).waitFor({ state: 'detached' })
 }
 
-/** Tira fina da depuração recolhida, e o botão que recolhe o painel aberto. */
-export const tiraDepuracao = (page) => page.getByRole('button', { name: /^Abrir a depuração/ })
+/** Tira fina da depuração recolhida ("SIP · Fluxo · Log"), e o botão que recolhe a gaveta aberta. */
+export const tiraDepuracao = (page) => page.getByRole('button', { name: /^SIP · Fluxo · Log/ })
 export const recolherDepuracao = (page) => page.getByRole('button', { name: 'Recolher a depuração' })
 
-/** Abre o painel de depuração (SIP · Fluxo · Log), que começa recolhido. */
-export async function abrirDepuracao(page) {
+/** Abre a gaveta de depuração, que começa recolhida; com `aba`, vai para ela (SIP, Fluxo, Log ou Saúde). */
+export async function abrirDepuracao(page, aba) {
     if (await tiraDepuracao(page).isVisible()) await tiraDepuracao(page).click()
+    if (aba) await abaDepuracao(page, aba).click()
 }
+
+/** Aba da gaveta de depuração. */
+export const abaDepuracao = (page, nome) =>
+    page.getByRole('tablist', { name: 'Abas da depuração' }).getByRole('tab', { name: nome, exact: true })
+
+/** Filtro de conta da gaveta ("Todas" ou "nome · ramal"). */
+export const contaDepuracao = (page) => page.getByRole('combobox', { name: 'Conta da depuração' })
+
+/** Alça que muda o tamanho da gaveta aberta. */
+export const alcaDepuracao = (page) => page.getByRole('separator', { name: 'Tamanho da depuração' })
+
+/** Mensagem da aba SIP, pela primeira linha ("INVITE sip:…", "200 OK"). */
+export const mensagemSip = (page, texto) => page.locator('#debug-tabpanel .line.sip', { hasText: texto })
 
 /** Campo do número do discador (combobox com as sugestões dos contatos da conta atual). */
 export const campoNumero = (page) => page.getByRole('combobox', { name: 'Número' })
@@ -159,7 +186,7 @@ export async function criarContato(page, conta, nome, numero) {
 }
 
 /** Detalhes da conta atual, que a coluna de chamadas mostra quando não há chamada. */
-export const detalhesDaConta = (page, conta) => page.getByRole('heading', { name: `Detalhes de ${conta}` })
+export const detalhesDaConta = (page, conta) => page.getByRole('region', { name: `Detalhes de ${conta}` })
 
 /** Digita o número e liga. */
 export async function discar(page, numero) {
@@ -203,11 +230,19 @@ export async function transferirCega(page, numero, destino) {
     await cartao.getByRole('button', { name: 'Cega' }).click()
 }
 
-/** Quantas linhas do log (aba "Tudo", com eventos e SIP bruto) casam com o texto. */
+/** Abre a gaveta numa aba com o filtro em "Todas" as contas. */
+export async function verTodas(page, aba) {
+    await abrirDepuracao(page, aba)
+    await contaDepuracao(page).selectOption({ label: 'Todas' })
+}
+
+/** Linha da aba aberta da gaveta (Log ou SIP). */
+export const linhaDepuracao = (page, texto) => page.locator('#debug-tabpanel .line', { hasText: texto })
+
+/** Quantas linhas da aba Log, com todas as contas, casam com o texto. */
 export async function contarLinhas(page, texto) {
-    await abrirDepuracao(page)
-    await page.getByRole('tab', { name: 'Tudo' }).click()
-    return page.locator('.line', { hasText: texto }).count()
+    await verTodas(page, 'Log')
+    return linhaDepuracao(page, texto).count()
 }
 
 /** Espera aparecer uma linha do log além das `antes` que já existiam: só vale o que veio depois do gesto. */

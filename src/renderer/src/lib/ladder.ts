@@ -77,12 +77,26 @@ function headerValue(lines: string[], names: string[]): string | undefined {
     return undefined
 }
 
-function severityOf(status: number | undefined): Severity {
+/** Gravidade pelo código da resposta; pedidos são 'request'. */
+export function severityOf(status: number | undefined): Severity {
     if (status === undefined) return 'request'
     if (status < 200) return 'provisional'
     if (status === 401 || status === 407) return 'auth'
     if (status >= 400) return 'error'
     return 'ok'
+}
+
+/**
+ * Resumo de uma linha do SIP bruto para a lista da depuração: o sentido e a linha inicial
+ * ("INVITE sip:8000@pbx SIP/2.0" ou "SIP/2.0 200 OK"), já sem a seta. Serve também para o que não
+ * tem Call-ID, que o diagrama ignora.
+ */
+export function sipHeadline(text: string): { dir: 'out' | 'in' | null; line: string; status?: number } {
+    const dir = directionOf(text)
+    const lines = text.split(/\r?\n/).map((line) => line.replace(/^\s*[→←]\s*/, '').trim())
+    const line = lines.find((l) => REQUEST_LINE.test(l) || STATUS_LINE.test(l)) ?? lines.find(Boolean) ?? ''
+    const status = STATUS_LINE.exec(line)
+    return { dir, line, status: status ? Number(status[1]) : undefined }
 }
 
 /** Lê uma linha do SIP bruto. Devolve null para o que não é mensagem SIP com Call-ID e CSeq. */
@@ -221,6 +235,9 @@ export interface LadderLayout {
 
 export const LADDER = { columnGap: 240, margin: 120, top: 56, rowHeight: 34, bottom: 24 }
 
+/** Medidas do desenho: a gaveta de depuração usa uma versão estreita; o arquivo exportado, a larga. */
+export type LadderGeometry = Pick<typeof LADDER, 'columnGap' | 'margin' | 'rowHeight'>
+
 /**
  * Posições das colunas e das setas. O PBX fica no meio; cada conta, de um lado, na ordem em que
  * apareceu. Com duas contas da mesma chamada, a escada mostra as duas pernas: A → PBX → B.
@@ -228,14 +245,15 @@ export const LADDER = { columnGap: 240, margin: 120, top: 56, rowHeight: 34, bot
 export function layoutLadder(
     dialogs: Dialog[],
     describeAccount: (accountId: string) => { label: string; sublabel: string },
-    pbxLabel: string
+    pbxLabel: string,
+    geometry: LadderGeometry = LADDER
 ): LadderLayout {
     const accountIds = [...new Set(dialogs.map((d) => d.accountId))]
     const pbxIndex = Math.ceil(accountIds.length / 2)
     const order: (string | null)[] = [...accountIds]
     order.splice(pbxIndex, 0, null)
     const columns: LadderColumn[] = order.map((accountId, i) => ({
-        x: LADDER.margin + i * LADDER.columnGap,
+        x: geometry.margin + i * geometry.columnGap,
         accountId,
         ...(accountId ? describeAccount(accountId) : { label: 'PBX', sublabel: pbxLabel })
     }))
@@ -245,11 +263,11 @@ export function layoutLadder(
     const rows = messages.map((message, i) => {
         const account = columns.find((c) => c.accountId === message.accountId)!
         const [x1, x2] = message.dir === 'out' ? [account.x, pbx.x] : [pbx.x, account.x]
-        return { message, x1, x2, y: LADDER.top + (i + 1) * LADDER.rowHeight, offsetMs: message.ts - first }
+        return { message, x1, x2, y: LADDER.top + (i + 1) * geometry.rowHeight, offsetMs: message.ts - first }
     })
     return {
-        width: LADDER.margin * 2 + (columns.length - 1) * LADDER.columnGap,
-        height: LADDER.top + (rows.length + 1) * LADDER.rowHeight + LADDER.bottom,
+        width: geometry.margin * 2 + (columns.length - 1) * geometry.columnGap,
+        height: LADDER.top + (rows.length + 1) * geometry.rowHeight + LADDER.bottom,
         top: LADDER.top,
         columns,
         rows

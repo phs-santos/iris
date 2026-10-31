@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useLogStore } from '@renderer/stores/log'
 import { t } from '@renderer/i18n'
 import { computed, nextTick, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
@@ -12,6 +13,13 @@ const props = defineProps<{ call: CallView }>()
 const emit = defineEmits<{ 'save-contact': [accountId: string, number: string] }>()
 const accounts = useAccountsStore()
 const calls = useCallsStore()
+const log = useLogStore()
+
+/** Escolhe a chamada; a depuração passa a mostrar a conta dela (RF-21). */
+function select(): void {
+    calls.selectedId = props.call.id
+    log.accountFilter = props.call.accountId
+}
 
 const dtmf = ref('')
 const dtmfError = ref('')
@@ -128,7 +136,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
         class="call"
         :class="[stateInfo.cls, { selected: calls.selectedId === call.id, ended: !live }]"
         :style="{ '--account': account?.color }"
-        @click="calls.selectedId = call.id"
+        @click="select"
     >
         <div class="line">
             <div class="who">
@@ -139,7 +147,7 @@ const openRecordings = (): void => void window.iris.audio.openRecordings().catch
                         class="name"
                         :aria-pressed="calls.selectedId === call.id"
                         :title="$t('callRow.escolher')"
-                        @click.stop="calls.selectedId = call.id"
+                        @click.stop="select"
                     >
                         {{ call.remoteName || call.remote }}
                     </button>

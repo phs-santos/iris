@@ -99,6 +99,10 @@ describe('filtro do log', () => {
         expect(matches(entry, { accountId: null, kind: 'sip', minLevel: 'debug', text: '' })).toBe(false)
         expect(matches(entry, { accountId: null, kind: 'all', minLevel: 'warn', text: '' })).toBe(false)
     })
+    it('linha sem conta (do app) aparece com qualquer filtro de conta', () => {
+        const app: LogEntry = { ...entry, accountId: null, text: 'Microfone: padrão' }
+        expect(matches(app, { accountId: 'b', kind: 'all', minLevel: 'debug', text: '' })).toBe(true)
+    })
 })
 
 describe('contas em lote por CSV (RF-48)', () => {

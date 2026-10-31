@@ -4,7 +4,17 @@ import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { abrirDepuracao, abrirSeletor, discar, fecharSeletor, linhaDaConta, seletor } from './helpers/tela.mjs'
+import {
+    abaDepuracao,
+    abrirSeletor,
+    discar,
+    fecharSeletor,
+    isolarDoMouse,
+    linhaDaConta,
+    linhaDepuracao,
+    seletor,
+    verTodas
+} from './helpers/tela.mjs'
 
 const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
 const shots = process.env.SHOTS_DIR
@@ -24,6 +34,7 @@ const app = await electron.launch({
 let mainErrors = ''
 app.process().stderr.on('data', (chunk) => (mainErrors += chunk))
 const page = await app.firstWindow()
+await isolarDoMouse(app)
 const pageErrors = []
 page.on('pageerror', (error) => pageErrors.push(String(error)))
 await page.setViewportSize?.({ width: 1360, height: 820 }).catch(() => {})
@@ -94,8 +105,8 @@ try {
     if (shots) await page.screenshot({ path: join(shots, '4-consulta.png') })
     await consult.getByRole('button', { name: 'Concluir transferência' }).click()
     await page.getByText('1 ativa', { exact: true }).waitFor({ timeout: 5000 })
-    await abrirDepuracao(page)
-    await page.locator('.line', { hasText: 'Agora em chamada com 8000' }).waitFor()
+    await verTodas(page, 'Log')
+    await linhaDepuracao(page, 'Agora em chamada com 8000').waitFor()
     step('transferência assistida ligou 1001 com a URA e liberou 1002')
     await live('→').getByRole('button', { name: 'Desligar' }).click()
     await page.getByText('0 ativas').waitFor()
@@ -108,7 +119,7 @@ try {
     const mics = await audio.locator('select').first().locator('option').count()
     if (mics < 2) throw new Error('Nenhum microfone listado no diálogo de áudio')
     await audio.locator('select').first().selectOption({ index: 1 })
-    await page.locator('.line', { hasText: 'Microfone: ' }).waitFor()
+    await linhaDepuracao(page, 'Microfone: ').waitFor()
     if (shots) await page.screenshot({ path: join(shots, '5-audio.png') })
     step('Configurações › Áudio lista e troca o microfone')
 
@@ -129,14 +140,14 @@ try {
     await audio.getByRole('button', { name: 'Fechar', exact: true }).click()
     step('Configurações › Aparência troca e salva o tema e a cor de destaque')
 
-    await page.getByRole('tab', { name: 'SIP bruto' }).click()
-    await page.locator('.line.sip', { hasText: 'INVITE sip:1002@demo.local' }).first().waitFor()
+    await abaDepuracao(page, 'SIP').click()
+    await linhaDepuracao(page, 'INVITE sip:1002@demo.local').first().waitFor()
     step('log SIP bruto mostra o INVITE')
     if (shots) await page.screenshot({ path: join(shots, '6-log-sip.png') })
 
     // Diagrama de escada: a chamada vira setas, e a seta abre a mensagem completa.
-    await page.getByRole('button', { name: 'Fluxo SIP' }).click()
-    const ladder = page.getByRole('dialog', { name: 'Fluxo SIP' })
+    await abaDepuracao(page, 'Fluxo').click()
+    const ladder = page.locator('#debug-tabpanel')
     await ladder.locator('.what', { hasText: 'INVITE → 200 OK' }).first().click()
     await ladder
         .getByRole('button', { name: /^INVITE, / })
@@ -149,8 +160,6 @@ try {
             .first()
             .waitFor()
     if (shots) await page.screenshot({ path: join(shots, '7-fluxo-sip.png') })
-    await page.keyboard.press('Escape')
-    await ladder.waitFor({ state: 'detached' })
     step('fluxo SIP desenha a chamada e abre a mensagem ao clicar')
 
     if (/No handler registered|Error occurred in handler/.test(mainErrors))
