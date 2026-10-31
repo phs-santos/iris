@@ -2,20 +2,11 @@
 // perdida, a escolha em Configurações → Notificações e o botão de teste. Cada aviso deixa uma linha no
 // log interno; é por ela que o teste sabe que a notificação saiu.
 // Uso: npm run build && node tests/e2e/notificacoes.mjs   (Linux sem tela: xvfb-run -a node tests/e2e/notificacoes.mjs)
-import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { escolherConta, esperarContasSimuladas } from './helpers/tela.mjs'
+import { abrir, escolherConta, esperarContasSimuladas } from './helpers/tela.mjs'
 
-const userData = mkdtempSync(join(tmpdir(), 'iris-notificacoes-'))
-const args = ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
-const app = await electron.launch({
-    args,
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-})
-const page = await app.firstWindow()
+const { app, page, userData } = await abrir({ prefixo: 'iris-notificacoes-' })
 const step = (msg) => console.log(`✓ ${msg}`)
 const notices = () =>
     readFileSync(join(userData, 'logs', 'iris.log'), 'utf8')
@@ -69,7 +60,7 @@ try {
 
     // Desligar o aviso de chamada recebida em Configurações → Notificações.
     await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
-    const settings = page.getByRole('dialog')
+    const settings = page.getByRole('dialog', { name: 'Ajustes' })
     await settings.getByRole('tab', { name: 'Notificações' }).click()
     await settings
         .getByText('Chamada recebida', { exact: true })

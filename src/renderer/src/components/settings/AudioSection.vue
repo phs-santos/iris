@@ -4,6 +4,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useDevicesStore } from '@renderer/stores/devices'
 import { ringer } from '@renderer/sip/audio'
 import { DEFAULT_RINGTONE } from '@shared/ringtones'
+import CodecsList from './CodecsList.vue'
 
 const devices = useDevicesStore()
 
@@ -91,77 +92,123 @@ onUnmounted(stopMeter)
             <h3>{{ $t('audioSection.audio') }}</h3>
             <p>{{ $t('audioSection.vale_para_as_chamadas_e') }}</p>
         </div>
-        <label class="field">
-            <span class="label">{{ $t('audioSection.microfone') }}</span>
-            <select
-                class="input"
-                :value="devices.inputId"
-                @change="chooseInput(($event.target as HTMLSelectElement).value)"
-            >
-                <option value="">{{ $t('audioSection.padrao_do_sistema') }}</option>
-                <option v-for="d in devices.inputs" :key="d.id" :value="d.id">{{ d.label }}</option>
-            </select>
-        </label>
-        <div
-            class="meter"
-            role="meter"
-            :aria-label="$t('audioSection.nivel_do_microfone')"
-            :aria-valuenow="Math.round(level * 100)"
-        >
-            <div class="bar" :style="{ width: `${Math.round(level * 100)}%` }"></div>
-        </div>
-        <p v-if="micError" class="error">{{ micError }}</p>
-        <p v-else class="set-hint">{{ $t('audioSection.fale_alguma_coisa_a_barra') }}</p>
 
-        <label class="field">
-            <span class="label">{{ $t('audioSection.alto_falante') }}</span>
-            <select
-                class="input"
-                :value="devices.outputId"
-                @change="devices.setOutput(($event.target as HTMLSelectElement).value)"
-            >
-                <option value="">{{ $t('audioSection.padrao_do_sistema') }}</option>
-                <option v-for="d in devices.outputs" :key="d.id" :value="d.id">{{ d.label }}</option>
-            </select>
-        </label>
-        <div>
-            <button class="btn" :disabled="testing" @click="testOutput">
-                {{ $t('audioSection.tocar_som_de_teste') }}
-            </button>
+        <h4 class="sub">{{ $t('audioSection.dispositivos') }}</h4>
+        <div class="set-group">
+            <div class="set-row">
+                <label class="what" for="audio-in"
+                    ><b>{{ $t('audioSection.microfone') }}</b></label
+                >
+                <select
+                    id="audio-in"
+                    class="input control"
+                    :value="devices.inputId"
+                    @change="chooseInput(($event.target as HTMLSelectElement).value)"
+                >
+                    <option value="">{{ $t('audioSection.padrao_do_sistema') }}</option>
+                    <option v-for="d in devices.inputs" :key="d.id" :value="d.id">{{ d.label }}</option>
+                </select>
+            </div>
+            <div class="set-row">
+                <span class="what">
+                    <b>{{ $t('audioSection.nivel') }}</b>
+                    <small v-if="micError" class="error">{{ micError }}</small>
+                    <small v-else>{{ $t('audioSection.fale_alguma_coisa_a_barra') }}</small>
+                </span>
+                <div
+                    class="meter control"
+                    role="meter"
+                    :aria-label="$t('audioSection.nivel_do_microfone')"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                    :aria-valuenow="Math.round(level * 100)"
+                >
+                    <div class="bar" :style="{ width: `${Math.round(level * 100)}%` }"></div>
+                </div>
+            </div>
+            <div class="set-row">
+                <label class="what" for="audio-out"
+                    ><b>{{ $t('audioSection.alto_falante') }}</b></label
+                >
+                <span class="control pair">
+                    <select
+                        id="audio-out"
+                        class="input"
+                        :value="devices.outputId"
+                        @change="devices.setOutput(($event.target as HTMLSelectElement).value)"
+                    >
+                        <option value="">{{ $t('audioSection.padrao_do_sistema') }}</option>
+                        <option v-for="d in devices.outputs" :key="d.id" :value="d.id">{{ d.label }}</option>
+                    </select>
+                    <button class="btn small" :disabled="testing" @click="testOutput">
+                        {{ $t('audioSection.testar') }}
+                    </button>
+                </span>
+            </div>
+            <div class="set-row">
+                <span class="what">
+                    <b>{{ $t('audioSection.volume_do_toque', { n: devices.ringVolume }) }}</b>
+                    <small>{{ $t('audioSection.toque_por_conta') }}</small>
+                </span>
+                <span class="control pair">
+                    <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="5"
+                        :value="devices.ringVolume"
+                        :aria-label="$t('audioSection.volume_do_toque_rotulo')"
+                        @change="devices.setRingVolume(Number(($event.target as HTMLInputElement).value))"
+                    />
+                    <button type="button" class="btn small" @click="ringer.preview(DEFAULT_RINGTONE)">
+                        {{ $t('audioSection.ouvir_toque') }}
+                    </button>
+                </span>
+            </div>
+            <div class="set-row">
+                <span class="what">
+                    <b>{{ $t('audioSection.gravacoes') }}</b>
+                    <small>{{ $t('audioSection.gravacoes_dica') }}</small>
+                    <small v-if="folderError" class="error" role="alert">{{ folderError }}</small>
+                </span>
+                <button class="btn small" @click="openRecordings">{{ $t('audioSection.abrir_gravacoes') }}</button>
+            </div>
         </div>
 
-        <label class="field">
-            <span class="label">{{ $t('audioSection.volume_do_toque', { n: devices.ringVolume }) }}</span>
-            <span class="ring">
-                <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    step="5"
-                    :value="devices.ringVolume"
-                    :aria-label="$t('audioSection.volume_do_toque_rotulo')"
-                    @change="devices.setRingVolume(Number(($event.target as HTMLInputElement).value))"
-                />
-                <button type="button" class="btn small" @click="ringer.preview(DEFAULT_RINGTONE)">
-                    {{ $t('audioSection.ouvir_toque') }}
-                </button>
-            </span>
-        </label>
-        <p class="set-hint">{{ $t('audioSection.toque_por_conta') }}</p>
-
-        <div class="set-head">
-            <h3>{{ $t('audioSection.gravacoes') }}</h3>
-            <p>{{ $t('audioSection.gravacoes_dica') }}</p>
-        </div>
-        <div>
-            <button class="btn" @click="openRecordings">{{ $t('audioSection.abrir_gravacoes') }}</button>
-        </div>
-        <p v-if="folderError" class="error" role="alert">{{ folderError }}</p>
+        <h4 class="sub">{{ $t('audioSection.codecs') }}</h4>
+        <CodecsList />
     </section>
 </template>
 
 <style scoped>
+.sub {
+    margin: 0 0 -8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+}
+.set-row {
+    padding: 7px 12px;
+}
+.control.pair {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 300px;
+}
+.control.pair select,
+.control.pair input[type='range'] {
+    flex: 1;
+    min-width: 0;
+}
+select.control {
+    width: 300px;
+}
+input[type='range'] {
+    accent-color: var(--accent);
+}
 .meter {
+    width: 300px;
     height: 8px;
     border-radius: 4px;
     background: var(--raise);
@@ -172,18 +219,7 @@ onUnmounted(stopMeter)
     background: var(--ok);
     transition: width 60ms linear;
 }
-.ring {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.ring input {
-    flex: 1;
-    accent-color: var(--accent);
-}
 .error {
-    color: var(--bad);
-    font-size: 12px;
-    margin: 0;
+    color: var(--bad-text) !important;
 }
 </style>

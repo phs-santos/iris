@@ -5,9 +5,18 @@ import { DEFAULT_RECONNECT } from '@shared/reconnect'
 import type { ReconnectSettings } from '@shared/types'
 import type { NotificationSettings } from '@shared/notifications'
 
-/** Seções da tela de Configurações. */
+/** Seções da janela de Ajustes; Sobre fica no pé, fora da lista. */
 export type SettingsSection =
-    'appearance' | 'audio' | 'notifications' | 'servers' | 'connection' | 'security' | 'data' | 'update'
+    | 'audio'
+    | 'appearance'
+    | 'servers'
+    | 'tags'
+    | 'connection'
+    | 'notifications'
+    | 'security'
+    | 'data'
+    | 'update'
+    | 'about'
 
 /** Aparência e conexão da tela de Configurações, aplicadas na hora e salvas em settings.json. */
 export const usePreferencesStore = defineStore('preferences', () => {

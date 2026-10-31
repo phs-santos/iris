@@ -1,196 +1,196 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { ref } from 'vue'
 import { t } from '@renderer/i18n'
 import { useServersStore } from '@renderer/stores/servers'
+import { useAccountsStore } from '@renderer/stores/accounts'
 import { useToastsStore } from '@renderer/stores/toasts'
-import { parseSipServer } from '@shared/sip-target'
-import type { SipServer } from '@shared/servers'
+import { canDeleteServer, SIMULATED_SERVER_ID, type SipServer } from '@shared/servers'
+import ServerDialog from '../ServerDialog.vue'
+import Icon from '../icons/Icon.vue'
 
-/** Servidores cadastrados (RF-51): os dados de conexão de um PBX, usados por várias contas. */
+/**
+ * Servidores (RF-51): lista com o simulado fixo em primeiro, e a janela de servidor para criar e editar.
+ * Servidor em uso não se apaga: a linha diz quantas contas usam e o que fazer.
+ */
 const servers = useServersStore()
-const editing = ref<SipServer | null>(null)
-const form = reactive<SipServer>(blank())
-const message = ref('')
+const accounts = useAccountsStore()
+/** Janela aberta: `null` fechada, `'new'` para criar, ou o servidor sendo editado. */
+const editing = ref<SipServer | 'new' | null>(null)
 const confirmDelete = ref<string | null>(null)
+/** Recusa de apagar, por servidor: a mensagem fica na linha dele. */
+const refused = ref<{ id: string; text: string } | null>(null)
 
-function blank(): SipServer {
-    return {
-        id: '',
-        name: '',
-        domain: '',
-        transport: 'ws',
-        wssUrl: '',
-        sipServer: '',
-        iceServers: '',
-        preset: 'asterisk'
+const isSimulatedServer = (s: SipServer): boolean => s.id === SIMULATED_SERVER_ID
+const usage = (s: SipServer): number => servers.usersOf(s.id).length
+
+function askDelete(server: SipServer): void {
+    const check = canDeleteServer(server, accounts.accounts)
+    if (!check.ok && check.reason === 'em-uso') {
+        confirmDelete.value = null
+        refused.value = {
+            id: server.id,
+            text: check.count === 1 ? t('serversSection.em_uso_1') : t('serversSection.em_uso_n', { n: check.count })
+        }
+        return
     }
+    refused.value = null
+    confirmDelete.value = server.id
 }
 
-function edit(server?: SipServer): void {
-    Object.assign(form, blank(), server ? JSON.parse(JSON.stringify(server)) : { id: crypto.randomUUID() })
-    editing.value = server ?? form
-    message.value = ''
-}
-
-const error = computed(() => {
-    if (!form.name.trim()) return t('serversSection.erro_nome')
-    if (!form.domain.trim()) return t('serversSection.erro_dominio')
-    if (form.transport === 'ws' && !/^wss?:\/\/.+/i.test(form.wssUrl.trim())) return t('serversSection.erro_wss')
-    if (form.transport !== 'ws' && !parseSipServer(form.sipServer, form.domain, form.transport))
-        return t('serversSection.erro_endereco')
-    return ''
-})
-
-async function save(): Promise<void> {
-    if (error.value) return
-    const server: SipServer = {
-        ...JSON.parse(JSON.stringify(form)),
-        name: form.name.trim(),
-        domain: form.domain.trim(),
-        wssUrl: form.transport === 'ws' ? form.wssUrl.trim() : '',
-        sipServer: form.transport === 'ws' ? '' : form.sipServer.trim(),
-        srtp: form.transport !== 'ws' && form.srtp ? true : undefined
-    }
-    const changed = await servers.save(server)
-    editing.value = null
-    message.value = changed ? t('serversSection.contas_atualizadas', { n: changed }) : t('serversSection.salvo')
-    useToastsStore().show(message.value)
-}
-
-async function remove(id: string): Promise<void> {
-    const result = await servers.remove(id)
+async function remove(server: SipServer): Promise<void> {
+    const result = await servers.remove(server.id)
     confirmDelete.value = null
-    // A tela de recusa (servidor em uso) é da Tarefa 12; até lá, só não mostra "apagado".
-    if (result.ok) message.value = t('serversSection.apagado')
+    if (result.ok) useToastsStore().show(t('serversSection.apagado', { name: server.name }))
+    // Uma conta pode ter passado a usar o servidor entre a pergunta e a confirmação.
+    else askDelete(server)
 }
 
 const describe = (s: SipServer): string =>
-    s.transport === 'ws' ? s.wssUrl : `${s.transport.toUpperCase()} ${s.sipServer || s.domain}`
+    isSimulatedServer(s)
+        ? t('serversSection.simulado_dica')
+        : s.transport === 'ws'
+          ? s.wssUrl
+          : `${s.transport.toUpperCase()} · ${s.sipServer || s.domain}`
 </script>
 
 <template>
     <section class="set-section">
-        <div class="set-head">
-            <h3>{{ $t('serversSection.servidores') }}</h3>
-            <p>{{ $t('serversSection.explicacao') }}</p>
-        </div>
-        <div v-if="servers.servers.length" class="set-group">
-            <div v-for="s in servers.servers" :key="s.id" class="set-row">
-                <span class="what">
-                    <b>{{ s.name }}</b>
-                    <small class="mono">{{ s.domain }} · {{ describe(s) }}</small>
-                    <small>{{ $t('serversSection.usado_por', { n: servers.usersOf(s.id).length }) }}</small>
-                </span>
-                <template v-if="confirmDelete === s.id">
-                    <button class="btn small stop" @click="remove(s.id)">{{ $t('serversSection.confirmar') }}</button>
-                    <button class="btn small" @click="confirmDelete = null">{{ $t('serversSection.cancelar') }}</button>
-                </template>
-                <template v-else>
-                    <button
-                        class="btn small"
-                        :aria-label="$t('serversSection.editar_nome', { name: s.name })"
-                        @click="edit(s)"
-                    >
-                        {{ $t('serversSection.editar') }}
-                    </button>
-                    <button
-                        class="btn small"
-                        :aria-label="$t('serversSection.excluir_nome', { name: s.name })"
-                        @click="confirmDelete = s.id"
-                    >
-                        {{ $t('serversSection.excluir') }}
-                    </button>
-                </template>
+        <div class="set-head head-row">
+            <div>
+                <h3>{{ $t('serversSection.servidores') }}</h3>
+                <p>{{ $t('serversSection.explicacao') }}</p>
             </div>
+            <button class="btn small primary" @click="editing = 'new'">
+                <Icon name="plus" />{{ $t('serversSection.novo') }}
+            </button>
         </div>
-        <p v-else-if="!editing" class="set-hint">{{ $t('serversSection.vazio') }}</p>
-        <p v-if="confirmDelete" class="set-hint">{{ $t('serversSection.aviso_exclusao') }}</p>
 
-        <form v-if="editing" class="set-group server-form" @submit.prevent="save">
-            <label class="field">
-                <span class="label">{{ $t('serversSection.nome') }}</span>
-                <input v-model="form.name" class="input" :placeholder="$t('serversSection.nome_exemplo')" />
-            </label>
-            <label class="field">
-                <span class="label">{{ $t('serversSection.dominio') }}</span>
-                <input v-model="form.domain" class="input mono" :placeholder="$t('serversSection.dominio_exemplo')" />
-            </label>
-            <label class="field">
-                <span class="label">{{ $t('serversSection.transporte') }}</span>
-                <select v-model="form.transport" class="input">
-                    <option value="ws">{{ $t('serversSection.ws') }}</option>
-                    <option value="udp">{{ $t('serversSection.udp') }}</option>
-                    <option value="tcp">{{ $t('serversSection.tcp') }}</option>
-                    <option value="tls">{{ $t('serversSection.tls') }}</option>
-                </select>
-            </label>
-            <label v-if="form.transport === 'ws'" class="field">
-                <span class="label">{{ $t('serversSection.websocket') }}</span>
-                <input v-model="form.wssUrl" class="input mono" :placeholder="$t('serversSection.wss_exemplo')" />
-            </label>
-            <label v-else class="field">
-                <span class="label">{{ $t('serversSection.endereco') }}</span>
-                <input
-                    v-model="form.sipServer"
-                    class="input mono"
-                    :placeholder="$t('serversSection.endereco_exemplo')"
-                />
-            </label>
-            <label class="field">
-                <span class="label">{{ $t('serversSection.stun_turn') }}</span>
-                <input v-model="form.iceServers" class="input mono" :placeholder="$t('serversSection.stun_exemplo')" />
-            </label>
-            <label class="field">
-                <span class="label">{{ $t('serversSection.preset') }}</span>
-                <select v-model="form.preset" class="input">
-                    <option value="asterisk">{{ $t('serversSection.asterisk') }}</option>
-                    <option value="kamailio">{{ $t('serversSection.kamailio') }}</option>
-                    <option value="generic">{{ $t('serversSection.generico') }}</option>
-                </select>
-            </label>
-            <label v-if="form.transport !== 'ws'" class="check">
-                <input v-model="form.srtp" type="checkbox" /> {{ $t('serversSection.srtp') }}
-            </label>
-            <p v-if="error" class="bad">{{ error }}</p>
-            <div class="actions">
-                <button type="button" class="btn" @click="editing = null">{{ $t('serversSection.cancelar') }}</button>
-                <button type="submit" class="btn primary" :disabled="Boolean(error)">
-                    {{ $t('serversSection.salvar') }}
-                </button>
-            </div>
-        </form>
-        <button v-else class="btn" @click="edit()">{{ $t('serversSection.novo') }}</button>
-        <p v-if="message" class="set-hint" role="status">{{ message }}</p>
+        <ul class="set-group list">
+            <li v-for="s in servers.all" :key="s.id" class="srv" :class="{ fixed: isSimulatedServer(s) }">
+                <span class="glyph" aria-hidden="true"><Icon name="server" /></span>
+                <span class="what">
+                    <span class="name">
+                        <b>{{ s.name }}</b>
+                        <span v-if="isSimulatedServer(s)" class="pill neutral">{{ $t('serversSection.fixo') }}</span>
+                    </span>
+                    <small class="mono">{{ isSimulatedServer(s) ? '' : `${s.domain} · ` }}{{ describe(s) }}</small>
+                    <small v-if="refused?.id === s.id" class="refused" role="alert">{{ refused.text }}</small>
+                </span>
+                <span class="uses tabular">{{
+                    usage(s) === 1 ? $t('serversSection.uma_conta') : $t('serversSection.n_contas', { n: usage(s) })
+                }}</span>
+                <span v-if="!isSimulatedServer(s)" class="acts">
+                    <template v-if="confirmDelete === s.id">
+                        <button class="btn small stop" @click="remove(s)">{{ $t('serversSection.confirmar') }}</button>
+                        <button class="btn small" @click="confirmDelete = null">
+                            {{ $t('serversSection.cancelar') }}
+                        </button>
+                    </template>
+                    <template v-else>
+                        <button
+                            class="btn small"
+                            :aria-label="$t('serversSection.editar_nome', { name: s.name })"
+                            @click="editing = s"
+                        >
+                            <Icon name="edit" />{{ $t('serversSection.editar') }}
+                        </button>
+                        <button
+                            class="btn small ghost"
+                            :aria-label="$t('serversSection.excluir_nome', { name: s.name })"
+                            :title="$t('serversSection.excluir')"
+                            @click="askDelete(s)"
+                        >
+                            <Icon name="trash" />
+                        </button>
+                    </template>
+                </span>
+            </li>
+        </ul>
+
+        <ServerDialog
+            v-if="editing"
+            :server="editing === 'new' ? undefined : editing"
+            @close="editing = null"
+            @saved="editing = null"
+        />
     </section>
 </template>
 
 <style scoped>
-.server-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    padding: 12px;
+.head-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
 }
-.field {
+.head-row > div {
+    flex: 1;
+}
+.btn .icon {
+    width: 13px;
+    height: 13px;
+}
+.list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.srv {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--line);
+}
+.srv:last-child {
+    border-bottom: 0;
+}
+.srv.fixed {
+    background: var(--panel-2);
+}
+.glyph {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: var(--radius-sm);
+    background: var(--raise);
+    color: var(--muted);
+}
+.glyph .icon {
+    width: 14px;
+    height: 14px;
+}
+.what {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
 }
-.check,
-.bad,
-.actions {
-    grid-column: 1 / -1;
-}
-.bad {
-    color: var(--bad);
-    margin: 0;
-}
-.actions {
+.name {
     display: flex;
-    justify-content: flex-end;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
 }
 .what small {
-    display: block;
+    color: var(--muted);
+    font-size: 11.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.what small.refused {
+    color: var(--bad-text);
+    white-space: normal;
+    font-family: var(--sans);
+}
+.uses {
+    color: var(--muted);
+    font-size: 11.5px;
+    white-space: nowrap;
+}
+.acts {
+    display: flex;
+    gap: 4px;
 }
 </style>

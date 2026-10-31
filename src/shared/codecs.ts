@@ -21,12 +21,14 @@ const isName = (v: unknown): v is AudioCodecName => DEFAULT_CODECS.includes(v as
  * desconhecido e repetido são ignorados. Nunca fica vazia: se tudo estiver desligado, vale o padrão.
  */
 export function offerOrder(prefs: CodecPrefs | undefined): AudioCodecName[] {
-    if (!prefs) return [...DEFAULT_CODECS]
+    if (!prefs || typeof prefs !== 'object') return [...DEFAULT_CODECS]
+    // Um settings.json mexido à mão pode trazer qualquer coisa: o que não é lista vale como lista vazia.
+    const list = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
     const seen = new Set<AudioCodecName>()
-    for (const name of [...(prefs.order ?? []), ...DEFAULT_CODECS]) if (isName(name)) seen.add(name)
-    const disabled = new Set((prefs.disabled ?? []).filter(isName))
-    const list = [...seen].filter((name) => !disabled.has(name))
-    return list.length ? list : [...DEFAULT_CODECS]
+    for (const name of [...list(prefs.order), ...DEFAULT_CODECS]) if (isName(name)) seen.add(name)
+    const disabled = new Set(list(prefs.disabled).filter(isName))
+    const offer = [...seen].filter((name) => !disabled.has(name))
+    return offer.length ? offer : [...DEFAULT_CODECS]
 }
 
 export function isCodecPrefs(v: unknown): v is CodecPrefs | undefined {

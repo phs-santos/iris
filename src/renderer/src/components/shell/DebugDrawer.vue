@@ -3,7 +3,7 @@ import { t } from '@renderer/i18n'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useLogStore } from '@renderer/stores/log'
-import { clampWidth, DEBUG_WIDTH, useDebugStore, type DebugTab } from '@renderer/stores/debug'
+import { clampWidth, DEBUG_WIDTH, fitWidth, useDebugStore, type DebugTab } from '@renderer/stores/debug'
 import Icon from '../icons/Icon.vue'
 import LogPane from './LogPane.vue'
 import FlowPane from './FlowPane.vue'
@@ -49,8 +49,8 @@ const onResize = (): void => void (windowWidth.value = window.innerWidth)
 onMounted(() => window.addEventListener('resize', onResize))
 onUnmounted(() => window.removeEventListener('resize', onResize))
 /** O tamanho escolhido fica guardado; numa janela estreita a gaveta encolhe sem esquecer a escolha. */
-const shownWidth = computed(() => clampWidth(debug.width, windowWidth.value))
-const maxWidth = computed(() => clampWidth(Infinity, windowWidth.value))
+const shownWidth = computed(() => fitWidth(debug.width, windowWidth.value))
+const maxWidth = computed(() => fitWidth(Infinity, windowWidth.value))
 
 let drag: { x: number; width: number } | null = null
 function startDrag(event: PointerEvent): void {
@@ -60,17 +60,18 @@ function startDrag(event: PointerEvent): void {
 function onDrag(event: PointerEvent): void {
     if (!drag) return
     // A alça fica na borda esquerda: puxar para a esquerda alarga.
-    debug.width = clampWidth(drag.width + drag.x - event.clientX, windowWidth.value)
+    debug.width = clampWidth(drag.width + drag.x - event.clientX)
 }
 function endDrag(): void {
     drag = null
 }
 function onHandleKey(event: KeyboardEvent): void {
     const step = event.shiftKey ? 64 : 16
-    if (event.key === 'ArrowLeft') debug.width = clampWidth(shownWidth.value + step, windowWidth.value)
-    else if (event.key === 'ArrowRight') debug.width = clampWidth(shownWidth.value - step, windowWidth.value)
+    // Grava o tamanho pedido, não o limitado pela janela: ao alargar a janela, a gaveta volta a ele.
+    if (event.key === 'ArrowLeft') debug.width = clampWidth(shownWidth.value + step)
+    else if (event.key === 'ArrowRight') debug.width = clampWidth(shownWidth.value - step)
     else if (event.key === 'Home') debug.width = DEBUG_WIDTH.min
-    else if (event.key === 'End') debug.width = maxWidth.value
+    else if (event.key === 'End') debug.width = DEBUG_WIDTH.max
     else return
     event.preventDefault()
 }
@@ -120,7 +121,7 @@ const stripLabel = computed(() => (newError.value ? t('debug.abrir_erro') : t('d
                 tabindex="0"
                 :aria-label="$t('debug.tamanho')"
                 :aria-valuenow="shownWidth"
-                :aria-valuemin="DEBUG_WIDTH.min"
+                :aria-valuemin="Math.min(DEBUG_WIDTH.min, shownWidth)"
                 :aria-valuemax="maxWidth"
                 :title="$t('debug.tamanho_dica')"
                 @pointerdown="startDrag"

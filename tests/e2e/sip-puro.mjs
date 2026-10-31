@@ -2,28 +2,21 @@
 // por OPTIONS, mostram o SIP bruto, ligam e recebem chamadas com áudio G.711 e DTMF, põem em espera,
 // transferem (cega e assistida) e desregistram.
 // Uso: docker compose up -d && npm run build && node tests/e2e/sip-puro.mjs
-import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
-import { verTodas } from './helpers/tela.mjs'
+import { abrir, verTodas } from './helpers/tela.mjs'
 import { join } from 'node:path'
 
 const HOST = process.env.PBX_DOMAIN ?? '127.0.0.1'
 const CONTAINER = process.env.PBX_CONTAINER ?? 'iris-asterisk-1'
 const userData = mkdtempSync(join(tmpdir(), 'iris-sip-puro-'))
-const args = ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
 // Para investigar uma conexão que não fecha: grava o registro de rede do Chromium.
-if (process.env.IRIS_NETLOG) args.push(`--log-net-log=${process.env.IRIS_NETLOG}`)
+const args = process.env.IRIS_NETLOG ? [`--log-net-log=${process.env.IRIS_NETLOG}`] : []
 const contacts = () => execSync(`docker exec ${CONTAINER} asterisk -rx "pjsip show contacts"`).toString()
 
 // Com IRIS_APP, roda contra o app empacotado (o pacote de diagnóstico do test:pacote).
-const app = await electron.launch({
-    ...(process.env.IRIS_APP ? { executablePath: process.env.IRIS_APP, args: args.slice(1) } : { args }),
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-})
-const page = await app.firstWindow()
+const { app, page } = await abrir({ userData, executablePath: process.env.IRIS_APP, args })
 const step = (msg) => console.log(`✓ ${msg}`)
 const account = (name) => page.locator('.acc', { hasText: name })
 

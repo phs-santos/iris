@@ -64,7 +64,7 @@ describe('dados de versões anteriores à 2.0', () => {
     })
 
     it('arquivos da 2.0 ficam como estão', async () => {
-        const accounts = { schemaVersion: 2, accounts: [{ id: 'a' }] }
+        const accounts = { schemaVersion: 2, accounts: [{ id: 'a', tagIds: [] }] }
         write('accounts.json', accounts)
         write('contacts.json', { schemaVersion: 2, contacts: [] })
         write('history.json', '[]')
@@ -74,6 +74,18 @@ describe('dados de versões anteriores à 2.0', () => {
         for (const name of ['accounts.json', 'contacts.json', 'history.json', 'senhas.json'])
             expect(existsSync(join(dir, name)), name).toBe(true)
         expect(await loadAccounts()).toEqual(accounts.accounts)
+    })
+
+    it('conta sem tagIds vale como sem etiquetas', async () => {
+        write('accounts.json', {
+            schemaVersion: 2,
+            accounts: [
+                { id: 'a', name: 'A' },
+                { id: 'b', tagIds: ['t1'] }
+            ]
+        })
+        const list = await loadAccounts()
+        expect(list.map((a) => a.tagIds)).toEqual([[], ['t1']])
     })
 
     it('instalação nova não apaga nada nem falha', async () => {

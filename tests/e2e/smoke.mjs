@@ -1,40 +1,26 @@
 // Teste de fumaça de ponta a ponta no modo simulado: abre o app, liga de 1001 para 1002,
 // espera o auto-atender, envia DTMF e desliga. Uso: npm run build && node tests/e2e/smoke.mjs
-import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import {
     abaDepuracao,
+    abrir,
     abrirSeletor,
     discar,
     fecharSeletor,
-    isolarDoMouse,
     linhaDaConta,
     linhaDepuracao,
     seletor,
     verTodas
 } from './helpers/tela.mjs'
 
-const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
 const shots = process.env.SHOTS_DIR
 // IRIS_EXECUTABLE testa um build empacotado (ex.: dist/linux-unpacked/iris).
-const executablePath = process.env.IRIS_EXECUTABLE
-const args = executablePath ? [] : ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
-
-const app = await electron.launch({
-    executablePath,
-    args,
-    // IRIS_FAKE_MEDIA: microfone falso, sem depender de hardware nem do pedido de permissão do sistema.
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-})
+const { app, page, userData } = await abrir({ executablePath: process.env.IRIS_EXECUTABLE })
 // Erros do processo principal e da página: um canal de IPC que a interface chama antes de existir
 // não derruba nenhum passo abaixo, mas quebra o app instalado (aconteceu na 1.0.4).
 let mainErrors = ''
 app.process().stderr.on('data', (chunk) => (mainErrors += chunk))
-const page = await app.firstWindow()
-await isolarDoMouse(app)
 const pageErrors = []
 page.on('pageerror', (error) => pageErrors.push(String(error)))
 await page.setViewportSize?.({ width: 1360, height: 820 }).catch(() => {})
@@ -113,15 +99,15 @@ try {
 
     // Escolha de áudio (RF-19).
     await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
-    const audio = page.getByRole('dialog', { name: 'Configurações' })
+    const audio = page.getByRole('dialog', { name: 'Ajustes' })
     await audio.getByRole('tab', { name: 'Áudio' }).click()
     await audio.getByRole('meter', { name: 'Nível do microfone' }).waitFor()
-    const mics = await audio.locator('select').first().locator('option').count()
+    const mics = await audio.getByLabel('Microfone', { exact: true }).locator('option').count()
     if (mics < 2) throw new Error('Nenhum microfone listado no diálogo de áudio')
-    await audio.locator('select').first().selectOption({ index: 1 })
+    await audio.getByLabel('Microfone', { exact: true }).selectOption({ index: 1 })
     await linhaDepuracao(page, 'Microfone: ').waitFor()
     if (shots) await page.screenshot({ path: join(shots, '5-audio.png') })
-    step('Configurações › Áudio lista e troca o microfone')
+    step('Ajustes › Áudio lista e troca o microfone')
 
     // Aparência: o tema claro é o padrão; a cor de destaque e o tema valem na hora e ficam salvos.
     const theme = () => page.evaluate(() => document.documentElement.dataset.theme)
@@ -137,8 +123,15 @@ try {
         throw new Error(`Aparência não foi salva: ${JSON.stringify(saved.appearance)}`)
     await audio.getByRole('radio', { name: 'Claro' }).click()
     await audio.getByRole('button', { name: 'Cor padrão' }).click()
-    await audio.getByRole('button', { name: 'Fechar', exact: true }).click()
-    step('Configurações › Aparência troca e salva o tema e a cor de destaque')
+    step('Ajustes › Aparência troca e salva o tema e a cor de destaque')
+    // O Guia fica no pé dos Ajustes (saiu da barra de ícones): abre no lugar deles.
+    if (await page.getByRole('navigation', { name: 'Navegação' }).getByRole('button', { name: 'Guia' }).count())
+        throw new Error('o Guia ainda está na barra de ícones')
+    await audio.getByRole('button', { name: 'Guia' }).click()
+    await page.getByRole('dialog', { name: 'Guia da Íris' }).waitFor()
+    await audio.waitFor({ state: 'detached' })
+    await page.keyboard.press('Escape')
+    step('o Guia abre pelo pé dos Ajustes')
 
     await abaDepuracao(page, 'SIP').click()
     await linhaDepuracao(page, 'INVITE sip:1002@demo.local').first().waitFor()

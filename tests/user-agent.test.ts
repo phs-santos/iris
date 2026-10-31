@@ -793,3 +793,26 @@ describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
         expect(() => agent.dial('600', callRecorder().events)).toThrow(/Registre a conta/)
     })
 })
+
+describe('teste do servidor (OPTIONS sem registrar)', () => {
+    it('mede a resposta ao OPTIONS e fecha sem mandar REGISTER', async () => {
+        const { agent, transport } = setup({}, (t) => (t.answer = () => ({ status: 405, reason: 'Not Allowed' })))
+        const ms = await agent.probe()
+        expect(ms).toBeGreaterThanOrEqual(0)
+        expect(transport().sent.map((r) => r.method)).toEqual(['OPTIONS'])
+        expect(transport().closed).toBe(true)
+    })
+
+    it('sem resposta, lança depois do tempo e fecha', async () => {
+        const { agent, transport } = setup({}, (t) => (t.answer = () => null))
+        const result = expect(agent.probe(50)).rejects.toThrow(/OPTIONS sem resposta/)
+        await vi.advanceTimersByTimeAsync(60)
+        await result
+        expect(transport().closed).toBe(true)
+    })
+
+    it('não conectou: lança o erro do transporte', async () => {
+        const { agent } = setup({}, (t) => (t.openError = new Error('ECONNREFUSED')))
+        await expect(agent.probe()).rejects.toThrow('ECONNREFUSED')
+    })
+})

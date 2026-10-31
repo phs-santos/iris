@@ -26,10 +26,17 @@ function write(key: string, value: string): void {
 
 /** Barra de ícones, discar e o mínimo da coluna de chamadas: o que a gaveta nunca cobre. */
 const RESERVED = 60 + 260 + 320
+/** Menor largura desenhada numa janela estreita demais: abaixo do mínimo, mas sem estourar a grade. */
+const FLOOR = 160
 
-export function clampWidth(width: number, windowWidth = Infinity): number {
-    const max = Math.min(DEBUG_WIDTH.max, Math.max(DEBUG_WIDTH.min, windowWidth - RESERVED))
-    return Math.round(Math.min(max, Math.max(DEBUG_WIDTH.min, width)))
+/** Largura escolhida, a que fica guardada: só os limites da gaveta, sem olhar o tamanho da janela. */
+export function clampWidth(width: number): number {
+    return Math.round(Math.min(DEBUG_WIDTH.max, Math.max(DEBUG_WIDTH.min, width)))
+}
+
+/** Largura desenhada: a escolhida, sem passar do que a janela deixa. Não muda o que ficou guardado. */
+export function fitWidth(width: number, windowWidth = Infinity): number {
+    return Math.round(Math.max(FLOOR, Math.min(clampWidth(width), windowWidth - RESERVED)))
 }
 
 /** Estado da gaveta de depuração: aberta ou na tira, a aba, a largura e a mensagem SIP a mostrar. */

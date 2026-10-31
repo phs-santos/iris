@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { canDeleteServer, serversWithSimulated, simulatedServer, SIMULATED_SERVER_ID } from '../src/shared/servers'
+import {
+    canDeleteServer,
+    defaultServerId,
+    serversWithSimulated,
+    simulatedServer,
+    SIMULATED_SERVER_ID
+} from '../src/shared/servers'
 import type { SipServer } from '../src/shared/servers'
 import type { Account } from '../src/shared/types'
 
@@ -8,6 +14,15 @@ const account = (serverId: string): Account =>
     ({ id: Math.random().toString(), serverId, tagIds: [] }) as unknown as Account
 
 describe('regras dos servidores', () => {
+    it('conta nova vem com o último servidor usado, o primeiro cadastrado ou o simulado', () => {
+        const saved = [server('s1'), server('s2')]
+        expect(defaultServerId(saved, 's2')).toBe('s2')
+        expect(defaultServerId(saved, SIMULATED_SERVER_ID)).toBe(SIMULATED_SERVER_ID)
+        expect(defaultServerId(saved, 'apagado')).toBe('s1')
+        expect(defaultServerId(saved, null)).toBe('s1')
+        expect(defaultServerId([], 's1')).toBe(SIMULATED_SERVER_ID)
+    })
+
     it('não apaga servidor em uso nem o simulado', () => {
         const accounts = [account('s1'), account('s1'), account('s2'), account('')]
         expect(canDeleteServer(server('s1'), accounts)).toEqual({ ok: false, reason: 'em-uso', count: 2 })

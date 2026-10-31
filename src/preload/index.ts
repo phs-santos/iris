@@ -72,6 +72,7 @@ const api: IrisApi = {
         start: (engineId, config, password) => ipcRenderer.invoke(IPC.sipStart, engineId, config, password),
         stop: (engineId) => ipcRenderer.invoke(IPC.sipStop, engineId),
         health: (engineId) => ipcRenderer.invoke(IPC.sipHealth, engineId),
+        probe: (domain, transport, server) => ipcRenderer.invoke(IPC.sipProbe, domain, transport, server),
         dial: (engineId, destination, headers) => ipcRenderer.invoke(IPC.sipDial, engineId, destination, headers),
         callAction: (engineId, callId, action) => ipcRenderer.invoke(IPC.sipCallAction, engineId, callId, action),
         callStats: (engineId, callId) => ipcRenderer.invoke(IPC.sipCallStats, engineId, callId),

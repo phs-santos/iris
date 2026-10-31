@@ -456,3 +456,166 @@ textarea.input {
     white-space: nowrap;
     border: 0;
 }
+
+/* Formulários das janelas (conta e servidor): rótulo à direita numa coluna estreita, campo ao lado. Denso:
+   uma linha de 30 px por campo, sem cartões. */
+.form-grid {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    align-items: center;
+    gap: 7px 12px;
+    padding: 12px 16px;
+}
+.form-grid > .lbl {
+    justify-self: end;
+    text-align: right;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.2;
+}
+.form-grid > .lbl.top {
+    align-self: start;
+    padding-top: 7px;
+}
+.form-grid > .full {
+    grid-column: 2;
+}
+.req {
+    color: var(--bad);
+    margin-left: 2px;
+}
+.form-grid .input {
+    padding: 5px 8px;
+}
+.field-error {
+    display: block;
+    margin-top: 3px;
+    color: var(--bad-text);
+    font-size: 11.5px;
+}
+.input[aria-invalid='true'] {
+    border-color: var(--bad);
+}
+.field-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11.5px;
+}
+.check-line {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 24px;
+}
+.check-line input[type='checkbox'] {
+    accent-color: var(--accent-strong);
+    margin: 0;
+}
+
+/* Botões em grupo, um escolhido (transporte, DTMF, tema). O escolhido tem fundo e peso, não só cor. */
+.segmented {
+    display: inline-flex;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--panel);
+}
+.segmented button {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 4px 11px;
+    font-size: 12px;
+    cursor: pointer;
+    transition:
+        background 120ms,
+        color 120ms;
+}
+.segmented button + button {
+    border-left: 1px solid var(--line);
+}
+.segmented button:hover:not([aria-checked='true']) {
+    background: var(--panel-2);
+    color: var(--fg);
+}
+.segmented button[aria-checked='true'] {
+    background: var(--selected);
+    color: var(--accent-text);
+    font-weight: 600;
+    box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* "Avançado": barra que abre e fecha, com o resumo do que está lá dentro à direita. */
+.disclosure {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 16px;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--fg);
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+}
+.disclosure:hover {
+    background: var(--raise);
+}
+.disclosure .icon {
+    width: 13px;
+    height: 13px;
+    color: var(--muted);
+    transition: transform 140ms;
+}
+.disclosure[aria-expanded='true'] .icon {
+    transform: rotate(90deg);
+}
+.disclosure .summary {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    color: var(--muted);
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+@media (prefers-reduced-motion: reduce) {
+    .disclosure .icon {
+        transition: none;
+    }
+}
+
+/* Resultado do Testar, no rodapé das janelas: bolinha com forma (cheia, losango) e texto. */
+.test-result {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--muted);
+}
+.test-result.ok {
+    color: var(--ok-text);
+}
+.test-result.bad {
+    color: var(--bad-text);
+}
+.test-result .dot {
+    width: 8px;
+    height: 8px;
+}
+.dialog footer.split-foot {
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel-2);
+}
+.dialog footer.split-foot .acts {
+    display: flex;
+    gap: 8px;
+    flex: none;
+}

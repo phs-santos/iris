@@ -1,10 +1,16 @@
 // Contatos por conta (RF-50) e servidores cadastrados (RF-51), no modo simulado.
 // Uso: npm run build && node tests/e2e/contatos.mjs   (Linux sem tela: xvfb-run -a node tests/e2e/contatos.mjs)
-import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import {
+    abrir,
+    abrirAjustes,
+    abrirNovaConta,
+    escolherServidor,
+    fecharAjustes,
+    formConta,
+    janelaServidor,
+    preencherServidor,
     abrirContatos,
     abrirSeletor,
     acao,
@@ -18,14 +24,7 @@ import {
     sugestao
 } from './helpers/tela.mjs'
 
-const userData = mkdtempSync(join(tmpdir(), 'iris-contatos-'))
-const args = ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
-const app = await electron.launch({
-    args,
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-})
-const page = await app.firstWindow()
+const { app, page, userData } = await abrir({ prefixo: 'iris-contatos-' })
 const step = (msg) => console.log(`✓ ${msg}`)
 const read = (name) => JSON.parse(readFileSync(join(userData, name), 'utf8'))
 const errors = []
@@ -97,30 +96,31 @@ try {
     step('a janela de outra conta não mostra os contatos de Suporte 1001')
 
     // ─── Servidores ───
-    await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
-    const settings = page.getByRole('dialog')
-    await settings.getByRole('tab', { name: 'Servidores' }).click()
-    await settings.getByRole('button', { name: '+ Novo servidor' }).click()
-    await settings.getByLabel('Nome', { exact: true }).fill('PBX da Matriz')
-    await settings.getByLabel('Domínio SIP').fill('pbx.matriz.com')
-    await settings.getByLabel('WebSocket (WSS)').fill('wss://pbx.matriz.com:8089/ws')
-    await settings.getByRole('button', { name: 'Salvar' }).click()
-    await settings.getByText('Servidor salvo.').waitFor()
-    await settings.getByRole('button', { name: 'Fechar' }).first().click()
-    step('servidor cadastrado em Configurações → Servidores')
+    let settings = await abrirAjustes(page, 'Servidores')
+    // O simulado é fixo: aparece na lista, sem Editar nem Excluir.
+    await settings.getByText('PBX simulado').waitFor()
+    if (await settings.getByRole('button', { name: /^(Editar|Excluir) PBX simulado/ }).count())
+        throw new Error('o PBX simulado tem botão de editar ou excluir')
+    await settings.getByRole('button', { name: 'Novo servidor' }).click()
+    await preencherServidor(page, {
+        nome: 'PBX da Matriz',
+        dominio: 'pbx.matriz.com',
+        transporte: 'WebSocket',
+        wss: 'wss://pbx.matriz.com:8089/ws'
+    })
+    await settings.getByText('PBX da Matriz').waitFor()
+    await fecharAjustes(page)
+    step('servidor cadastrado em Ajustes → Servidores; o simulado não se edita nem se exclui')
 
-    // Duas contas novas ligadas ao servidor: só ramal e senha são digitados.
+    // Duas contas novas ligadas ao servidor: nome, ramal e senha são digitados, a conexão vem dele.
     for (const ext of ['3001', '3002']) {
-        await abrirSeletor(page)
-        await seletor(page).getByRole('button', { name: 'Nova conta' }).click()
-        const account = page.locator('form.dialog')
-        await account.getByLabel('Servidor').selectOption({ label: 'PBX da Matriz · pbx.matriz.com · WS' })
-        if (!(await account.getByRole('textbox', { name: 'Domínio SIP' }).isDisabled()))
-            throw new Error('o domínio não ficou travado')
-        await account.getByRole('textbox', { name: 'Nome' }).fill(`Matriz ${ext}`)
-        await account.getByRole('textbox', { name: 'Ramal' }).fill(ext)
+        const account = await abrirNovaConta(page)
+        await escolherServidor(account, 'PBX da Matriz')
+        await account.getByRole('textbox', { name: 'Nome', exact: true }).fill(`Matriz ${ext}`)
+        await account.getByLabel('Ramal').fill(ext)
         await account.getByLabel('Senha').fill('1234')
         await account.getByRole('button', { name: 'Salvar', exact: true }).click()
+        await account.waitFor({ state: 'detached' })
         await abrirSeletor(page)
         await linhaDaConta(page, `Matriz ${ext}`).waitFor()
         await page.keyboard.press('Escape')
@@ -136,35 +136,80 @@ try {
         return list
     }
     const saved = await matriz((list) => list.length === 2)
-    if (saved.length !== 2 || !saved.every((a) => a.domain === 'pbx.matriz.com' && a.serverId))
+    if (
+        saved.length !== 2 ||
+        !saved.every((a) => a.domain === 'pbx.matriz.com' && a.serverId && a.wssUrl === 'wss://pbx.matriz.com:8089/ws')
+    )
         throw new Error(`contas ligadas ao servidor gravadas errado: ${JSON.stringify(saved)}`)
-    step('duas contas criadas a partir do servidor, só com ramal e senha')
+    step('duas contas criadas a partir do servidor, com a conexão vinda dele')
 
     // Editar o servidor muda as duas contas de uma vez.
-    await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
-    await settings.getByRole('tab', { name: 'Servidores' }).click()
-    await settings.getByText('usado por 2 conta(s)').waitFor()
+    settings = await abrirAjustes(page, 'Servidores')
+    await settings.getByText('2 contas').waitFor()
     await settings.getByRole('button', { name: 'Editar PBX da Matriz' }).click()
-    await settings.getByLabel('WebSocket (WSS)').fill('wss://novo.matriz.com/ws')
-    await settings.getByRole('button', { name: 'Salvar' }).click()
-    await settings.getByText('Servidor salvo e 2 conta(s) atualizada(s).').waitFor()
+    await janelaServidor(page).getByLabel('Endereço WSS').fill('wss://novo.matriz.com/ws')
+    await janelaServidor(page).getByRole('button', { name: 'Salvar', exact: true }).click()
+    await page.getByText('Servidor salvo e 2 conta(s) atualizada(s).').waitFor()
     const updated = await matriz((list) => list.every((a) => a.wssUrl === 'wss://novo.matriz.com/ws'))
     if (!updated.every((a) => a.wssUrl === 'wss://novo.matriz.com/ws'))
         throw new Error('as contas não mudaram com o servidor')
     step('editar o servidor atualiza as duas contas ligadas a ele')
 
-    // Servidor em uso não pode ser excluído (canDeleteServer): as duas contas continuam ligadas a ele.
+    // Servidor em uso não pode ser excluído: a linha diz por quê, e as contas continuam ligadas a ele.
     await settings.getByRole('button', { name: 'Excluir PBX da Matriz' }).click()
-    await settings.getByRole('button', { name: 'Excluir mesmo' }).click()
-    await page.waitForTimeout(300)
-    if (await settings.getByText('Servidor excluído').count())
-        throw new Error('a tela disse que excluiu um servidor em uso')
-    await settings.getByRole('button', { name: 'Editar PBX da Matriz' }).waitFor()
+    await settings.getByRole('alert').filter({ hasText: 'Não dá para excluir: 2 contas usam este servidor' }).waitFor()
+    if (await settings.getByRole('button', { name: 'Excluir mesmo' }).count())
+        throw new Error('a tela pediu confirmação para excluir um servidor em uso')
     if (!read('servers.json').servers.some((sv) => sv.name === 'PBX da Matriz'))
         throw new Error('o servidor em uso sumiu de servers.json')
-    const ligadas = await matriz((list) => list.every((a) => a.serverId))
-    if (!ligadas.every((a) => a.serverId)) throw new Error('as contas perderam o servidor')
-    step('excluir um servidor em uso é recusado e as contas continuam ligadas a ele')
+    step('excluir um servidor em uso é recusado com o motivo (2 contas)')
+
+    // Servidor sem conta se exclui, com confirmação.
+    await settings.getByRole('button', { name: 'Novo servidor' }).click()
+    await preencherServidor(page, { nome: 'Sobra', dominio: 'sobra.teste' })
+    await settings.getByRole('button', { name: 'Excluir Sobra' }).click()
+    await settings.getByRole('button', { name: 'Excluir mesmo' }).click()
+    await settings.getByText('Sobra', { exact: true }).waitFor({ state: 'detached' })
+    step('servidor sem conta é excluído depois de confirmar')
+
+    // ─── Etiquetas ───
+    await settings.getByRole('tab', { name: 'Etiquetas' }).click()
+    await settings.getByLabel('Nome da etiqueta nova').fill('produção')
+    await settings.getByRole('button', { name: 'Adicionar' }).click()
+    await settings.getByLabel('Nome da etiqueta produção').waitFor()
+    await fecharAjustes(page)
+    // No cadastro da conta: escolhe a existente e cria outra ali mesmo.
+    await abrirSeletor(page)
+    await linhaDaConta(page, 'Matriz 3001').hover()
+    await seletor(page).getByRole('button', { name: 'Editar Matriz 3001' }).click()
+    const edit = formConta(page)
+    await edit.getByRole('button', { name: 'etiqueta' }).click()
+    await edit.getByRole('button', { name: 'produção' }).click()
+    await edit.getByLabel('Procurar ou criar etiqueta').fill('acme')
+    await edit.getByLabel('Procurar ou criar etiqueta').press('Enter')
+    await edit.getByRole('button', { name: 'Tirar a etiqueta acme' }).waitFor()
+    await edit.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await edit.waitFor({ state: 'detached' })
+    const etiquetas = read('tags.json').tags
+    const comTags = await matriz((list) => list.some((a) => a.tagIds.length === 2))
+    const nomes = comTags
+        .find((a) => a.name === 'Matriz 3001')
+        ?.tagIds.map((id) => etiquetas.find((t) => t.id === id)?.name)
+        .sort()
+    if (JSON.stringify(nomes) !== '["acme","produção"]') throw new Error(`etiquetas gravadas errado: ${nomes}`)
+    // Renomear vale em todas as contas; apagar tira de todas.
+    settings = await abrirAjustes(page, 'Etiquetas')
+    await settings.getByLabel('Nome da etiqueta acme').fill('cliente Acme')
+    await settings.getByLabel('Nome da etiqueta acme').press('Enter')
+    await settings.getByLabel('Nome da etiqueta cliente Acme').waitFor()
+    await settings.getByRole('button', { name: 'Apagar produção' }).click()
+    await settings.getByRole('button', { name: 'Apagar e tirar de 1 conta(s)' }).click()
+    await settings.getByLabel('Nome da etiqueta produção').waitFor({ state: 'detached' })
+    await fecharAjustes(page)
+    const depois = await matriz((list) => list.every((a) => a.tagIds.length <= 1))
+    if (depois.find((a) => a.name === 'Matriz 3001')?.tagIds.length !== 1)
+        throw new Error('apagar a etiqueta não tirou ela da conta')
+    step('etiquetas: criar em Ajustes e no cadastro, renomear e apagar (tira das contas)')
 
     if (errors.length) throw new Error(`erros na interface:\n${errors.join('\n')}`)
 } catch (error) {

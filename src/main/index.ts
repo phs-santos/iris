@@ -38,11 +38,11 @@ import { isReconnect } from '@shared/reconnect'
 import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
-import { isTag, TAGS_LIMIT, type Tag } from '@shared/tags'
+import { isTagList, type Tag } from '@shared/tags'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { isRingVolume } from '@shared/ringtones'
 import { appLog, describeError, startAppLog } from './app-log'
-import { registerNativeSipIpc } from './native-sip'
+import { applyCodecs, registerNativeSipIpc } from './native-sip'
 import { diagnoseNetwork } from './net-diag'
 import { isNetDiagRequest, type NetDiagRequest } from '@shared/net-diag'
 
@@ -221,7 +221,7 @@ function registerIpc(): void {
     })
     handle(IPC.tagsLoad, () => loadTags())
     handle(IPC.tagsSave, (_e, tags: Tag[]) => {
-        check(isList(tags, TAGS_LIMIT) && tags.every(isTag), 'lista de etiquetas')
+        check(isTagList(tags), 'lista de etiquetas')
         return saveTags(tags)
     })
     handle(IPC.secretsGet, (_e, id: string) => {
@@ -262,6 +262,7 @@ function registerIpc(): void {
             'preferências'
         )
         const settings = await updateSettings(patch)
+        if ('codecs' in patch) applyCodecs(settings.codecs)
         trustedHosts = new Set(settings.trustedHosts)
         savedTheme = settings.appearance?.theme
         return settings

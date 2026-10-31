@@ -88,87 +88,95 @@ async function network(a: Account, all: Check[]): Promise<void> {
     else if (native) list.push({ ok: null, text: t('healthPane.stun_sem_servidor') })
 }
 
+/** Cada medida tem um número: só a última apaga o "Verificando…". */
+let runs = 0
+
 /** Verificações de ambiente e da conta (RF-24 e RF-25). */
 async function run(): Promise<void> {
     const a = account.value
     if (!a) return
+    const token = ++runs
     running.value = true
-    const all: Check[] = []
-    const list = { push: (c: Omit<Check, 'group'>) => all.push({ ...c, group: 'account' }) }
-    const computer = { push: (c: Omit<Check, 'group'>) => all.push({ ...c, group: 'computer' }) }
-    const net = { push: (c: Omit<Check, 'group'>) => all.push({ ...c, group: 'network' }) }
-
-    const status = accounts.statusOf(a.id)
-    list.push({
-        ok: status.state === 'registered',
-        text: t('healthPane.registro', { p: describeStatus(status) }),
-        hint: status.state === 'error' && status.code === 401 ? t('healthPane.confira_a_senha_e_o') : undefined
-    })
-
-    // SIP puro (RF-39) não usa WebSocket: mostra o transporte da conta.
-    const link = isNativeAccount(a)
-        ? t('healthPane.transporte', { p: a.transport?.toUpperCase() })
-        : t('healthPane.websocket')
-    const health = await accounts.checkHealth(a.id)
-    if (health) {
-        list.push({
-            ok: health.websocketConnected,
-            text: `${link} ${health.websocketConnected ? t('healthPane.conectado') : t('healthPane.desconectado')}`
-        })
-        list.push({
-            ok: health.latencyMs !== undefined,
-            text:
-                health.latencyMs !== undefined
-                    ? t('healthPane.options_respondeu_em_ms', { latencyMs: health.latencyMs })
-                    : health.error
-                      ? t('healthPane.options_sem_resposta_erro', { error: health.error })
-                      : t('healthPane.options_sem_resposta')
-        })
-    } else {
-        list.push({ ok: null, text: t('healthPane.registre_a_conta_para_medir', { link }) })
-    }
-
-    let micOk = false
+    // Com try/finally, um erro no meio (microfone, rede) não deixa a aba presa em "Verificando…".
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        stream.getTracks().forEach((t) => t.stop())
-        micOk = true
-    } catch {
-        micOk = false
-    }
-    computer.push({
-        ok: micOk,
-        text: micOk ? t('healthPane.microfone_liberado') : t('healthPane.microfone_indisponivel'),
-        hint: micOk ? undefined : t('healthPane.conecte_um_microfone_e_permita')
-    })
+        const all: Check[] = []
+        const list = { push: (c: Omit<Check, 'group'>) => all.push({ ...c, group: 'account' }) }
+        const computer = { push: (c: Omit<Check, 'group'>) => all.push({ ...c, group: 'computer' }) }
+        const net = { push: (c: Omit<Check, 'group'>) => all.push({ ...c, group: 'network' }) }
 
-    const devices = await navigator.mediaDevices.enumerateDevices()
-    const outputs = devices.filter((d) => d.kind === 'audiooutput').length
-    computer.push({ ok: outputs > 0, text: t('healthPane.saidas_de_audio_encontradas', { outputs }) })
-
-    if (!isSimulated(a)) await network(a, all)
-
-    if (!isSimulated(a) && !isNativeAccount(a)) {
-        const hasTurn = /turns?:/i.test(a.iceServers)
-        net.push({
-            ok: hasTurn ? true : null,
-            text: hasTurn ? t('healthPane.servidor_turn_configurado') : t('healthPane.sem_servidor_turn'),
-            hint: hasTurn ? undefined : t('healthPane.atras_de_nat_simetrico_a')
+        const status = accounts.statusOf(a.id)
+        list.push({
+            ok: status.state === 'registered',
+            text: t('healthPane.registro', { p: describeStatus(status) }),
+            hint: status.state === 'error' && status.code === 401 ? t('healthPane.confira_a_senha_e_o') : undefined
         })
-        net.push({
-            ok: a.wssUrl.startsWith('wss://'),
-            text: a.wssUrl.startsWith('wss://')
-                ? t('healthPane.transporte_seguro_wss')
-                : t('healthPane.transporte_sem_tls_ws'),
-            hint: a.wssUrl.startsWith('wss://') ? undefined : t('healthPane.muitos_pbx_exigem_wss_para')
-        })
-    }
 
-    // A conta pode ter mudado enquanto media: o resultado de outra conta não aparece.
-    if (account.value?.id !== a.id) return
-    checks.value = all
-    checkedAt.value = new Date().toLocaleTimeString('pt-BR')
-    running.value = false
+        // SIP puro (RF-39) não usa WebSocket: mostra o transporte da conta.
+        const link = isNativeAccount(a)
+            ? t('healthPane.transporte', { p: a.transport?.toUpperCase() })
+            : t('healthPane.websocket')
+        const health = await accounts.checkHealth(a.id)
+        if (health) {
+            list.push({
+                ok: health.websocketConnected,
+                text: `${link} ${health.websocketConnected ? t('healthPane.conectado') : t('healthPane.desconectado')}`
+            })
+            list.push({
+                ok: health.latencyMs !== undefined,
+                text:
+                    health.latencyMs !== undefined
+                        ? t('healthPane.options_respondeu_em_ms', { latencyMs: health.latencyMs })
+                        : health.error
+                          ? t('healthPane.options_sem_resposta_erro', { error: health.error })
+                          : t('healthPane.options_sem_resposta')
+            })
+        } else {
+            list.push({ ok: null, text: t('healthPane.registre_a_conta_para_medir', { link }) })
+        }
+
+        let micOk = false
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            stream.getTracks().forEach((t) => t.stop())
+            micOk = true
+        } catch {
+            micOk = false
+        }
+        computer.push({
+            ok: micOk,
+            text: micOk ? t('healthPane.microfone_liberado') : t('healthPane.microfone_indisponivel'),
+            hint: micOk ? undefined : t('healthPane.conecte_um_microfone_e_permita')
+        })
+
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const outputs = devices.filter((d) => d.kind === 'audiooutput').length
+        computer.push({ ok: outputs > 0, text: t('healthPane.saidas_de_audio_encontradas', { outputs }) })
+
+        if (!isSimulated(a)) await network(a, all)
+
+        if (!isSimulated(a) && !isNativeAccount(a)) {
+            const hasTurn = /turns?:/i.test(a.iceServers)
+            net.push({
+                ok: hasTurn ? true : null,
+                text: hasTurn ? t('healthPane.servidor_turn_configurado') : t('healthPane.sem_servidor_turn'),
+                hint: hasTurn ? undefined : t('healthPane.atras_de_nat_simetrico_a')
+            })
+            net.push({
+                ok: a.wssUrl.startsWith('wss://'),
+                text: a.wssUrl.startsWith('wss://')
+                    ? t('healthPane.transporte_seguro_wss')
+                    : t('healthPane.transporte_sem_tls_ws'),
+                hint: a.wssUrl.startsWith('wss://') ? undefined : t('healthPane.muitos_pbx_exigem_wss_para')
+            })
+        }
+
+        // A conta pode ter mudado enquanto media: o resultado de outra conta não aparece.
+        if (account.value?.id !== a.id) return
+        checks.value = all
+        checkedAt.value = new Date().toLocaleTimeString('pt-BR')
+    } finally {
+        if (token === runs) running.value = false
+    }
 }
 
 async function copyReport(): Promise<void> {

@@ -19,6 +19,18 @@ describe('ordem dos codecs', () => {
         expect(offerOrder(prefs)).toEqual(['PCMA', 'PCMU', 'G722', 'opus'])
     })
 
+    it('ordem ou desligados que não são lista voltam ao padrão sem lançar', () => {
+        expect(offerOrder({ order: 42, disabled: [] } as unknown as CodecPrefs)).toEqual(DEFAULT_CODECS)
+        expect(offerOrder({ order: 'PCMA', disabled: null } as unknown as CodecPrefs)).toEqual(DEFAULT_CODECS)
+        expect(offerOrder({ order: ['PCMA'], disabled: 7 } as unknown as CodecPrefs)).toEqual([
+            'PCMA',
+            'G722',
+            'PCMU',
+            'opus'
+        ])
+        expect(offerOrder('x' as unknown as CodecPrefs)).toEqual(DEFAULT_CODECS)
+    })
+
     it('codec que falta na ordem vai para o fim', () => {
         expect(offerOrder({ order: ['opus'], disabled: [] })).toEqual(['opus', 'G722', 'PCMU', 'PCMA'])
     })

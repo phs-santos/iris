@@ -1,13 +1,13 @@
 // Acessibilidade (RNF-12): varre as telas com o axe-core (regras WCAG 2.1 A e AA) e confere que
 // as ações principais têm atalho. Uso: npm run build && node tests/e2e/a11y.mjs
-import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { readFileSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
     abaDepuracao,
-    isolarDoMouse,
+    abrir,
+    abrirNovaConta,
+    janelaServidor,
     recolherDepuracao,
     verTodas,
     campoNumero,
@@ -23,15 +23,7 @@ import {
 } from './helpers/tela.mjs'
 
 const axeSource = readFileSync(createRequire(import.meta.url).resolve('axe-core/axe.min.js'), 'utf8')
-const userData = mkdtempSync(join(tmpdir(), 'iris-a11y-'))
-const args = ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
-const app = await electron.launch({
-    args,
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-})
-const page = await app.firstWindow()
-await isolarDoMouse(app)
+const { app, page, userData } = await abrir({ prefixo: 'iris-a11y-' })
 const step = (msg) => console.log(`✓ ${msg}`)
 const problems = []
 
@@ -126,16 +118,28 @@ try {
         .catch(() => problems.push('[discador] Esc não fecha as sugestões'))
     await campoNumero(page).fill('')
 
-    await abrirSeletor(page)
-    await seletor(page).getByRole('button', { name: 'Nova conta' }).click()
+    const form = await abrirNovaConta(page)
     await scan('formulário de conta')
+    await form.getByRole('button', { name: /^Avançado/ }).click()
+    await scan('formulário de conta › avançado')
+    await form.getByRole('button', { name: 'etiqueta' }).click()
+    await scan('formulário de conta › etiquetas')
+    await form.getByLabel('Procurar ou criar etiqueta').press('Escape')
+    if (!(await form.isVisible())) problems.push('[etiquetas] Esc na lista de etiquetas fechou o cadastro')
+    await form.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await scan('formulário de conta › erros')
+    await form.getByRole('combobox', { name: 'Servidor', exact: true }).selectOption({ label: '+ Novo servidor…' })
+    await janelaServidor(page).waitFor()
+    await scan('janela de servidor')
     await page.keyboard.press('Escape')
-    await page
-        .locator('form.dialog')
+    await janelaServidor(page)
+        .waitFor({ state: 'detached', timeout: 2000 })
+        .catch(() => problems.push('[servidor] Esc não fecha'))
+    if (!(await form.isVisible())) problems.push('[servidor] Esc fechou também o cadastro de conta')
+    await page.keyboard.press('Escape')
+    await form
         .waitFor({ state: 'detached', timeout: 2000 })
         .catch(() => problems.push('[formulário de conta] Esc não fecha'))
-    if (await page.locator('form.dialog').count())
-        await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
 
     // Gaveta de depuração: as quatro abas passam pela varredura; ←/→ trocam de aba (RNF-12).
     await verTodas(page, 'SIP')
@@ -159,25 +163,38 @@ try {
     await scan('depuração › Saúde')
     await recolherDepuracao(page).click()
 
-    // Configurações: cada seção passa pela varredura; as setas trocam de seção (RNF-12).
+    // Ajustes: cada seção passa pela varredura; as setas trocam de seção (RNF-12).
     await page.keyboard.press('ControlOrMeta+,')
-    const settings = page.getByRole('dialog', { name: 'Configurações' })
-    await settings.waitFor({ timeout: 2000 }).catch(() => problems.push('[configurações] Ctrl/Cmd+, não abre'))
-    for (const name of ['Aparência', 'Áudio', 'Servidores', 'Conexão', 'Certificados', 'Importar e exportar']) {
-        await settings.getByRole('tab', { name }).click()
-        await scan(`configurações › ${name}`)
-    }
-    await settings.getByRole('tab', { name: 'Aparência' }).click()
-    await page.keyboard.press('ArrowDown')
+    const settings = page.getByRole('dialog', { name: 'Ajustes' })
+    await settings.waitFor({ timeout: 2000 }).catch(() => problems.push('[ajustes] Ctrl/Cmd+, não abre'))
     if ((await settings.getByRole('tab', { name: 'Áudio' }).getAttribute('aria-selected')) !== 'true')
-        problems.push('[configurações] seta para baixo não troca de seção')
+        problems.push('[ajustes] não abriu em Áudio')
+    const secoes = ['Áudio', 'Aparência', 'Servidores', 'Etiquetas', 'Conexão', 'Notificações', 'Certificados']
+    for (const name of [...secoes, 'Importar e exportar']) {
+        await settings.getByRole('tab', { name }).click()
+        await scan(`ajustes › ${name}`)
+    }
+    // Codecs pelo teclado: ↑ sobe o PCMA e o foco fica no botão, para apertar de novo.
+    await settings.getByRole('tab', { name: 'Áudio' }).click()
+    await settings.getByRole('button', { name: 'Subir PCMA' }).focus()
+    await page.keyboard.press('Enter')
+    await page
+        .waitForFunction(() => document.activeElement?.getAttribute('aria-label') === 'Subir PCMA', null, {
+            timeout: 2000
+        })
+        .catch(() => problems.push('[codecs] o foco não seguiu o PCMA ao subir'))
+    await page.keyboard.press('Enter')
+    await settings.getByRole('button', { name: 'Sobre' }).click()
+    await scan('ajustes › sobre')
+    await settings.getByRole('tab', { name: 'Áudio' }).click()
+    await page.keyboard.press('ArrowDown')
+    if ((await settings.getByRole('tab', { name: 'Aparência' }).getAttribute('aria-selected')) !== 'true')
+        problems.push('[ajustes] seta para baixo não troca de seção')
     await settings.getByRole('tab', { name: 'Atualização' }).click()
     await page.getByText('funciona só no app instalado').waitFor()
     await scan('configurações › atualização')
     await page.keyboard.press('Escape')
-    await settings
-        .waitFor({ state: 'detached', timeout: 2000 })
-        .catch(() => problems.push('[configurações] Esc não fecha'))
+    await settings.waitFor({ state: 'detached', timeout: 2000 }).catch(() => problems.push('[ajustes] Esc não fecha'))
 
     const menuDe = async (nome) => {
         await abrirSeletor(page)
@@ -272,11 +289,21 @@ try {
     await settings.getByRole('radio', { name: 'Escuro' }).click()
     if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'dark')
         problems.push('[tema escuro] o tema não mudou')
-    for (const name of ['Aparência', 'Servidores', 'Notificações']) {
+    for (const name of ['Aparência', 'Áudio', 'Servidores', 'Etiquetas', 'Notificações']) {
         await settings.getByRole('tab', { name }).click()
-        await scan(`tema escuro › configurações › ${name}`)
+        await scan(`tema escuro › ajustes › ${name}`)
     }
     await page.keyboard.press('Escape')
+    const formEscuro = await abrirNovaConta(page)
+    await formEscuro.getByRole('button', { name: /^Avançado/ }).click()
+    await scan('tema escuro › formulário de conta')
+    await formEscuro
+        .getByRole('combobox', { name: 'Servidor', exact: true })
+        .selectOption({ label: '+ Novo servidor…' })
+    await scan('tema escuro › janela de servidor')
+    await page.keyboard.press('Escape')
+    await page.keyboard.press('Escape')
+    await formEscuro.waitFor({ state: 'detached', timeout: 2000 })
     await scan('tema escuro › janela principal')
     await abrirSeletor(page)
     await linhaDaConta(page, 'Suporte 1001').locator('.pick').focus()

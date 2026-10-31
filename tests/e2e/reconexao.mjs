@@ -1,25 +1,19 @@
 // Reconexão (RNF-06, RF-08): derruba o contêiner do PBX e confere que as contas voltam sozinhas,
 // tanto a que já estava registrada quanto a que tentou a primeira conexão com o PBX fora do ar.
 // Uso: docker compose up -d && npm run build && node tests/e2e/reconexao.mjs
-import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
+import { abrir } from './helpers/tela.mjs'
 
 const WSS = process.env.PBX_WS ?? 'wss://127.0.0.1:8089/ws'
 const DOMAIN = process.env.PBX_DOMAIN ?? '127.0.0.1'
 const CONTAINER = process.env.PBX_CONTAINER ?? 'iris-asterisk-1'
 const userData = mkdtempSync(join(tmpdir(), 'iris-reconexao-'))
-const args = ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
 const docker = (command) => execSync(`docker ${command} ${CONTAINER}`, { stdio: 'pipe' })
 
-const app = await electron.launch({
-    args,
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-})
-const page = await app.firstWindow()
+const { app, page } = await abrir({ userData })
 const step = (msg) => console.log(`✓ ${msg}`)
 const account = (name) => page.locator('.acc', { hasText: name })
 

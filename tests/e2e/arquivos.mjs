@@ -1,19 +1,18 @@
 // Arquivos de dados e log interno: preferências gravadas em fila, arquivo estragado guardado à parte
 // sem impedir o app de abrir (RNF-19) e erros no log em arquivo (RNF-14).
 // Uso: npm run build && node tests/e2e/arquivos.mjs   (Linux sem tela: xvfb-run -a node tests/e2e/arquivos.mjs)
-import { _electron as electron } from 'playwright-core'
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { abrir, esperarContas } from './helpers/tela.mjs'
 
 const userData = mkdtempSync(join(tmpdir(), 'iris-arquivos-'))
-const args = ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
-const launch = () =>
-    electron.launch({
-        args,
-        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-    })
+/** Abre (ou reabre) o app na mesma pasta de dados e espera as 3 contas. */
+const launch = async () => {
+    const opened = await abrir({ userData })
+    await esperarContas(opened.page)
+    return opened
+}
 const step = (msg) => console.log(`✓ ${msg}`)
 const fail = (msg) => {
     throw new Error(msg)
@@ -24,9 +23,8 @@ const appLog = () => readFileSync(join(userData, 'logs', 'iris.log'), 'utf8')
 let failed = false
 let app
 try {
-    app = await launch()
-    let page = await app.firstWindow()
-    await page.getByText('3 contas').waitFor()
+    let page
+    ;({ app, page } = await launch())
     if (!/INFO Íris \S+ abriu/.test(appLog())) fail('o log interno não registrou a abertura do app')
     step('log interno criado em logs/iris.log na pasta de dados')
 
@@ -74,9 +72,7 @@ try {
     writeFileSync(join(userData, 'settings.json'), '{ isto não é JSON')
     writeFileSync(join(userData, 'accounts.json'), '[1, 2, 3]')
     writeFileSync(join(userData, 'contacts.json'), '')
-    app = await launch()
-    page = await app.firstWindow()
-    await page.getByText('3 contas').waitFor({ timeout: 15000 })
+    ;({ app, page } = await launch())
     step('o app abre com preferências, contas e contatos estragados')
     for (const [name, what] of [
         ['settings.json', 'preferências'],
@@ -96,9 +92,7 @@ try {
     await app.close()
     writeFileSync(join(userData, 'accounts.json'), JSON.stringify({ schemaVersion: 1, accounts: [] }))
     writeFileSync(join(userData, 'history.json'), '{"schemaVersion":1,"calls":[]}')
-    app = await launch()
-    page = await app.firstWindow()
-    await page.getByText('3 contas').waitFor({ timeout: 15000 })
+    ;({ app, page } = await launch())
     if (existsSync(join(userData, 'history.json'))) fail('history.json da versão antiga continuou na pasta')
     const fresh = readData('accounts.json')
     if (fresh.schemaVersion !== 2 || !fresh.accounts.every((a) => a.serverId === 'simulado'))

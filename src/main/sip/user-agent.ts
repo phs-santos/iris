@@ -194,6 +194,36 @@ export class SipUserAgent {
         await this.register()
     }
 
+    /**
+     * Só abre o transporte e manda um OPTIONS, sem registrar, e fecha: o Testar da janela de servidor. Lança
+     * se não conectar ou se não vier resposta em `timeoutMs`. Qualquer resposta final conta (até 401 ou 405).
+     */
+    async probe(timeoutMs = 5000): Promise<number> {
+        const { transport: kind, host, port, trusted } = this.config
+        const transport = this.createTransport({ kind, host, port, trusted })
+        transport.onMessage = (text) => this.receive(text)
+        transport.onClose = () => undefined
+        await transport.open()
+        this.transport = transport
+        this.contact = { host: transport.local.address, port: transport.local.port }
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+            return await Promise.race([
+                this.ping(),
+                new Promise<never>((_ok, fail) => {
+                    timer = setTimeout(
+                        () => fail(new Error(`OPTIONS sem resposta em ${timeoutMs / 1000} s`)),
+                        timeoutMs
+                    )
+                })
+            ])
+        } finally {
+            clearTimeout(timer)
+            this.stopped = true
+            this.closeTransport()
+        }
+    }
+
     /** Desregistra (sem esperar muito) e fecha. */
     async stop(): Promise<void> {
         if (this.stopped) return

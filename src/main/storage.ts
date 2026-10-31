@@ -132,7 +132,8 @@ export async function loadAccounts(): Promise<Account[]> {
         'contas',
         (d) => schema2(d) && Array.isArray(d.accounts)
     )
-    return data?.accounts ?? []
+    // Conta gravada sem etiquetas (à mão ou antes delas) vale como sem nenhuma: o resto do código lê a lista.
+    return (data?.accounts ?? []).map((a) => (Array.isArray(a.tagIds) ? a : { ...a, tagIds: [] }))
 }
 
 export async function saveAccounts(accounts: Account[]): Promise<void> {

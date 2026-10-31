@@ -12,21 +12,28 @@ import NotificationsSection from './NotificationsSection.vue'
 import SecuritySection from './SecuritySection.vue'
 import ImportExportSection from './ImportExportSection.vue'
 import UpdateSection from './UpdateSection.vue'
+import TagsSection from './TagsSection.vue'
+import AboutSection from './AboutSection.vue'
+import Icon from '../icons/Icon.vue'
 
-/** Tela única de Configurações: junta Áudio, Importar/Exportar, Atualização e certificados. */
+/**
+ * Janela de Ajustes: as seções à esquerda, na ordem da especificação, e Sobre e Guia no pé. Abre em Áudio; com
+ * uma atualização pendente, quem abre (App.vue) pede a seção Atualização.
+ */
 const props = defineProps<{ section: SettingsSection; update: UpdateInfo | null }>()
-const emit = defineEmits<{ close: []; channel: [channel: UpdateChannel] }>()
+const emit = defineEmits<{ close: []; channel: [channel: UpdateChannel]; guide: [] }>()
 const dialogEl = ref<HTMLElement | null>(null)
 useDialog(dialogEl, () => emit('close'))
 
 const current = ref<SettingsSection>(props.section)
 const sections = computed(() =>
     [
-        { id: 'appearance' as const, name: t('settingsDialog.aparencia') },
         { id: 'audio' as const, name: t('settingsDialog.audio') },
-        { id: 'notifications' as const, name: t('settingsDialog.notificacoes') },
+        { id: 'appearance' as const, name: t('settingsDialog.aparencia') },
         { id: 'servers' as const, name: t('settingsDialog.servidores') },
+        { id: 'tags' as const, name: t('settingsDialog.etiquetas') },
         { id: 'connection' as const, name: t('settingsDialog.conexao') },
+        { id: 'notifications' as const, name: t('settingsDialog.notificacoes') },
         { id: 'security' as const, name: t('settingsDialog.certificados') },
         { id: 'data' as const, name: t('settingsDialog.importar_e_exportar') },
         { id: 'update' as const, name: t('settingsDialog.atualizacao'), badge: props.update?.currentVersion }
@@ -38,7 +45,11 @@ function onNavKey(event: KeyboardEvent): void {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
     event.preventDefault()
     const list = sections.value
-    const index = list.findIndex((s) => s.id === current.value)
+    // Em Sobre (fora da lista), a seta vai para a primeira ou a última seção.
+    const index = Math.max(
+        -1,
+        list.findIndex((s) => s.id === current.value)
+    )
     const next = list[(index + (event.key === 'ArrowDown' ? 1 : list.length - 1)) % list.length]
     current.value = next.id
     dialogEl.value?.querySelector<HTMLElement>(`#set-tab-${next.id}`)?.focus()
@@ -56,9 +67,9 @@ function onNavKey(event: KeyboardEvent): void {
             tabindex="-1"
         >
             <header>
-                <h2 id="settings-title">{{ $t('settingsDialog.configuracoes') }}</h2>
+                <h2 id="settings-title">{{ $t('settingsDialog.ajustes') }}</h2>
                 <button class="btn small ghost" :aria-label="$t('settingsDialog.fechar')" @click="emit('close')">
-                    ✕
+                    <Icon name="close" />
                 </button>
             </header>
             <div class="split">
@@ -77,7 +88,7 @@ function onNavKey(event: KeyboardEvent): void {
                             class="item"
                             :class="{ on: current === s.id }"
                             :aria-selected="current === s.id"
-                            :tabindex="current === s.id ? 0 : -1"
+                            :tabindex="current === s.id || (current === 'about' && s.id === 'audio') ? 0 : -1"
                             aria-controls="set-panel"
                             @click="current = s.id"
                         >
@@ -85,10 +96,37 @@ function onNavKey(event: KeyboardEvent): void {
                             <span v-if="s.badge" class="badge mono">{{ s.badge }}</span>
                         </button>
                     </div>
+                    <div class="foot">
+                        <button
+                            type="button"
+                            class="link"
+                            :class="{ on: current === 'about' }"
+                            :aria-pressed="current === 'about'"
+                            @click="current = 'about'"
+                        >
+                            {{ $t('settingsDialog.sobre') }}
+                        </button>
+                        <button
+                            type="button"
+                            class="link"
+                            :title="$t('settingsDialog.guia_dica')"
+                            @click="emit('guide')"
+                        >
+                            <Icon name="book" />{{ $t('settingsDialog.guia') }}
+                        </button>
+                    </div>
                 </nav>
-                <div id="set-panel" class="panel" role="tabpanel" :aria-labelledby="`set-tab-${current}`">
+                <div
+                    id="set-panel"
+                    class="panel"
+                    :role="current === 'about' ? 'region' : 'tabpanel'"
+                    :aria-labelledby="current === 'about' ? undefined : `set-tab-${current}`"
+                    :aria-label="current === 'about' ? $t('settingsDialog.sobre') : undefined"
+                >
                     <AppearanceSection v-if="current === 'appearance'" />
                     <AudioSection v-else-if="current === 'audio'" />
+                    <TagsSection v-else-if="current === 'tags'" />
+                    <AboutSection v-else-if="current === 'about'" />
                     <NotificationsSection v-else-if="current === 'notifications'" />
                     <ServersSection v-else-if="current === 'servers'" />
                     <ConnectionSection v-else-if="current === 'connection'" />
@@ -107,20 +145,52 @@ function onNavKey(event: KeyboardEvent): void {
 
 <style scoped>
 .dialog.settings {
-    width: min(860px, 100%);
-    height: min(600px, 100%);
+    width: min(880px, 100%);
+    height: min(640px, 100%);
     overflow: hidden;
 }
 .split {
     flex: 1;
     min-height: 0;
     display: grid;
-    grid-template-columns: 210px 1fr;
+    grid-template-columns: 190px 1fr;
+}
+header .btn .icon {
+    width: 14px;
+    height: 14px;
+}
+.foot {
+    margin-top: auto;
+    display: flex;
+    gap: 2px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+}
+.link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted);
+    padding: 5px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+.link:hover,
+.link.on {
+    background: var(--raise);
+    color: var(--fg);
+}
+.link .icon {
+    width: 13px;
+    height: 13px;
 }
 nav {
     background: var(--panel-2);
     border-right: 1px solid var(--line);
-    padding: 12px 8px;
+    padding: 10px 8px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -133,13 +203,14 @@ nav {
 }
 .item {
     display: flex;
+    font-size: 12.5px;
     justify-content: space-between;
     align-items: center;
     text-align: left;
     border: 0;
     border-radius: 6px;
     background: transparent;
-    padding: 7px 10px;
+    padding: 6px 10px;
     cursor: pointer;
 }
 .item:hover {
@@ -156,7 +227,7 @@ nav {
     font-weight: 400;
 }
 .panel {
-    padding: 18px 22px;
+    padding: 16px 20px;
     overflow: auto;
     min-width: 0;
 }

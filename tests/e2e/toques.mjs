@@ -1,16 +1,10 @@
 // Toque por conta e volume do toque (RF-55), no modo simulado.
 // Uso: npm run build && node tests/e2e/toques.mjs
-import { _electron as electron } from 'playwright-core'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { abrirSeletor, esperarContasSimuladas, linhaDaConta, seletor } from './helpers/tela.mjs'
+import { abrir, abrirSeletor, esperarContasSimuladas, linhaDaConta, seletor } from './helpers/tela.mjs'
 
-const userData = mkdtempSync(join(tmpdir(), 'iris-e2e-'))
-const args = ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
-const app = await electron.launch({ args, env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' } })
-const page = await app.firstWindow()
+const { app, page, userData } = await abrir()
 const pageErrors = []
 page.on('pageerror', (error) => pageErrors.push(String(error)))
 const step = (msg) => console.log(`✓ ${msg}`)
@@ -21,7 +15,7 @@ try {
 
     // Volume do toque: vale na hora e fica gravado.
     await page.keyboard.press('ControlOrMeta+,')
-    const dialog = page.getByRole('dialog', { name: 'Configurações' })
+    const dialog = page.getByRole('dialog', { name: 'Ajustes' })
     await dialog.getByRole('tab', { name: 'Áudio' }).click()
     await dialog.getByLabel('Volume do toque').fill('80')
     await dialog.getByText('Volume do toque: 80%').waitFor()
@@ -34,8 +28,9 @@ try {
     await abrirSeletor(page)
     await linhaDaConta(page, 'Suporte 1001').hover()
     await seletor(page).getByRole('button', { name: 'Editar Suporte 1001' }).click()
-    const form = page.locator('form.dialog')
-    await form.getByLabel('Toque das chamadas recebidas').selectOption('sino')
+    const form = page.getByRole('dialog', { name: 'Editar Suporte 1001' })
+    await form.getByRole('button', { name: /^Avançado/ }).click()
+    await form.getByLabel('Toque', { exact: true }).selectOption('sino')
     await form.getByRole('button', { name: 'Ouvir' }).click()
     await form.getByRole('button', { name: 'Salvar', exact: true }).click()
     await form.waitFor({ state: 'detached' })

@@ -1,7 +1,7 @@
 import type { Account, AccountsExport, Preset } from '@shared/types'
 import type { RegStatus } from '@renderer/sip/engine'
 import { parseSipServer } from '@shared/sip-target'
-import { isSimulated, SIMULATED_SERVER_ID } from '@shared/servers'
+import { applyServer, isSimulated, SIMULATED_SERVER_ID, type SipServer } from '@shared/servers'
 import { t } from '@renderer/i18n'
 
 export const ACCOUNT_COLORS = ['#3fcf86', '#6b9cf5', '#f0b13e', '#e879a6', '#5fd0d6', '#b48cf2', '#f08a5d']
@@ -146,8 +146,9 @@ export function validateAccount(account: Account, password: string): Record<stri
             if (!parseSipServer(account.sipServer, account.domain || 'x', transport))
                 errors.sipServer = t('accounts.valida_servidor')
         }
-        if (!password) errors.password = t('accounts.valida_senha')
     }
+    // O PBX simulado também pede a senha: sem ela, ele responde 401, como um PBX de verdade.
+    if (!password) errors.password = t('accounts.valida_senha')
     return errors
 }
 
@@ -174,22 +175,12 @@ const CSV_COLUMNS: Record<string, string> = {
     name: 'name',
     ramal: 'extension',
     extension: 'extension',
-    dominio: 'domain',
-    domain: 'domain',
+    servidor: 'server',
+    server: 'server',
     senha: 'password',
-    password: 'password',
-    transporte: 'transport',
-    transport: 'transport',
-    endereco: 'address',
-    address: 'address',
-    servidor: 'address',
-    usuario: 'authUsername',
-    auth: 'authUsername',
-    'auto-atender': 'autoAnswer',
-    autoatender: 'autoAnswer',
-    srtp: 'srtp'
+    password: 'password'
 }
-export const CSV_HEADER = 'nome;ramal;dominio;senha;transporte;endereco'
+export const CSV_HEADER = 'nome;ramal;servidor;senha'
 const MAX_CSV_ROWS = 1000
 
 /** Separa uma linha de CSV, com campos entre aspas e aspas dobradas dentro deles. */
@@ -221,15 +212,27 @@ const plain = (text: string): string =>
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase()
         .trim()
-const yes = (text: string | undefined): boolean => /^(s|sim|y|yes|1|true|x)$/i.test((text ?? '').trim())
 
 /**
- * Lê uma planilha de contas salva como CSV. A primeira linha diz as colunas (nome, ramal, dominio,
- * senha, transporte, endereco; opcionais: usuario, auto-atender, srtp), separadas por ponto e vírgula,
- * vírgula ou tabulação. O endereço é o WebSocket (wss://…) ou, em SIP puro, o host e a porta.
+ * Acha o servidor de uma linha da planilha: pelo nome cadastrado ou, se só um servidor tiver esse domínio,
+ * pelo domínio. Sem acento e sem diferença de maiúsculas.
+ */
+function findServer(text: string, servers: SipServer[]): SipServer | undefined {
+    const wanted = plain(text)
+    if (!wanted) return undefined
+    const byName = servers.find((s) => plain(s.name) === wanted)
+    if (byName) return byName
+    const byDomain = servers.filter((s) => plain(s.domain) === wanted)
+    return byDomain.length === 1 ? byDomain[0] : undefined
+}
+
+/**
+ * Lê uma planilha de contas salva como CSV. A primeira linha diz as colunas (nome, ramal, servidor, senha),
+ * separadas por ponto e vírgula, vírgula ou tabulação. O servidor é um dos cadastrados em Ajustes → Servidores
+ * (pelo nome ou pelo domínio): a conexão vem dele, e nenhuma conta fica sem servidor.
  * Para no primeiro erro, dizendo a linha: importar metade de uma planilha confunde mais do que ajuda.
  */
-export function parseAccountsCsv(text: string): Array<{ account: Account; password: string }> {
+export function parseAccountsCsv(text: string, servers: SipServer[]): Array<{ account: Account; password: string }> {
     const lines = text
         .replace(/^\uFEFF/, '')
         .split(/\r?\n/)
@@ -238,7 +241,7 @@ export function parseAccountsCsv(text: string): Array<{ account: Account; passwo
     if (lines.length - 1 > MAX_CSV_ROWS) throw new Error(t('accounts.csv_grande', { max: MAX_CSV_ROWS }))
     const separator = [';', '\t', ','].find((s) => lines[0]!.includes(s)) ?? ';'
     const columns = splitCsvLine(lines[0]!, separator).map((name) => CSV_COLUMNS[plain(name)])
-    for (const needed of ['name', 'extension', 'domain'])
+    for (const needed of ['name', 'extension', 'server'])
         if (!columns.includes(needed)) throw new Error(t('accounts.csv_sem_coluna', { header: CSV_HEADER }))
 
     return lines.slice(1).map((line, index) => {
@@ -246,27 +249,18 @@ export function parseAccountsCsv(text: string): Array<{ account: Account; passwo
         splitCsvLine(line, separator).forEach((value, i) => {
             if (columns[i]) row[columns[i]!] = value
         })
-        const address = row.address ?? ''
-        const wanted = plain(row.transport ?? '')
-        const transport = ['udp', 'tcp', 'tls'].includes(wanted)
-            ? (wanted as 'udp' | 'tcp' | 'tls')
-            : wanted === '' || wanted === 'ws' || wanted === 'wss'
-              ? 'ws'
-              : null
         const where = t('accounts.csv_linha', { line: index + 2 })
-        if (!transport) throw new Error(`${where}: ${t('accounts.csv_transporte', { value: row.transport })}`)
-        const account = newAccount({
-            name: row.name ?? '',
-            extension: row.extension ?? '',
-            domain: row.domain ?? '',
-            authUsername: row.authUsername ?? '',
-            transport,
-            wssUrl: transport === 'ws' ? address : '',
-            sipServer: transport === 'ws' ? '' : address,
-            autoAnswer: { enabled: yes(row.autoAnswer), delayMs: 1000 },
-            srtp: transport !== 'ws' && yes(row.srtp) ? true : undefined,
-            color: ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]
-        })
+        const server = findServer(row.server ?? '', servers)
+        if (!server) throw new Error(`${where}: ${t('accounts.csv_servidor', { value: row.server ?? '' })}`)
+        const account = applyServer(
+            newAccount({
+                name: row.name ?? '',
+                extension: row.extension ?? '',
+                dtmfMode: server.dtmfMode ?? 'auto',
+                color: ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]
+            }),
+            server
+        )
         const password = row.password ?? ''
         const error = Object.values(validateAccount(account, password))[0]
         if (error) throw new Error(`${where}: ${error}`)

@@ -104,6 +104,21 @@ async function trustHost(): Promise<void> {
     }
 }
 
+/**
+ * Ajustes abrem em Áudio, a primeira seção. Com uma versão nova para baixar ou já baixada (o ponto no ícone de
+ * Ajustes), abrem direto em Atualização, que é o que o aviso chamou.
+ */
+function openSettings(): void {
+    if (updatePending.value) openUpdate()
+    else settingsAt.value = 'audio'
+}
+
+/** O Guia fica no pé dos Ajustes: abre no lugar deles. */
+function openGuide(): void {
+    settingsAt.value = null
+    showGuide.value = true
+}
+
 /** Abre a tela já procurando: o resultado guardado pode ser de horas atrás (ex.: erro de quando não havia rede). */
 function openUpdate(): void {
     settingsAt.value = 'update'
@@ -125,7 +140,7 @@ function onKey(event: KeyboardEvent): void {
     const mod = event.ctrlKey || event.metaKey
     if (!mod) return
     if (event.key === ',') {
-        settingsAt.value ??= 'appearance'
+        if (!settingsAt.value) openSettings()
         return event.preventDefault()
     }
     const selectedCall = calls.calls.find((c) => c.id === calls.selectedId && c.state !== 'ended')
@@ -241,8 +256,7 @@ onUnmounted(() => {
                 :picker-open="pickerOpen"
                 :update-pending="updatePending"
                 @picker="pickerOpen = !pickerOpen"
-                @settings="updatePending ? openUpdate() : (settingsAt = 'appearance')"
-                @guide="showGuide = true"
+                @settings="openSettings"
             />
 
             <section class="col dial-col" :aria-label="$t('app.discar')">
@@ -288,6 +302,7 @@ onUnmounted(() => {
             :update="update"
             @close="settingsAt = null"
             @channel="setUpdateChannel"
+            @guide="openGuide"
         />
     </div>
 </template>

@@ -48,6 +48,15 @@ export function serversWithSimulated(saved: SipServer[]): SipServer[] {
     return [simulatedServer(), ...saved.filter((s) => s.id !== SIMULATED_SERVER_ID)]
 }
 
+/**
+ * Servidor que já vem escolhido numa conta nova: o da última conta salva, se ainda existe; senão o primeiro
+ * cadastrado; sem nenhum cadastrado, o simulado.
+ */
+export function defaultServerId(saved: SipServer[], lastUsed: string | null | undefined): string {
+    if (lastUsed && (lastUsed === SIMULATED_SERVER_ID || saved.some((s) => s.id === lastUsed))) return lastUsed
+    return saved.find((s) => s.id !== SIMULATED_SERVER_ID)?.id ?? SIMULATED_SERVER_ID
+}
+
 export type DeleteServerCheck = { ok: true } | { ok: false; reason: 'simulado' | 'em-uso'; count?: number }
 
 /** Não se apaga o simulado nem um servidor que alguma conta usa. Conta com serverId vazio não usa nenhum. */

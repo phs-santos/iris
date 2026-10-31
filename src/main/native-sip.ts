@@ -5,7 +5,7 @@
 import { app, type WebContents } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { offerOrder } from '@shared/codecs'
+import { offerOrder, type CodecPrefs } from '@shared/codecs'
 import { loadSettings } from './storage'
 import { WavRecorder } from './sip/recorder'
 import {
@@ -18,7 +18,7 @@ import {
     type NativeSipEventBody,
     type NativeSipHealth
 } from '@shared/types'
-import { isSipTransportKind, parseSipServer } from '@shared/sip-target'
+import { isSipTransportKind, parseSipServer, type SipTransportKind } from '@shared/sip-target'
 import { check, handle, isPlainObject, isString, on } from './ipc-guard'
 import type { CallEvents, SipCall } from './sip/call'
 import { createTransport } from './sip/transport'
@@ -94,6 +94,15 @@ function isCallAction(v: unknown): v is NativeCallAction {
         /^[0-9*#A-Da-d]$/.test(v.tone) &&
         DTMF_MODES.includes(v.mode as string)
     )
+}
+
+/**
+ * A ordem dos codecs mudou em Ajustes → Áudio: vale já para os agentes no ar, inclusive para a próxima chamada
+ * recebida, e não só depois do próximo registro.
+ */
+export function applyCodecs(prefs: CodecPrefs | undefined): void {
+    const codecs = offerOrder(prefs)
+    for (const agent of agents.values()) agent.setCodecs(codecs)
 }
 
 export function registerNativeSipIpc(options: Options): void {
@@ -180,10 +189,12 @@ export function registerNativeSipIpc(options: Options): void {
                     (Array.isArray(headers) && headers.length <= 20 && headers.every(isExtraHeader))),
             'chamada SIP'
         )
+        if (!agents.has(engineId)) throw new Error('Registre a conta antes de ligar')
+        const codecs = offerOrder((await loadSettings()).codecs)
+        // Busca de novo depois do await: a conta pode ter sido parada (ou registrada de novo) enquanto lia.
         const agent = agents.get(engineId)
         if (!agent) throw new Error('Registre a conta antes de ligar')
-        // A ordem pode ter mudado nas Configurações depois do registro.
-        agent.setCodecs(offerOrder((await loadSettings()).codecs))
+        agent.setCodecs(codecs)
         // O id nasce aqui para os eventos já saírem com ele, antes de a interface receber a resposta.
         let callId = ''
         const call = agent.dial(
@@ -281,6 +292,28 @@ export function registerNativeSipIpc(options: Options): void {
             health.error = error instanceof Error ? error.message : String(error)
         }
         return health
+    })
+
+    handle(IPC.sipProbe, async (_e, domain: string, transport: SipTransportKind, server: string): Promise<number> => {
+        check(isString(domain, 255) && isSipTransportKind(transport) && isString(server, 300), 'servidor para testar')
+        const target = parseSipServer(server, domain.trim(), transport)
+        check(Boolean(target), 'endereço do servidor')
+        // Um agente de uso único, sem conta nem senha: só o OPTIONS, como o "Medir de novo" dos detalhes.
+        const probe = new SipUserAgent(
+            {
+                user: 'iris',
+                domain: domain.trim(),
+                password: '',
+                transport,
+                host: target!.host,
+                port: target!.port,
+                trusted: options.isTrustedHost(target!.host),
+                userAgent: `Iris/${app.getVersion()}`
+            },
+            createTransport,
+            { status: () => undefined, log: () => undefined, certificate: options.onCertificateError }
+        )
+        return probe.probe(PING_TIMEOUT_MS)
     })
 
     // Ao sair, tenta desregistrar; se não der tempo, o registro vence sozinho no PBX.

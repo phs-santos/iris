@@ -306,7 +306,13 @@ function openInDrawer(d: Dialog): void {
                 <li v-for="d in activity" :key="d.key">
                     <button type="button" class="item" :class="tone(d)" @click="openInDrawer(d)">
                         <span class="when mono tabular">{{ clock(d.start) }}</span>
-                        <span class="method mono">{{ d.direction === 'in' ? '←' : '→' }} {{ d.method }}</span>
+                        <span class="method mono"
+                            ><span aria-hidden="true">{{ d.direction === 'in' ? '←' : '→' }}</span
+                            ><span class="sr-only">{{
+                                d.direction === 'in' ? $t('accountDetails.recebida') : $t('accountDetails.enviada')
+                            }}</span>
+                            {{ d.method }}</span
+                        >
                         <span class="peer">{{ dialogPeer(d) }}</span>
                         <span class="res mono">{{ result(d) }}</span>
                         <span class="took mono tabular">{{ took(d) }}</span>

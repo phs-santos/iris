@@ -2,25 +2,18 @@
 // Cadastra 1001 e 1002 pela tela, liga de uma para a outra com áudio WebRTC,
 // envia DTMF para a URA 8000, confere o 486 do número ocupado e faz uma transferência assistida.
 // Uso: npm run build && node tests/e2e/asterisk.mjs
-import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
-import { linhaDepuracao, verTodas } from './helpers/tela.mjs'
+import { abrir, linhaDepuracao, verTodas } from './helpers/tela.mjs'
 
 const WSS = process.env.PBX_WS ?? 'wss://127.0.0.1:8089/ws'
 const DOMAIN = process.env.PBX_DOMAIN ?? '127.0.0.1'
 const userData = mkdtempSync(join(tmpdir(), 'iris-pbx-'))
 const shots = process.env.SHOTS_DIR
-const args = ['.']
-if (process.getuid?.() === 0) args.push('--no-sandbox')
 
-const app = await electron.launch({
-    args,
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-})
-const page = await app.firstWindow()
+const { app, page } = await abrir({ userData })
 const step = (msg) => console.log(`✓ ${msg}`)
 
 async function addAccount(name, ext, autoAnswer, expectCertPrompt = false) {

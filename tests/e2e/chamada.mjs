@@ -35,7 +35,17 @@ import {
     seletor,
     tiraDepuracao,
     tituloDiscar,
-    transferirCega
+    transferirCega,
+    abrirNovaConta,
+    abrirAjustes,
+    fecharAjustes,
+    codecPrimeiro,
+    linhaCodec,
+    escolherServidor,
+    preencherServidor,
+    formConta,
+    janelaServidor,
+    esperarRegistro
 } from './helpers/tela.mjs'
 
 const step = (msg) => console.log(`✓ ${msg}`)
@@ -70,6 +80,15 @@ let failed = false
 try {
     // ─── Modo simulado ───
     await esperarContasSimuladas(page)
+
+    // A Lab 2001 do simulado começa com senha errada (403): a tira avisa "erro novo" sem abrir sozinha, e o aviso
+    // some depois de abrir e fechar a gaveta.
+    await page.getByRole('button', { name: /^SIP · Fluxo · Log.*erro novo$/ }).waitFor({ timeout: 10000 })
+    await abrirDepuracao(page)
+    await recolherDepuracao(page).click()
+    if (/erro novo/.test(await tiraDepuracao(page).getAttribute('aria-label')))
+        throw new Error('a tira continuou com "erro novo" depois de abrir e fechar a gaveta')
+    step('simulado: a tira avisa "erro novo" e perde o aviso depois de abrir e fechar a gaveta')
 
     // A gaveta de depuração começa recolhida na tira.
     if ((await tiraDepuracao(page).getAttribute('aria-expanded')) !== 'false')
@@ -111,6 +130,46 @@ try {
     await recolherDepuracao(page).waitFor({ timeout: 2000 })
     await recolherDepuracao(page).click()
     step('simulado: com o seletor aberto, um clique na tira abre a depuração e fecha o seletor')
+
+    // Cadastro de conta: nome obrigatório, "+ Novo servidor…" volta com o servidor escolhido, e a conta registra.
+    let form = await abrirNovaConta(page)
+    const servidorEscolhido = async () =>
+        (
+            await form.getByRole('combobox', { name: 'Servidor', exact: true }).locator('option:checked').textContent()
+        ).trim()
+    if ((await servidorEscolhido()) !== 'PBX simulado')
+        throw new Error(`a conta nova não veio com o PBX simulado: ${await servidorEscolhido()}`)
+    await form.getByRole('button', { name: 'Salvar', exact: true }).click()
+    if ((await form.getByRole('textbox', { name: 'Nome', exact: true }).getAttribute('aria-invalid')) !== 'true')
+        throw new Error('salvar sem nome não marcou o campo Nome')
+    await form.getByRole('combobox', { name: 'Servidor', exact: true }).selectOption({ label: '+ Novo servidor…' })
+    await janelaServidor(page).waitFor()
+    await preencherServidor(page, { nome: 'Servidor de teste', dominio: 'pbx.teste' })
+    if ((await servidorEscolhido()) !== 'Servidor de teste · UDP')
+        throw new Error(`o servidor novo não voltou escolhido: ${await servidorEscolhido()}`)
+    await escolherServidor(form, 'PBX simulado')
+    await form.getByRole('textbox', { name: 'Nome', exact: true }).fill('Simulada 1005')
+    await form.getByLabel('Ramal').fill('1005')
+    await form.getByLabel('Senha').fill('1234')
+    await form.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await form.waitFor({ state: 'detached' })
+    await esperarRegistro(page, 'Simulada 1005')
+    await tituloDiscar(page).filter({ hasText: 'Simulada 1005' }).waitFor()
+    await escolherConta(page, 'Suporte 1001')
+    step('simulado: cadastra servidor e conta pela tela, registra e vira a conta atual (nome obrigatório)')
+
+    // A ordem dos codecs muda pelas setas (↑) e fica gravada; o último ligado não desliga.
+    await abrirAjustes(page, 'Áudio')
+    await codecPrimeiro(page, 'PCMA')
+    const gravada = async () => (await page.evaluate(() => window.iris.settings.load())).codecs?.order?.[0]
+    for (let i = 0; i < 20 && (await gravada()) !== 'PCMA'; i++) await page.waitForTimeout(100)
+    if ((await gravada()) !== 'PCMA') throw new Error(`a ordem dos codecs não foi gravada: ${await gravada()}`)
+    for (const nome of ['G.722', 'PCMU', 'Opus']) await linhaCodec(page, nome).getByRole('checkbox').uncheck()
+    if (!(await linhaCodec(page, 'PCMA').getByRole('checkbox').isDisabled()))
+        throw new Error('dava para desligar o último codec ligado')
+    for (const nome of ['G.722', 'PCMU', 'Opus']) await linhaCodec(page, nome).getByRole('checkbox').check()
+    await fecharAjustes(page)
+    step('simulado: a ordem dos codecs muda pelas setas, fica gravada e o último ligado não desliga')
 
     const ura = /→\s*8000/
     await ligar('8000', 5000)
@@ -189,13 +248,49 @@ try {
     // ─── Asterisk (opcional) ───
     if (process.env.PBX_WS) {
         const dominio = process.env.PBX_DOMAIN ?? '127.0.0.1'
-        await criarConta(page, { nome: 'Chamada 2001', ramal: '2001', dominio })
-        await criarConta(page, { nome: 'Chamada 2002', ramal: '2002', dominio, autoAtender: true })
+        // Servidor pela janela própria, aberta do cadastro da conta, com o Testar (OPTIONS) antes de salvar.
+        form = await abrirNovaConta(page)
+        await form.getByRole('combobox', { name: 'Servidor', exact: true }).selectOption({ label: '+ Novo servidor…' })
+        const teste = await preencherServidor(page, { nome: 'Asterisk', dominio, testar: true })
+        if (!/^Respondeu ao OPTIONS em \d+ ms/.test(teste)) throw new Error(`o Testar do servidor falhou: ${teste}`)
+        await form.getByRole('textbox', { name: 'Nome', exact: true }).fill('Chamada 2001')
+        await form.getByLabel('Ramal').fill('2001')
+        await form.getByLabel('Senha').fill('1234')
+        await form.getByRole('button', { name: 'Salvar', exact: true }).click()
+        await formConta(page).waitFor({ state: 'detached' })
+        await esperarRegistro(page, 'Chamada 2001')
+        step(`Asterisk: cadastra servidor (${teste}) e conta UDP 2001 pela tela e registra`)
+        await criarConta(page, { nome: 'Chamada 2002', ramal: '2002', servidor: 'Asterisk', autoAtender: true })
         await escolherConta(page, 'Chamada 2001')
 
         const ate2002 = /2001\s*→\s*2002/
         await ligar('2002', 20000)
         step('Asterisk: 2001 liga para 2002 e a chamada fica "em chamada"')
+        // PCMA em primeiro (Ajustes → Áudio, acima): é o primeiro da oferta e o que o 200 OK escolhe.
+        await abrirDepuracao(page, 'SIP')
+        await contaDepuracao(page).selectOption({ label: 'Chamada 2001 · 2001' })
+        const convite = mensagemSip(page, 'INVITE sip:2002').last()
+        await convite.getByRole('button').first().click()
+        const sdp = await convite.locator('pre').textContent()
+        if (!/^m=audio \d+ RTP\/AVP 8\b/m.test(sdp)) throw new Error(`o INVITE não oferece PCMA primeiro:\n${sdp}`)
+        // O Asterisk oferece "0 8" (PCMU primeiro) a 2002, e o 200 OK que a Íris responde escolhe pela ordem dela.
+        // A resposta do Asterisk a 2001 segue a ordem do próprio Asterisk, por isso não é conferida.
+        await contaDepuracao(page).selectOption({ label: 'Chamada 2002 · 2002' })
+        const respostas = mensagemSip(page, '200 OK')
+        await respostas.last().waitFor({ timeout: 10000 })
+        let sdpOk = ''
+        for (let i = (await respostas.count()) - 1; i >= 0 && !sdpOk; i--) {
+            const linha = respostas.nth(i)
+            await linha.getByRole('button').first().click()
+            const texto = await linha.locator('pre').textContent()
+            if (/CSeq: \d+ INVITE/.test(texto) && /^m=audio/m.test(texto)) sdpOk = texto
+        }
+        if (!/^m=audio \d+ RTP\/AVP 8\b/m.test(sdpOk)) throw new Error(`o 200 OK de 2002 não escolheu PCMA:\n${sdpOk}`)
+        await chamadaAtiva(page, /2002\s*←\s*2001/)
+            .getByText('PCMA', { exact: true })
+            .waitFor({ timeout: 10000 })
+        await recolherDepuracao(page).click()
+        step('Asterisk: a ordem dos codecs vai para o INVITE (PCMA primeiro) e para o 200 OK da chamada recebida')
         await esperaERetomada(ate2002)
         step('Asterisk: espera e retomada')
         antes = await contarLinhas(page, LINHA_TRANSFERENCIA)

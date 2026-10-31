@@ -8,7 +8,7 @@ import { describeStatus, newAccount, normalizeImported, parseAccountsCsv, sample
 import { reconnectDelay, shouldReconnect } from '@shared/reconnect'
 import { usePreferencesStore } from './preferences'
 import { notify } from '@renderer/lib/notify'
-import { isSimulated } from '@shared/servers'
+import { isSimulated, type SipServer } from '@shared/servers'
 import { removeTag as removeTagFrom } from '@shared/tags'
 
 interface Runtime {
@@ -271,9 +271,12 @@ export const useAccountsStore = defineStore('accounts', () => {
         return items.length
     }
 
-    /** Cria contas a partir de uma planilha em CSV (RF-48). Nada é criado se alguma linha estiver errada. */
-    async function importCsv(text: string): Promise<number> {
-        const items = parseAccountsCsv(text)
+    /**
+     * Cria contas a partir de uma planilha em CSV (RF-48), cada uma ligada a um dos `servers`. Nada é criado se
+     * alguma linha estiver errada.
+     */
+    async function importCsv(text: string, servers: SipServer[]): Promise<number> {
+        const items = parseAccountsCsv(text, servers)
         for (const { account, password } of items) {
             accounts.value.push(account)
             await window.iris.secrets.set(account.id, password)

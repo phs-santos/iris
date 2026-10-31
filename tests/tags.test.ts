@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accountsWithTag, isTag, removeTag } from '../src/shared/tags'
+import { accountsWithTag, isTag, isTagList, nextTagColor, removeTag, TAG_COLORS } from '../src/shared/tags'
 import type { Account } from '../src/shared/types'
 
 const account = (id: string, tagIds: string[]): Account => ({ id, tagIds }) as unknown as Account
@@ -15,6 +15,23 @@ describe('etiquetas', () => {
         expect(isTag({ id: 't1', name: 'a', color: '#12345g' })).toBe(false)
         expect(isTag({ name: 'a', color: '#123456' })).toBe(false)
         expect(isTag(null)).toBe(false)
+    })
+
+    it('etiqueta nova pega a primeira cor livre', () => {
+        expect(nextTagColor([])).toBe(TAG_COLORS[0])
+        expect(nextTagColor([{ id: 'a', name: 'a', color: TAG_COLORS[0]!.toUpperCase() }])).toBe(TAG_COLORS[1])
+        const all = TAG_COLORS.map((color, i) => ({ id: String(i), name: 'x', color }))
+        expect(TAG_COLORS).toContain(nextTagColor(all))
+    })
+
+    it('lista para gravar recusa id repetido', () => {
+        const a = { id: 't1', name: 'A', color: '#111111' }
+        const b = { id: 't2', name: 'B', color: '#222222' }
+        expect(isTagList([a, b])).toBe(true)
+        expect(isTagList([])).toBe(true)
+        expect(isTagList([a, { ...b, id: 't1' }])).toBe(false)
+        expect(isTagList([a, { id: 't3' }])).toBe(false)
+        expect(isTagList('x')).toBe(false)
     })
 
     it('apagar etiqueta tira de todas as contas', () => {

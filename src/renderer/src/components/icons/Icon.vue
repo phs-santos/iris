@@ -74,6 +74,24 @@ defineProps<{ name: IconName }>()
             v-else-if="name === 'refresh'"
             d="M20 11a8 8 0 0 0-14.6-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.6 4.5L20 16M20 20v-4h-4"
         />
+        <template v-else-if="name === 'grip'">
+            <circle cx="9" cy="6" r="1" />
+            <circle cx="15" cy="6" r="1" />
+            <circle cx="9" cy="12" r="1" />
+            <circle cx="15" cy="12" r="1" />
+            <circle cx="9" cy="18" r="1" />
+            <circle cx="15" cy="18" r="1" />
+        </template>
+        <path v-else-if="name === 'up'" d="M12 19V5M6 11l6-6 6 6" />
+        <path v-else-if="name === 'down'" d="M12 5v14M6 13l6 6 6-6" />
+        <template v-else-if="name === 'server'">
+            <rect x="3" y="4" width="18" height="7" rx="1.5" />
+            <rect x="3" y="13" width="18" height="7" rx="1.5" />
+            <path d="M7 7.5h.01M7 16.5h.01" />
+        </template>
+        <path v-else-if="name === 'tag'" d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9zM8 8h.01" />
+        <path v-else-if="name === 'trash'" d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+        <path v-else-if="name === 'edit'" d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" />
         <path v-else-if="name === 'erase'" d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1zM12 9l6 6M18 9l-6 6" />
     </svg>
 </template>
@@ -92,6 +110,13 @@ export type IconName =
     | 'flow'
     | 'plus'
     | 'chevron'
+    | 'grip'
+    | 'up'
+    | 'down'
+    | 'server'
+    | 'tag'
+    | 'trash'
+    | 'edit'
     | 'close'
     | 'erase'
     | 'book'

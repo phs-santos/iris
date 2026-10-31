@@ -23,6 +23,24 @@ const theme = computed(() => prefs.appearance.theme ?? DEFAULT_THEME)
         </div>
 
         <div class="set-group">
+            <div class="set-row">
+                <span class="what">
+                    <b id="theme-label">{{ $t('appearanceSection.tema') }}</b>
+                    <small>{{ $t('appearanceSection.tema_dica') }}</small>
+                </span>
+                <div class="seg" role="radiogroup" aria-labelledby="theme-label">
+                    <button
+                        v-for="th in themes"
+                        :key="th.id"
+                        role="radio"
+                        :aria-checked="theme === th.id"
+                        :class="{ on: theme === th.id }"
+                        @click="prefs.setTheme(th.id)"
+                    >
+                        {{ th.name }}
+                    </button>
+                </div>
+            </div>
             <div class="set-row column">
                 <span class="what">
                     <b>{{ $t('appearanceSection.cor_de_destaque') }}</b>
@@ -57,24 +75,6 @@ const theme = computed(() => prefs.appearance.theme ?? DEFAULT_THEME)
                     <span class="btn primary">{{ $t('appearanceSection.ligar') }}</span>
                     <span class="tab-sample">{{ $t('appearanceSection.telefone') }}</span>
                     <span class="btn focus-sample">{{ $t('appearanceSection.com_foco') }}</span>
-                </div>
-            </div>
-            <div class="set-row">
-                <span class="what">
-                    <b id="theme-label">{{ $t('appearanceSection.tema') }}</b>
-                    <small>{{ $t('appearanceSection.tema_dica') }}</small>
-                </span>
-                <div class="seg" role="radiogroup" aria-labelledby="theme-label">
-                    <button
-                        v-for="th in themes"
-                        :key="th.id"
-                        role="radio"
-                        :aria-checked="theme === th.id"
-                        :class="{ on: theme === th.id }"
-                        @click="prefs.setTheme(th.id)"
-                    >
-                        {{ th.name }}
-                    </button>
                 </div>
             </div>
         </div>

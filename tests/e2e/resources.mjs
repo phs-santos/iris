@@ -1,10 +1,9 @@
 // Recursos (RNF-05): até 300 MB de RAM com 10 contas e 1 chamada; CPU ociosa abaixo de 2%.
 // Mede todos os processos do app (principal, interface, GPU, rede) pelo app.getAppMetrics().
 // Uso: docker compose up -d && npm run build && node tests/e2e/resources.mjs
-import { _electron as electron } from 'playwright-core'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { verTodas } from './helpers/tela.mjs'
+import { abrir, verTodas } from './helpers/tela.mjs'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
 
@@ -33,11 +32,7 @@ writeFileSync(
     })
 )
 
-const app = await electron.launch({
-    args: ['.'],
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-})
-const page = await app.firstWindow()
+const { app, page } = await abrir({ userData })
 const step = (msg) => console.log(`✓ ${msg}`)
 
 /** Memória (MB) e CPU (%) somadas de todos os processos do app. */

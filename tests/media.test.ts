@@ -153,6 +153,10 @@ describe('SDP (RF-39)', () => {
         expect(() =>
             parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/AVP 18\r\na=rtpmap:18 G729/8000\r\n')
         ).toThrow(/codec em comum/)
+        // O PCMA existe na Íris, mas está desligado: o erro diz que nenhum ligado casa.
+        expect(() => parseSdp('v=0\r\nc=IN IP4 1.1.1.1\r\nm=audio 4000 RTP/AVP 8\r\n', ['G722', 'PCMU'])).toThrow(
+            /Nenhum codec ligado casa com a oferta: ligados G722, PCMU; oferecidos PCMA/
+        )
     })
 
     it('a resposta espelha o sentido pedido', () => {

@@ -7,7 +7,7 @@ import {
     parseAccountsCsv,
     validateAccount
 } from '@renderer/lib/accounts'
-import { SIMULATED_SERVER_ID } from '@shared/servers'
+import { serversWithSimulated, SIMULATED_SERVER_ID, type SipServer } from '@shared/servers'
 import { matches, type LogEntry } from '@renderer/stores/log'
 import { describeSipError } from '@renderer/sip/engine'
 
@@ -17,12 +17,10 @@ describe('validateAccount', () => {
         expect(Object.keys(errors).sort()).toEqual(['domain', 'extension', 'name', 'password', 'wssUrl'])
     })
 
-    it('não exige WSS nem senha em conta simulada', () => {
-        const errors = validateAccount(
-            newAccount({ name: 'a', extension: '1', domain: 'd', serverId: SIMULATED_SERVER_ID }),
-            ''
-        )
-        expect(errors).toEqual({})
+    it('não exige WSS em conta simulada, mas exige a senha', () => {
+        const account = newAccount({ name: 'a', extension: '1', domain: 'd', serverId: SIMULATED_SERVER_ID })
+        expect(validateAccount(account, '1234')).toEqual({})
+        expect(Object.keys(validateAccount(account, ''))).toEqual(['password'])
     })
 })
 
@@ -106,47 +104,73 @@ describe('filtro do log', () => {
 })
 
 describe('contas em lote por CSV (RF-48)', () => {
-    it('cria contas de WebSocket e de SIP puro, com ponto e vírgula, vírgula ou tabulação', () => {
+    const udp: SipServer = {
+        id: 'srv-udp',
+        name: 'PBX Matriz',
+        domain: 'pbx.empresa.com',
+        transport: 'udp',
+        wssUrl: '',
+        sipServer: '10.0.0.5:5060',
+        iceServers: '',
+        preset: 'asterisk',
+        dtmfMode: 'sip-info'
+    }
+    const ws: SipServer = {
+        ...udp,
+        id: 'srv-ws',
+        name: 'Nuvem',
+        domain: 'nuvem.com',
+        transport: 'ws',
+        wssUrl: 'wss://nuvem.com/ws',
+        sipServer: ''
+    }
+    const servers = serversWithSimulated([udp, ws])
+
+    it('liga cada conta ao servidor, pelo nome ou pelo domínio, com ; , ou tabulação', () => {
         const csv = [
-            'Nome;Ramal;Domínio;Senha;Transporte;Endereço;Auto-atender;SRTP',
-            'Suporte 1001;1001;pbx.empresa.com;segredo;;wss://pbx.empresa.com:8089/ws;sim;',
-            '"Fila; vendas";2001;10.0.0.5;"se""nha";TLS;10.0.0.5:5061;;sim'
+            'Nome;Ramal;Servidor;Senha',
+            'Suporte;1001;pbx matriz;segredo',
+            '"Fila; vendas";2001;NUVEM.com;"se""nha"'
         ].join('\r\n')
-        const [web, pure] = parseAccountsCsv(`\uFEFF${csv}`)
-        expect(web).toMatchObject({
+        const [pure, web] = parseAccountsCsv(`\uFEFF${csv}`, servers)
+        expect(pure).toMatchObject({
             password: 'segredo',
             account: {
-                name: 'Suporte 1001',
-                extension: '1001',
+                name: 'Suporte',
+                serverId: 'srv-udp',
                 domain: 'pbx.empresa.com',
-                transport: 'ws',
-                wssUrl: 'wss://pbx.empresa.com:8089/ws',
-                autoAnswer: { enabled: true }
+                transport: 'udp',
+                sipServer: '10.0.0.5:5060',
+                dtmfMode: 'sip-info'
             }
         })
-        expect(pure).toMatchObject({
+        expect(web).toMatchObject({
             password: 'se"nha',
-            account: { name: 'Fila; vendas', transport: 'tls', sipServer: '10.0.0.5:5061', wssUrl: '', srtp: true }
+            account: { name: 'Fila; vendas', serverId: 'srv-ws', transport: 'ws', wssUrl: 'wss://nuvem.com/ws' }
         })
-        expect(web!.account.id).not.toBe(pure!.account.id)
+        expect(pure!.account.id).not.toBe(web!.account.id)
 
-        const comma = parseAccountsCsv('name,extension,domain,password,transport\nA,2002,pbx.teste,1234,udp')
-        expect(comma[0]!.account).toMatchObject({ extension: '2002', transport: 'udp', sipServer: '' })
-        const tab = parseAccountsCsv('nome\tramal\tdominio\tsenha\ttransporte\nB\t2003\tpbx.teste\t1234\ttcp')
-        expect(tab[0]!.account.transport).toBe('tcp')
+        const comma = parseAccountsCsv('name,extension,server,password\nA,2002,PBX simulado,1234', servers)
+        expect(comma[0]!.account.serverId).toBe(SIMULATED_SERVER_ID)
+        const tab = parseAccountsCsv('nome\tramal\tservidor\tsenha\nB\t2003\tPBX Matriz\t1234', servers)
+        expect(tab[0]!.account.transport).toBe('udp')
     })
 
     it('para no primeiro erro e diz a linha', () => {
-        expect(() => parseAccountsCsv('nome;ramal;dominio')).toThrow(/pelo menos uma conta/)
-        expect(() => parseAccountsCsv('nome;senha\nA;1')).toThrow(/colunas nome, ramal e dominio/)
-        expect(() => parseAccountsCsv('nome;ramal;dominio;senha;transporte\nA;1;pbx;1;udp\nB;2;pbx;1;sctp')).toThrow(
-            'Linha 3: transporte "sctp" desconhecido; use ws, udp, tcp ou tls'
+        expect(() => parseAccountsCsv('nome;ramal;servidor', servers)).toThrow(/pelo menos uma conta/)
+        expect(() => parseAccountsCsv('nome;ramal;dominio;senha\nA;1;pbx;1', servers)).toThrow(/nome, ramal, servidor/)
+        expect(() => parseAccountsCsv('nome;ramal;servidor;senha\nA;1;Nuvem;1\nB;2;outro;1', servers)).toThrow(
+            /^Linha 3: servidor "outro" não está cadastrado/
         )
-        expect(() => parseAccountsCsv('nome;ramal;dominio;senha;transporte\nA;1;pbx;;udp')).toThrow(
+        expect(() => parseAccountsCsv('nome;ramal;servidor;senha\nA;1;PBX Matriz;', servers)).toThrow(
             'Linha 2: Informe a senha do ramal'
         )
-        expect(() => parseAccountsCsv('nome;ramal;dominio;senha\nA;1;pbx;1')).toThrow(
-            /Linha 2: Use um endereço como wss/
+    })
+
+    it('domínio repetido em dois servidores não escolhe sozinho', () => {
+        const twin = { ...udp, id: 'srv-2', name: 'Outro' }
+        expect(() => parseAccountsCsv('nome;ramal;servidor;senha\nA;1;pbx.empresa.com;1', [udp, twin])).toThrow(
+            /Linha 2: servidor/
         )
     })
 })

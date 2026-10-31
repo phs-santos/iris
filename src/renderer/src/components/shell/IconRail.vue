@@ -8,10 +8,10 @@ import Icon from '../icons/Icon.vue'
 
 /**
  * Barra de ícones à esquerda: a conta atual no topo (abre o seletor), as telas no meio e Ajustes no pé.
- * Hoje a única tela é o Telefone; Cenários entra aqui quando voltar.
+ * Hoje a única tela é o Telefone; Cenários entra aqui quando voltar. O Guia fica no pé dos Ajustes (F1 abre).
  */
 defineProps<{ pickerOpen: boolean; updatePending: boolean }>()
-const emit = defineEmits<{ picker: []; settings: []; guide: [] }>()
+const emit = defineEmits<{ picker: []; settings: [] }>()
 const accounts = useAccountsStore()
 const avatar = ref<HTMLButtonElement | null>(null)
 
@@ -68,10 +68,6 @@ defineExpose({ focusAvatar: () => avatar.value?.focus() })
 
         <span class="spacer"></span>
 
-        <button type="button" class="item" :title="$t('rail.guia_dica')" @click="emit('guide')">
-            <Icon name="book" />
-            <span>{{ $t('rail.guia') }}</span>
-        </button>
         <button
             type="button"
             class="item"

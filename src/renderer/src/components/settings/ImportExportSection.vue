@@ -3,8 +3,10 @@ import { t } from '@renderer/i18n'
 import { ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { CSV_HEADER } from '@renderer/lib/accounts'
+import { useServersStore } from '@renderer/stores/servers'
 
 const accounts = useAccountsStore()
+const servers = useServersStore()
 const includePasswords = ref(false)
 const message = ref<{ ok: boolean; text: string } | null>(null)
 
@@ -36,7 +38,7 @@ async function doImportCsv(): Promise<void> {
     const text = await window.iris.files.openText('csv')
     if (text === null) return
     try {
-        const count = await accounts.importCsv(text)
+        const count = await accounts.importCsv(text, servers.all)
         message.value = { ok: true, text: t('importExportSection.contas_criadas', { count }) }
     } catch (error) {
         message.value = { ok: false, text: (error as Error).message }

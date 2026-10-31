@@ -5,14 +5,19 @@ import { mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-/** Abre o app com uma pasta de dados nova e o microfone falso. Devolve também a pasta usada. */
-export async function abrir() {
-    const userData = mkdtempSync(join(tmpdir(), 'iris-chamada-'))
-    const args = ['.']
+/**
+ * Abre o app com o microfone falso e a janela isolada do mouse do computador (ver `isolarDoMouse`). Todo e2e
+ * abre por aqui. Sem `userData`, cria uma pasta de dados nova; `executablePath` testa um app empacotado;
+ * `args` vai depois do '.' (ou sozinho, com `executablePath`).
+ */
+export async function abrir({ userData, prefixo = 'iris-e2e-', executablePath, args: extra = [], env = {} } = {}) {
+    userData ??= mkdtempSync(join(tmpdir(), prefixo))
+    const args = executablePath ? [...extra] : ['.', ...extra]
     if (process.getuid?.() === 0) args.push('--no-sandbox')
     const app = await electron.launch({
+        executablePath,
         args,
-        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
+        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', ...env }
     })
     const page = await app.firstWindow()
     await isolarDoMouse(app)
@@ -27,7 +32,11 @@ export async function abrir() {
  */
 export async function isolarDoMouse(app) {
     await app.evaluate(({ BrowserWindow }) => {
-        for (const win of BrowserWindow.getAllWindows()) win.setIgnoreMouseEvents(true)
+        for (const win of BrowserWindow.getAllWindows()) {
+            win.setIgnoreMouseEvents(true)
+            // Nem o teclado de verdade: uma tecla de quem usa a máquina caía na busca do seletor no meio do teste.
+            win.setFocusable(false)
+        }
     })
 }
 
@@ -58,6 +67,17 @@ export async function esperarRegistro(page, nome, timeout = 15000) {
     await fecharSeletor(page)
 }
 
+/** Espera o seletor mostrar `n` contas carregadas, sem esperar registro. */
+export async function esperarContas(page, n = 3, timeout = 15000) {
+    // Primeiro as contas carregam (o avatar passa a dizer a conta atual); só então o seletor abre. Aberto antes,
+    // o aviso de arquivo estragado podia surgir no alto e empurrar a tela no meio do clique.
+    await page.getByRole('button', { name: /^Conta atual/ }).waitFor({ timeout })
+    await page.waitForTimeout(300)
+    await abrirSeletor(page)
+    await seletor(page).getByText(`${n} contas`).waitFor({ timeout })
+    await fecharSeletor(page)
+}
+
 /** Espera as contas de exemplo do modo simulado carregarem e as duas primeiras registrarem. */
 export async function esperarContasSimuladas(page) {
     await abrirSeletor(page)
@@ -68,7 +88,7 @@ export async function esperarContasSimuladas(page) {
 
 /**
  * Cria uma etiqueta e põe nas contas indicadas, gravando direto pelos canais de dados e recarregando a tela.
- * A tela de etiquetas (Ajustes → Etiquetas) ainda não existe.
+ * Atalho para os testes que só precisam de uma conta etiquetada; a tela fica coberta em chamada.mjs.
  */
 export async function etiquetar(page, etiqueta, contas) {
     await page.evaluate(
@@ -96,22 +116,101 @@ export async function filtrarPorEtiqueta(page, etiqueta) {
 /** Título da coluna de discar ("Discar de …"). */
 export const tituloDiscar = (page) => page.getByRole('heading', { name: /^Discar de / })
 
-/** Cadastra uma conta de SIP puro (UDP por padrão) pelo formulário e espera registrar. */
-export async function criarConta(
-    page,
-    { nome, ramal, dominio, senha = '1234', transporte = 'UDP', autoAtender = false }
-) {
+/** Janela de cadastro de conta aberta. */
+export const formConta = (page) => page.getByRole('dialog', { name: /^(Nova conta|Editar )/ }).first()
+
+/** Janela de servidor aberta (do cadastro de conta ou de Ajustes → Servidores). */
+export const janelaServidor = (page) => page.getByRole('dialog', { name: /^(Novo servidor|Editar )/ }).last()
+
+/** Abre o cadastro de uma conta nova pelo seletor. */
+export async function abrirNovaConta(page) {
     await abrirSeletor(page)
     await seletor(page).getByRole('button', { name: 'Nova conta' }).click()
-    const form = page.locator('form.dialog')
-    await form.getByRole('textbox', { name: 'Nome' }).fill(nome)
-    await form.getByRole('textbox', { name: 'Ramal' }).fill(ramal)
-    await form.getByRole('textbox', { name: 'Domínio SIP' }).fill(dominio)
+    await formConta(page).waitFor()
+    return formConta(page)
+}
+
+/**
+ * Preenche a janela de servidor aberta e salva. Com `testar`, aperta Testar antes e espera a resposta do OPTIONS.
+ * Devolve o texto do teste, ou null.
+ */
+export async function preencherServidor(page, { nome, dominio, transporte = 'UDP', endereco, wss, testar = false }) {
+    const janela = janelaServidor(page)
+    await janela.getByRole('textbox', { name: 'Nome', exact: true }).fill(nome)
+    await janela.getByLabel('Domínio SIP').fill(dominio)
+    await janela.getByRole('radiogroup', { name: 'Transporte' }).getByRole('radio', { name: transporte }).click()
+    if (endereco) await janela.getByLabel('Endereço:porta').fill(endereco)
+    if (wss) await janela.getByLabel('Endereço WSS').fill(wss)
+    let resultado = null
+    if (testar) {
+        await janela.getByRole('button', { name: 'Testar' }).click()
+        const status = janela.getByRole('status')
+        await status.filter({ hasText: /Respondeu|Não respondeu/ }).waitFor({ timeout: 10000 })
+        resultado = (await status.textContent()).trim()
+    }
+    await janela.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await janela.waitFor({ state: 'detached' })
+    return resultado
+}
+
+/** Escolhe o servidor no cadastro de conta pelo começo do nome ("PBX simulado", "Asterisk · UDP"). */
+export async function escolherServidor(form, nome) {
+    const select = form.getByRole('combobox', { name: 'Servidor', exact: true })
+    const label = await select
+        .locator('option')
+        .evaluateAll(
+            (options, nome) => options.map((o) => o.textContent.trim()).find((text) => text.startsWith(nome)),
+            nome
+        )
+    if (!label) throw new Error(`servidor ${nome} não está na lista`)
+    await select.selectOption({ label })
+}
+
+/** Abre o Avançado do cadastro, se estiver fechado. */
+export async function abrirAvancado(janela) {
+    const botao = janela.getByRole('button', { name: /^Avançado/ })
+    if ((await botao.getAttribute('aria-expanded')) !== 'true') await botao.click()
+}
+
+/** Cadastra uma conta pela tela (o servidor já precisa existir) e espera registrar. */
+export async function criarConta(page, { nome, ramal, servidor, senha = '1234', autoAtender = false }) {
+    const form = await abrirNovaConta(page)
+    await form.getByRole('textbox', { name: 'Nome', exact: true }).fill(nome)
+    await escolherServidor(form, servidor)
+    await form.getByLabel('Ramal').fill(ramal)
     await form.getByLabel('Senha').fill(senha)
-    await form.getByLabel('Transporte').selectOption({ label: `SIP por ${transporte}` })
-    if (autoAtender) await form.getByText('Auto-atender após').locator('input[type=checkbox]').check()
-    await form.getByRole('button', { name: 'Salvar e registrar' }).click()
+    if (autoAtender) {
+        await abrirAvancado(form)
+        await form.getByLabel('Atender sozinho após').check()
+    }
+    await form.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await form.waitFor({ state: 'detached' })
     await esperarRegistro(page, nome)
+}
+
+/** A janela de Ajustes. */
+export const ajustes = (page) => page.getByRole('dialog', { name: 'Ajustes' })
+
+/** Abre os Ajustes pela barra de ícones e, com `secao`, vai para ela (Áudio, Servidores, Etiquetas…). */
+export async function abrirAjustes(page, secao) {
+    if (!(await ajustes(page).isVisible())) await page.getByRole('button', { name: 'Ajustes', exact: true }).click()
+    await ajustes(page).waitFor()
+    if (secao) await ajustes(page).getByRole('tab', { name: secao, exact: true }).click()
+    return ajustes(page)
+}
+
+export async function fecharAjustes(page) {
+    await ajustes(page).getByRole('button', { name: 'Fechar', exact: true }).first().click()
+    await ajustes(page).waitFor({ state: 'detached' })
+}
+
+/** Linha de um codec em Ajustes → Áudio. */
+export const linhaCodec = (page, nome) => ajustes(page).locator('li[data-codec]', { hasText: nome })
+
+/** Põe um codec em primeiro na ordem, pelos botões ↑ (o caminho do teclado). */
+export async function codecPrimeiro(page, nome) {
+    const subir = ajustes(page).getByRole('button', { name: `Subir ${nome}` })
+    while (await subir.isEnabled()) await subir.click()
 }
 
 /** Torna a conta a atual pelo seletor: é dela que o discador liga. */
@@ -177,7 +276,7 @@ export const janelaContatos = (page, conta) => page.getByRole('dialog', { name: 
 export async function criarContato(page, conta, nome, numero) {
     const janela = await abrirContatos(page, conta)
     await janela.getByRole('button', { name: '+ Novo contato' }).click()
-    await janela.getByLabel('Nome', { exact: true }).fill(nome)
+    await janela.getByRole('textbox', { name: 'Nome', exact: true }).fill(nome)
     await janela.getByLabel('Número ou ramal').fill(numero)
     await janela.getByRole('button', { name: 'Salvar', exact: true }).click()
     await janela.locator('.contact', { hasText: nome }).waitFor()

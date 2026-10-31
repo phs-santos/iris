@@ -123,7 +123,14 @@ export function parseSdp(text: string, prefer?: AudioCodec[]): RemoteMedia {
     const codec = prefer
         ? prefer.map((wanted) => found.find((f) => f.name === wanted)).find((f) => f !== undefined)
         : found[0]
-    if (!codec) throw new SdpError('Nenhum codec em comum: a Íris fala G.722, G.711 (PCMU e PCMA) e Opus')
+    if (!codec) {
+        // A oferta tem um codec que a Íris fala, mas desligado em Ajustes → Áudio: o erro diz isso.
+        if (prefer && found.length)
+            throw new SdpError(
+                `Nenhum codec ligado casa com a oferta: ligados ${prefer.join(', ')}; oferecidos ${found.map((f) => f.name).join(', ')}`
+            )
+        throw new SdpError('Nenhum codec em comum: a Íris fala G.722, G.711 (PCMU e PCMA) e Opus')
+    }
     // Com Opus, o DTMF usa o telephone-event do mesmo relógio (48000), se o outro lado ofereceu.
     const dtmfRate = codec.name === 'opus' && dtmf48 !== undefined ? 48000 : 8000
     const dtmfPayload = dtmfRate === 48000 ? dtmf48 : dtmf8

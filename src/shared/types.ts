@@ -282,6 +282,8 @@ export interface IrisApi {
         start(engineId: string, config: NativeSipConfig, password: string): Promise<void>
         stop(engineId: string): Promise<void>
         health(engineId: string): Promise<NativeSipHealth>
+        /** Testar da janela de servidor: OPTIONS sem conta, devolve a ida e volta em ms. Lança sem resposta. */
+        probe(domain: string, transport: SipTransportKind, server: string): Promise<number>
         /** Liga e devolve o id da chamada; o andamento chega pelos eventos. */
         dial(engineId: string, destination: string, headers?: string[]): Promise<string>
         callAction(engineId: string, callId: string, action: NativeCallAction): Promise<void>
@@ -333,6 +335,7 @@ export const IPC = {
     sipStart: 'sip:start',
     sipStop: 'sip:stop',
     sipHealth: 'sip:health',
+    sipProbe: 'sip:probe',
     sipDial: 'sip:dial',
     sipCallAction: 'sip:call-action',
     sipCallStats: 'sip:call-stats',
