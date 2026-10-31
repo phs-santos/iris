@@ -6,13 +6,13 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 /** Abre o app com uma pasta de dados nova e o microfone falso. Devolve também a pasta usada. */
-export async function abrir({ modos = 'all' } = {}) {
+export async function abrir() {
     const userData = mkdtempSync(join(tmpdir(), 'iris-chamada-'))
     const args = ['.']
     if (process.getuid?.() === 0) args.push('--no-sandbox')
     const app = await electron.launch({
         args,
-        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: modos }
+        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
     })
     const page = await app.firstWindow()
     return { app, page, userData }

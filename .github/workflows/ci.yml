@@ -59,7 +59,7 @@ jobs:
             - name: Ponta a ponta no modo simulado
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/smoke.mjs
-            - name: Acessibilidade (axe, WCAG A/AA) e atalhos
+            - name: Acessibilidade (axe, WCAG A/AA) e atalhos da janela
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/a11y.mjs
             - name: Senhas em arquivo local e migração do formato antigo (RNF-07)
@@ -74,15 +74,9 @@ jobs:
             - name: Contatos e servidores cadastrados (RF-50, RF-51)
               if: ${{ !cancelled() }}
               run: xvfb-run -a node tests/e2e/contatos.mjs
-            - name: Links de telefone, atalhos globais e toque por conta (RF-53, RF-34, RF-55)
+            - name: Toque por conta e volume do toque (RF-55)
               if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/atalhos.mjs
-            - name: Interface e guia em inglês (RF-56)
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/idioma.mjs
-            - name: Modos e área secreta
-              if: ${{ !cancelled() }}
-              run: xvfb-run -a node tests/e2e/modos.mjs
+              run: xvfb-run -a node tests/e2e/toques.mjs
             - name: Subir Asterisk de teste
               if: ${{ !cancelled() }}
               run: |

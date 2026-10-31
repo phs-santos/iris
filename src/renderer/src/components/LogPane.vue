@@ -224,7 +224,7 @@ async function save(format: 'txt' | 'json'): Promise<void> {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: #9fb6ff;
+    color: var(--info-text);
 }
 .x {
     min-width: 0;

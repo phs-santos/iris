@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
+import { DEFAULT_ACCENT, DEFAULT_THEME, isHexColor, isTheme } from '@shared/appearance'
 import { isContact, type Contact, type ContactsFile } from '@shared/contacts'
 import { isSipServer, type ServersFile, type SipServer } from '@shared/servers'
 import type { Account, AccountsFile, SecretsStatus, Settings, SettingsPatch } from '@shared/types'
@@ -133,33 +134,31 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 /**
- * Tira das preferências as chaves de recursos que deixaram de existir na 2.0 (modos SDR, Mensagens, Cenários e Vídeo, ajuda da IA, câmera, avisos de
- * mensagem de texto e de monitor, correio de voz): arquivos antigos continuam valendo, e a validação dos canais não recusa o que a tela devolve (RNF-19).
+ * Tira das preferências as chaves de recursos que deixaram de existir na 2.0 (modos, perfil, links tel:, atalhos globais,
+ * botão do fone, ajuda da IA, câmera, avisos de mensagem de texto e de monitor, correio de voz) e deixa a aparência só com
+ * tema e cor de destaque: arquivos antigos continuam valendo, e a validação dos canais não recusa o que a tela devolve (RNF-19).
  */
 export function dropRemovedKeys(settings: Settings): Settings {
-    const clean = (enabled: object | undefined, removed: string[]): Record<string, boolean> | undefined =>
-        enabled
-            ? (Object.fromEntries(Object.entries(enabled).filter(([k]) => !removed.includes(k))) as Record<
-                  string,
-                  boolean
-              >)
-            : undefined
-    const out = { ...settings } as Settings & {
-        modes?: { enabled?: object }
-        notifications?: { enabled?: object }
-        ai?: unknown
-        videoInputId?: unknown
-    }
-    // Ajuda da IA (RF-38) e câmera (RF-52) saíram: os campos antigos somem do arquivo na próxima gravação.
-    delete out.ai
-    delete out.videoInputId
-    if (out.modes?.enabled)
-        out.modes = { ...out.modes, enabled: clean(out.modes.enabled, ['sdr', 'messages', 'scenarios', 'video']) }
-    if (out.notifications?.enabled)
+    const out = { ...settings } as Settings & Record<string, unknown> & { notifications?: { enabled?: object } }
+    // Os campos antigos somem do arquivo na próxima gravação.
+    for (const key of ['ai', 'videoInputId', 'profile', 'modes', 'links', 'shortcuts', 'mediaKey']) delete out[key]
+    if (out.notifications?.enabled) {
+        const removed = ['message', 'monitor', 'voicemail']
         out.notifications = {
             ...out.notifications,
-            enabled: clean(out.notifications.enabled, ['message', 'monitor', 'voicemail'])
+            enabled: Object.fromEntries(Object.entries(out.notifications.enabled).filter(([k]) => !removed.includes(k)))
         }
+    }
+    if (out.appearance !== undefined) {
+        const old = (typeof out.appearance === 'object' && out.appearance !== null ? out.appearance : {}) as Record<
+            string,
+            unknown
+        >
+        out.appearance = {
+            theme: isTheme(old.theme) ? old.theme : DEFAULT_THEME,
+            accent: isHexColor(old.accent) ? old.accent : DEFAULT_ACCENT
+        }
+    }
     return out
 }
 

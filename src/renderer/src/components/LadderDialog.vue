@@ -3,6 +3,7 @@ import { t } from '@renderer/i18n'
 import { computed, ref, watch } from 'vue'
 import { useDialog } from '@renderer/lib/dialog'
 import { useAccountsStore } from '@renderer/stores/accounts'
+import { usePreferencesStore } from '@renderer/stores/preferences'
 import { formatTime, useLogStore } from '@renderer/stores/log'
 import {
     buildDialogs,
@@ -13,6 +14,7 @@ import {
     ladderHtml,
     layoutLadder,
     SEVERITY_COLORS,
+    SEVERITY_COLORS_LIGHT,
     type Dialog,
     type LadderRow
 } from '@renderer/lib/ladder'
@@ -25,6 +27,9 @@ const dialogEl = ref<HTMLElement | null>(null)
 useDialog(dialogEl, () => emit('close'))
 const accounts = useAccountsStore()
 const log = useLogStore()
+const prefs = usePreferencesStore()
+/** Cores das setas: as claras não têm contraste sobre o fundo branco. */
+const colors = computed(() => (prefs.theme === 'light' ? SEVERITY_COLORS_LIGHT : SEVERITY_COLORS))
 
 const accountFilter = ref<string | null>(props.accountId)
 /** REGISTER e OPTIONS repetem o tempo todo; ficam escondidos até o usuário pedir. */
@@ -170,7 +175,7 @@ async function copyMessage(): Promise<void> {
                             <button class="item" @click="only(d)">
                                 <span class="top">
                                     <span class="mono time">{{ formatTime(d.start) }}</span>
-                                    <span class="who" :style="{ color: accounts.byId(d.accountId)?.color }">{{
+                                    <span class="who" :style="{ '--account': accounts.byId(d.accountId)?.color }">{{
                                         describeAccount(d.accountId).label
                                     }}</span>
                                 </span>
@@ -217,16 +222,16 @@ async function copyMessage(): Promise<void> {
                                     :y1="row.y"
                                     :x2="row.x2 - (row.x2 > row.x1 ? 2 : -2)"
                                     :y2="row.y"
-                                    :stroke="SEVERITY_COLORS[row.message.severity]"
+                                    :stroke="colors[row.message.severity]"
                                     stroke-width="1.6"
                                     :stroke-dasharray="row.message.retransmission ? '5 4' : undefined"
                                 />
-                                <path :d="arrowHead(row)" :fill="SEVERITY_COLORS[row.message.severity]" />
+                                <path :d="arrowHead(row)" :fill="colors[row.message.severity]" />
                                 <text
                                     :x="(row.x1 + row.x2) / 2"
                                     :y="row.y - 6"
                                     class="msg"
-                                    :fill="SEVERITY_COLORS[row.message.severity]"
+                                    :fill="colors[row.message.severity]"
                                 >
                                     {{ rowLabel(row) }}
                                 </text>
@@ -257,11 +262,11 @@ async function copyMessage(): Promise<void> {
             <footer>
                 <span class="note" role="status">{{ note }}</span>
                 <span class="legend" aria-hidden="true">
-                    <span :style="{ color: SEVERITY_COLORS.request }">{{ $t('ladderDialog.pedido') }}</span>
-                    <span :style="{ color: SEVERITY_COLORS.provisional }">{{ $t('ladderDialog.t_1xx') }}</span>
-                    <span :style="{ color: SEVERITY_COLORS.ok }">{{ $t('ladderDialog.t_2xx') }}</span>
-                    <span :style="{ color: SEVERITY_COLORS.auth }">401/407</span>
-                    <span :style="{ color: SEVERITY_COLORS.error }">{{ $t('ladderDialog.erro') }}</span>
+                    <span :style="{ color: colors.request }">{{ $t('ladderDialog.pedido') }}</span>
+                    <span :style="{ color: colors.provisional }">{{ $t('ladderDialog.t_1xx') }}</span>
+                    <span :style="{ color: colors.ok }">{{ $t('ladderDialog.t_2xx') }}</span>
+                    <span :style="{ color: colors.auth }">401/407</span>
+                    <span :style="{ color: colors.error }">{{ $t('ladderDialog.erro') }}</span>
                     <span>{{ $t('ladderDialog.de_novo') }}</span>
                 </span>
                 <button class="btn" :disabled="layout.rows.length === 0" @click="saveHtml">
@@ -350,6 +355,8 @@ async function copyMessage(): Promise<void> {
     color: var(--muted);
 }
 .who {
+    /* A cor da conta misturada ao texto: sozinha, não tem contraste sobre o fundo claro. */
+    color: color-mix(in srgb, var(--account, var(--fg)) 40%, var(--fg));
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -439,7 +446,7 @@ svg .msg {
     flex: 1;
     overflow: auto;
     font-size: 11.5px;
-    color: #b9c7d6;
+    color: var(--fg);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }

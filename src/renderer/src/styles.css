@@ -18,6 +18,10 @@
     --bad: #f0675e;
     /* Vermelho para texto de erro sobre o fundo avermelhado dos avisos. */
     --bad-text: #ff8f86;
+    /* Texto de estado sobre fundo tingido: claro no tema escuro, escuro no claro (contraste AA). */
+    --ok-text: #6fe0a6;
+    --warn-text: #f3c56f;
+    --info-text: #9fb6ff;
     --hold: #a9bcff;
     --sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     --mono: ui-monospace, 'SFMono-Regular', 'Cascadia Mono', Menlo, Consolas, monospace;
@@ -38,15 +42,11 @@
     --warn: #8a5700;
     --bad: #c0352c;
     --bad-text: #a3241c;
+    --ok-text: #0f6b3c;
+    --warn-text: #8a5700;
+    --info-text: #3b4fc4;
     --hold: #4153b8;
     color-scheme: light;
-}
-
-/* Densidade compacta: menos espaço vertical nas listas. */
-:root[data-density='compact'] .acc .row,
-:root[data-density='compact'] .contact {
-    padding-top: 3px;
-    padding-bottom: 3px;
 }
 
 * {
@@ -144,6 +144,23 @@ textarea {
     border-color: var(--hold);
     color: #fff;
 }
+.btn.primary:hover:not(:disabled),
+.btn.go:hover:not(:disabled),
+.btn.stop:hover:not(:disabled) {
+    filter: brightness(0.92);
+}
+.btn.primary:hover:not(:disabled) {
+    background: var(--accent-strong);
+}
+.btn.go:hover:not(:disabled) {
+    background: #17824b;
+}
+.btn.stop:hover:not(:disabled) {
+    background: #c9433a;
+}
+.btn.on:hover:not(:disabled) {
+    background: #33405a;
+}
 .btn.ghost {
     background: transparent;
     border-color: transparent;
@@ -210,11 +227,11 @@ textarea.input {
 }
 .pill.ok {
     background: rgba(63, 207, 134, 0.16);
-    color: #6fe0a6;
+    color: var(--ok-text);
 }
 .pill.warn {
     background: rgba(240, 177, 62, 0.16);
-    color: #f3c56f;
+    color: var(--warn-text);
 }
 .pill.bad {
     background: rgba(240, 103, 94, 0.16);

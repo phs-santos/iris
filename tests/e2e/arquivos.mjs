@@ -12,7 +12,7 @@ if (process.getuid?.() === 0) args.push('--no-sandbox')
 const launch = () =>
     electron.launch({
         args,
-        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
     })
 const step = (msg) => console.log(`✓ ${msg}`)
 const fail = (msg) => {
@@ -33,16 +33,16 @@ try {
     // Quatro gravações ao mesmo tempo: nenhuma alteração pode se perder.
     await page.evaluate(() =>
         Promise.all([
-            window.iris.settings.update({ profile: { name: 'Ana' } }),
-            window.iris.settings.update({ appearance: { size: 'large' } }),
+            window.iris.settings.update({ ringVolume: 70 }),
+            window.iris.settings.update({ appearance: { theme: 'dark' } }),
             window.iris.settings.update({ reconnect: { maxAttempts: 3 } }),
             window.iris.settings.update({ trustedHosts: ['pbx.exemplo'] })
         ])
     )
     const settings = readData('settings.json')
     if (
-        settings.profile?.name !== 'Ana' ||
-        settings.appearance?.size !== 'large' ||
+        settings.ringVolume !== 70 ||
+        settings.appearance?.theme !== 'dark' ||
         settings.reconnect?.maxAttempts !== 3 ||
         settings.trustedHosts?.[0] !== 'pbx.exemplo'
     )

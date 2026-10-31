@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { accentTokens, contrast, DEFAULT_ACCENT, isAppearance, isProfile, PALETTES } from '@shared/appearance'
+import { accentTokens, contrast, DEFAULT_ACCENT, DEFAULT_THEME, isAppearance } from '@shared/appearance'
 
 describe('cor de destaque', () => {
     it('sem cor salva, usa o azul da Íris', () => {
@@ -8,7 +8,7 @@ describe('cor de destaque', () => {
     })
 
     it('o botão principal sempre tem texto branco legível (AA)', () => {
-        for (const color of [...PALETTES.map((p) => p.accent), '#ffffff', '#ffff00', '#000000', '#7fdbff']) {
+        for (const color of [DEFAULT_ACCENT, '#ffffff', '#ffff00', '#000000', '#7fdbff']) {
             const { strong } = accentTokens(color)
             expect(contrast('#ffffff', strong)).toBeGreaterThanOrEqual(4.5)
         }
@@ -18,32 +18,41 @@ describe('cor de destaque', () => {
         expect(accentTokens('#1d4ed8').strong).toBe('#1d4ed8')
     })
 
-    it('nenhuma paleta pronta some contra o fundo', () => {
-        for (const p of PALETTES) expect(accentTokens(p.accent).faint).toBe(false)
+    it('a cor padrão não some contra o fundo, no claro nem no escuro', () => {
+        expect(accentTokens(DEFAULT_ACCENT, 'light').faint).toBe(false)
+        expect(accentTokens(DEFAULT_ACCENT, 'dark').faint).toBe(false)
     })
 
-    it('avisa quando a cor escolhida some contra o fundo escuro', () => {
-        expect(accentTokens('#1a2230').faint).toBe(true)
+    it('avisa quando a cor escolhida some contra o fundo do tema', () => {
+        expect(accentTokens('#1a2230', 'dark').faint).toBe(true)
+        expect(accentTokens('#f5f5f5', 'light').faint).toBe(true)
     })
 })
 
-describe('preferências que chegam pelo IPC', () => {
+describe('aparência que chega pelo IPC', () => {
+    it('o tema padrão é o claro', () => {
+        expect(DEFAULT_THEME).toBe('light')
+    })
+
     it('aceita campos ausentes, de um settings.json antigo', () => {
-        expect(isProfile(undefined)).toBe(true)
         expect(isAppearance(undefined)).toBe(true)
         expect(isAppearance({})).toBe(true)
     })
 
-    it('aceita valores válidos', () => {
-        expect(isProfile({ name: 'Ana', mainAccountId: 'abc' })).toBe(true)
-        expect(isAppearance({ accent: '#A0B1C2', size: 'large' })).toBe(true)
+    it('aparência aceita só tema e cor de destaque', () => {
+        expect(isAppearance({ theme: 'light', accent: '#2563eb' })).toBe(true)
+        expect(isAppearance({ theme: 'system' })).toBe(true)
+        expect(isAppearance({ accent: '#A0B1C2' })).toBe(true)
+        expect(isAppearance({ theme: 'light', accent: '#2563eb', palette: 'azul' })).toBe(false)
+        expect(isAppearance({ size: 'large' })).toBe(false)
+        expect(isAppearance({ compact: true })).toBe(false)
+        expect(isAppearance({ language: 'en' })).toBe(false)
     })
 
     it('recusa valores fora do formato', () => {
-        expect(isProfile({ name: 'x'.repeat(121) })).toBe(false)
-        expect(isProfile([])).toBe(false)
+        expect(isAppearance([])).toBe(false)
+        expect(isAppearance({ theme: 'roxo' })).toBe(false)
         expect(isAppearance({ accent: 'red' })).toBe(false)
         expect(isAppearance({ accent: '#fff; background: url(x)' })).toBe(false)
-        expect(isAppearance({ size: 'huge' })).toBe(false)
     })
 })

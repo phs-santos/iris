@@ -4,14 +4,12 @@ import { computed, ref } from 'vue'
 import { useAccountsStore } from '@renderer/stores/accounts'
 import { useCallsStore } from '@renderer/stores/calls'
 import { useContactsStore } from '@renderer/stores/contacts'
-import { usePreferencesStore } from '@renderer/stores/preferences'
 import PhoneIcon from './PhoneIcon.vue'
 import { MOCK_NUMBERS } from '@renderer/sip/mock-engine'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
 const contacts = useContactsStore()
-const prefs = usePreferencesStore()
 const destination = ref('')
 const headersText = ref('')
 const showHeaders = ref(false)
@@ -92,14 +90,7 @@ async function dial(number = destination.value): Promise<void> {
     }
 }
 
-defineExpose({
-    focus: () => input.value?.focus(),
-    /** Número vindo de fora (um link tel:, RF-53): fica no campo, pronto para ligar. */
-    setNumber: (number: string) => {
-        destination.value = number
-        input.value?.focus()
-    }
-})
+defineExpose({ focus: () => input.value?.focus() })
 </script>
 
 <template>
@@ -154,7 +145,7 @@ defineExpose({
             <button class="chip mono" type="button" @click="showKeypad = !showKeypad">
                 {{ $t('dialerPane.teclado') }}
             </button>
-            <button v-if="prefs.isOn('log')" class="chip mono" type="button" @click="showHeaders = !showHeaders">
+            <button class="chip mono" type="button" @click="showHeaders = !showHeaders">
                 {{ $t('dialerPane.cabecalhos_sip') }}
             </button>
         </div>
@@ -194,7 +185,7 @@ defineExpose({
             </button>
         </div>
 
-        <div v-if="showHeaders && prefs.isOn('log')" class="headers">
+        <div v-if="showHeaders" class="headers">
             <label class="label" for="extra-headers">{{ $t('dialerPane.cabecalhos_extras_no_invite_um') }}</label>
             <textarea
                 id="extra-headers"

@@ -16,7 +16,7 @@ const app = await electron.launch({
     executablePath,
     args,
     // IRIS_FAKE_MEDIA: microfone falso, sem depender de hardware nem do pedido de permissão do sistema.
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
 })
 // Erros do processo principal e da página: um canal de IPC que a interface chama antes de existir
 // não derruba nenhum passo abaixo, mas quebra o app instalado (aconteceu na 1.0.4).
@@ -36,7 +36,7 @@ try {
     step('1001 e 1002 registradas, Lab 2001 com 403')
     if (shots) await page.screenshot({ path: join(shots, '1-inicio.png') })
 
-    // Grupos de PBX recolhem e mostram o resumo; os primeiros passos aparecem no primeiro uso.
+    // Grupos de PBX recolhem e mostram o resumo.
     await page.getByRole('button', { name: /lab\.local/ }).click()
     await page.getByRole('button', { name: /lab\.local.*0\/1 no ar/ }).waitFor()
     if (await page.locator('.acc', { hasText: 'Lab 2001' }).count())
@@ -44,8 +44,6 @@ try {
     await page.getByRole('button', { name: /lab\.local/ }).click()
     await page.locator('.acc', { hasText: 'Lab 2001' }).waitFor()
     step('grupo de PBX recolhe com o resumo e volta')
-    const firstSteps = page.getByRole('region', { name: 'Primeiros passos' })
-    await firstSteps.getByText('0 de 3').waitFor()
 
     await page.locator('.chip', { hasText: '1002' }).click()
     await page.locator('.pill', { hasText: 'tocando' }).waitFor()
@@ -69,23 +67,14 @@ try {
     await outgoing.getByRole('button', { name: 'Desligar' }).click()
     await page.locator('.pill', { hasText: 'encerrada' }).nth(1).waitFor()
     step('chamada encerrada dos dois lados')
-    await firstSteps.getByText('1 de 3').waitFor()
-    await firstSteps.getByRole('button', { name: 'Fechar os primeiros passos' }).click()
-    await firstSteps.waitFor({ state: 'detached' })
-    step('primeiros passos: a chamada de teste marca o passo 1, e Fechar tira o quadro')
 
-    // Paleta de comandos (Ctrl/Cmd+K): acha conta e liga para um número digitado.
-    await page.keyboard.press('ControlOrMeta+k')
-    const palette = page.getByRole('dialog', { name: 'Paleta de comandos' })
-    await palette.getByRole('combobox').fill('vendas')
-    await palette.getByRole('option', { name: /Desregistrar Vendas 1002/ }).waitFor()
-    await palette.getByRole('combobox').fill('8000')
-    await palette.getByRole('option', { name: 'Ligar para 8000' }).waitFor()
-    await page.keyboard.press('Enter')
+    // Ligar para um número digitado (8000, a URA do modo simulado).
+    await page.getByLabel('Número', { exact: true }).fill('8000')
+    await page.getByRole('button', { name: 'Ligar', exact: true }).click()
     const ura = page.locator('.call', { hasText: /→\s*8000/ })
     await ura.locator('.pill', { hasText: 'em chamada' }).waitFor({ timeout: 8000 })
     await ura.getByRole('button', { name: 'Desligar' }).click()
-    step('paleta de comandos acha a conta e liga para o número digitado')
+    step('liga para o número digitado')
 
     // Transferência assistida (RF-16): 1001 liga para 1002, que consulta a URA 8000 e transfere.
     const live = (text) => page.locator('.call:not(.ended)', { hasText: text })
@@ -118,16 +107,22 @@ try {
     if (shots) await page.screenshot({ path: join(shots, '5-audio.png') })
     step('Configurações › Áudio lista e troca o microfone')
 
-    // Paleta de cores: vale na hora e fica salva.
+    // Aparência: o tema claro é o padrão; a cor de destaque e o tema valem na hora e ficam salvos.
+    const theme = () => page.evaluate(() => document.documentElement.dataset.theme)
+    if ((await theme()) !== 'light') throw new Error(`O tema padrão deveria ser o claro: ${await theme()}`)
     await audio.getByRole('tab', { name: 'Aparência' }).click()
-    await audio.getByRole('radio', { name: 'Violeta' }).click()
+    await audio.getByLabel('Escolher outra cor').fill('#c084fc')
     const accent = () => page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--accent'))
     if ((await accent()).trim() !== '#c084fc') throw new Error(`Cor de destaque não mudou: ${await accent()}`)
+    await audio.getByRole('radio', { name: 'Escuro' }).click()
+    if ((await theme()) !== 'dark') throw new Error('O tema escuro não foi aplicado')
     const saved = await page.evaluate(() => window.iris.settings.load())
-    if (saved.appearance?.accent !== '#c084fc') throw new Error('Cor de destaque não foi salva')
-    await audio.getByRole('radio', { name: 'Azul' }).click()
-    await audio.getByRole('button', { name: 'Fechar' }).click()
-    step('Configurações › Aparência troca e salva a cor de destaque')
+    if (saved.appearance?.accent !== '#c084fc' || saved.appearance?.theme !== 'dark')
+        throw new Error(`Aparência não foi salva: ${JSON.stringify(saved.appearance)}`)
+    await audio.getByRole('radio', { name: 'Claro' }).click()
+    await audio.getByRole('button', { name: 'Cor padrão' }).click()
+    await audio.getByRole('button', { name: 'Fechar', exact: true }).click()
+    step('Configurações › Aparência troca e salva o tema e a cor de destaque')
 
     await page.getByRole('tab', { name: 'SIP bruto' }).click()
     await page.locator('.line.sip', { hasText: 'INVITE sip:1002@demo.local' }).first().waitFor()
@@ -153,29 +148,6 @@ try {
     await ladder.waitFor({ state: 'detached' })
     step('fluxo SIP desenha a chamada e abre a mensagem ao clicar')
 
-    // Modo Telefone: janela estreita, teclado, chamada na tela inteira e volta à Bancada.
-    const width = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds().width)
-    await page.getByRole('button', { name: 'Modo Telefone' }).click()
-    await page.getByRole('region', { name: 'Discar' }).waitFor()
-    if ((await width()) > 500) throw new Error(`A janela do Telefone ficou larga: ${await width()} px`)
-    await page.getByLabel('Conta').selectOption({ label: 'Suporte 1001 · 1001' })
-    for (const k of ['1', '0', '0', '2']) await page.getByRole('button', { name: k, exact: true }).click()
-    await page.getByText('Vendas 1002', { exact: true }).waitFor()
-    await page.getByRole('button', { name: 'Ligar' }).click()
-    const onCall = page.getByRole('region', { name: 'Chamada em andamento' })
-    await onCall.getByRole('heading', { name: 'Vendas 1002' }).waitFor()
-    await onCall
-        .getByRole('status')
-        .filter({ hasText: /^\d\d:\d\d$/ })
-        .waitFor({ timeout: 8000 })
-    await onCall.getByRole('button', { name: 'Espera' }).click()
-    await onCall.getByText('em espera', { exact: true }).waitFor()
-    await onCall.getByRole('button', { name: 'Desligar' }).click()
-    await page.getByRole('region', { name: 'Discar' }).waitFor()
-    await page.getByRole('button', { name: 'Bancada', exact: true }).click()
-    await page.getByRole('tab', { name: 'Telefone' }).waitFor()
-    if ((await width()) < 1024) throw new Error(`A Bancada não voltou ao tamanho: ${await width()} px`)
-    step('modo Telefone liga, põe em espera, desliga e volta para a Bancada')
     if (/No handler registered|Error occurred in handler/.test(mainErrors))
         throw new Error(`Erro de IPC no processo principal:\n${mainErrors.slice(0, 600)}`)
     if (pageErrors.length) throw new Error(`Erros na interface:\n${pageErrors.join('\n')}`)

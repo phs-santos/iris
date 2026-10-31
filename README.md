@@ -30,18 +30,14 @@ Marcos **M0 (fundação)**, **M1 (MVP)**, **M2 (diagnóstico e transferência)**
 | RF-46 | Diagnóstico de rede na Saúde: registros DNS SRV do domínio, certificado TLS do PBX (emissor, validade, nomes) e endereço público pelo servidor STUN da conta |
 | RF-48 | Contas em lote por planilha CSV |
 | RF-36 | Gravação da chamada em WAV estéreo (um lado em cada canal), por enquanto só em SIP puro |
-| Interface | Tema claro e do sistema, listas compactas, ícones nos botões, medidor do áudio que chega e barras de sinal na chamada, avatar com iniciais, avisos rápidos na tela, paleta de comandos (Ctrl/Cmd+K), primeiros passos no primeiro uso, grupos de PBX recolhíveis e chamada recebida na cor da conta |
+| Interface | Tema claro (padrão), escuro e do sistema, cor de destaque, ícones nos botões, medidor do áudio que chega e barras de sinal na chamada, avisos rápidos na tela, grupos de PBX recolhíveis e chamada recebida na cor da conta |
 | Notificações | Chamada recebida (com Atender e Recusar no aviso, no macOS), chamada perdida, conta que caiu, correio de voz, cada um ligável em Configurações → Notificações, com botão de teste |
-| RF-53 | Links de telefone: a Íris abre `tel:`, `callto:`, `sip:` e `sips:` e põe o número no discador; ligar direto é opção, desligada por padrão |
-| RF-34 | Atalhos globais para atender, desligar e mudo, definidos em Configurações → Atalhos e links |
 | RF-55 | Toque de chamada por conta (clássico, digital, suave, sino ou nenhum), volume do toque em Configurações → Áudio e o botão do fone (tecla Tocar/Pausar) para atender e desligar |
-| RF-56 | Interface e guia em inglês, escolhidos em Configurações → Aparência; a troca vale na hora. O log de eventos, o resultado das chamadas, as notificações do sistema continuam em português |
 | RF-20 | Early media: o cartão diz se o som antes do atendimento é o toque local ou o áudio do PBX (183), e toca esse áudio. Em SIP puro sempre; em WebRTC por opção da conta |
-| RF-58 | Modos: o app abre só com o padrão de chamada; log e diagnóstico e vídeo ligam numa área escondida das Configurações |
 | RF-50 | Agenda de contatos: busca, favoritos, ligar com um clique, CSV, e o nome do contato nas chamadas |
 | RF-51 | Servidores cadastrados: a conta escolhe o PBX e só preenche ramal e senha; editar o servidor atualiza todas as contas dele |
 | RF-39 | SIP puro por UDP, TCP ou TLS com motor próprio: a conta registra, renova, responde ao OPTIONS do PBX, mede a Saúde, liga e recebe chamadas com áudio G.711, DTMF por RTP ou SIP INFO, mudo, espera, transferência cega e assistida, SRTP (SDES, AES_CM_128_HMAC_SHA1_80) e qualidade com perda, jitter e tempo de ida e volta (RTCP). Não tem: RTCP cifrado (com SRTP o RTT fica em 0), INVITE sem SDP, temporizador de sessão e DNS SRV |
-| RNF-13 | Textos da interface em arquivos de tradução (`src/renderer/src/i18n`), em português e prontos para inglês |
+| RNF-13 | Textos da interface em arquivo de tradução (`src/renderer/src/i18n`), em português |
 | RNF-14 | Log interno do app em arquivo rotativo (5 × 10 MB) em `logs/` na pasta de dados |
 | RNF-15 | Lint (ESLint) e cobertura da camada de domínio no CI, com mínimo de 70% |
 | RNF-01, RNF-04 | O CI abre o app empacotado nos três sistemas e mede a abertura e o registro |
@@ -112,9 +108,7 @@ npm run licenses    # licenças das bibliotecas que vão dentro do app
 npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
 npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
 npm run test:pbx    # integração com o Asterisk do docker compose
-npm run test:atalhos       # links tel: e sip:, atalhos globais, botão do fone e toque por conta, no simulado
-npm run test:modos         # modos escondidos por padrão e a área secreta
-npm run test:idioma        # interface e guia em inglês: troca na hora, grava e volta ao português
+npm run test:toques        # toque por conta e volume do toque, no simulado
 npm run test:notificacoes  # notificações no simulado: chamada recebida, Atender pelo aviso, chamada perdida e a escolha em Configurações
 npm run test:contatos   # agenda de contatos e servidores cadastrados pela tela, no simulado (RF-50, RF-51)
 npm run test:sip    # SIP puro no Asterisk: registro por UDP, TCP e TLS, chamadas com áudio, DTMF, cancelar, recusar, espera, transferência e SRTP (RF-39)

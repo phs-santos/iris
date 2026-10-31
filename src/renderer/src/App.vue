@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { currentLocale, t } from '@renderer/i18n'
+import { t } from '@renderer/i18n'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import type { Account, CertificateErrorEvent, UpdateChannel, UpdateInfo, WindowMode } from '@shared/types'
+import type { Account, CertificateErrorEvent, UpdateChannel, UpdateInfo } from '@shared/types'
 import { useAccountsStore } from './stores/accounts'
 import { useCallsStore } from './stores/calls'
 import { useLogStore } from './stores/log'
@@ -13,59 +13,27 @@ import AccountForm from './components/AccountForm.vue'
 import HealthDialog from './components/HealthDialog.vue'
 import SettingsDialog from './components/settings/SettingsDialog.vue'
 import GuideDialog from './components/GuideDialog.vue'
-import PhoneView from './components/PhoneView.vue'
 import PhoneIcon from './components/PhoneIcon.vue'
 import ToastStack from './components/ToastStack.vue'
-import FirstSteps from './components/FirstSteps.vue'
-import CommandPalette, { type PaletteAction } from './components/CommandPalette.vue'
 import ContactsPane from './components/ContactsPane.vue'
 import { useContactsStore } from './stores/contacts'
 import { useServersStore } from './stores/servers'
 import { useDevicesStore } from './stores/devices'
-import { useToastsStore } from './stores/toasts'
 import { usePreferencesStore, type SettingsSection } from './stores/preferences'
 import logoMarkDark from './assets/logo-mark.svg'
 import logoMarkLight from './assets/logo-mark-light.svg'
 import { accountHost } from './lib/accounts'
-import { secretTap } from '@shared/modes'
 
 const accounts = useAccountsStore()
 const calls = useCallsStore()
 const log = useLogStore()
 const devices = useDevicesStore()
 const prefs = usePreferencesStore()
-const toasts = useToastsStore()
 const centerTab = ref<'phone' | 'contacts'>('phone')
-/** Sempre abre na Bancada (decisão do usuário em 04/10/2026); o Telefone vale até trocar de novo. */
-const mode = ref<WindowMode>('bench')
-const phone = ref<InstanceType<typeof PhoneView> | null>(null)
-
-function setMode(next: WindowMode): void {
-    mode.value = next
-    void window.iris.setWindowMode(next)
-}
-
 const editing = ref<Account | null>(null)
 /** Seção aberta da tela de Configurações; null com a tela fechada. */
 const settingsAt = ref<SettingsSection | null>(null)
 const showGuide = ref(false)
-const showPalette = ref(false)
-/** Ações da janela para a paleta de comandos (Ctrl/Cmd+K). */
-const paletteActions = computed<PaletteAction[]>(() => [
-    { label: t('app.acao_nova_conta'), run: newAccount },
-    { label: t('app.acao_novo_contato'), run: () => (centerTab.value = 'contacts') },
-    { label: t('app.acao_registrar_todas'), run: () => void accounts.registerAll() },
-    { label: t('app.acao_desregistrar_todas'), run: () => void accounts.unregisterAll() },
-    { label: t('app.acao_aba', { name: t('app.contatos') }), run: () => (centerTab.value = 'contacts') },
-    { label: t('app.configuracoes'), hint: t('app.atalho_configuracoes'), run: () => (settingsAt.value = 'profile') },
-    { label: t('app.acao_servidores'), run: () => (settingsAt.value = 'servers') },
-    { label: t('app.acao_notificacoes'), run: () => (settingsAt.value = 'notifications') },
-    { label: t('app.acao_atalhos'), run: () => (settingsAt.value = 'shortcuts') },
-    { label: t('app.acao_gravacoes'), run: () => void window.iris.audio.openRecordings().catch(() => undefined) },
-    { label: t('app.acao_primeiros_passos'), run: () => void prefs.setProfile({ tourDone: false }) },
-    { label: t('app.guia'), hint: 'F1', run: () => (showGuide.value = true) },
-    { label: t('app.modo_telefone'), run: () => setMode('phone') }
-])
 const update = ref<UpdateInfo | null>(null)
 // O botão da barra avisa quando há versão nova para baixar ou já baixada (RF-35).
 const updatePending = computed(() => ['available', 'ready'].includes(update.value?.status.state ?? ''))
@@ -92,25 +60,8 @@ watch(
     { deep: true }
 )
 
-// Área secreta dos modos: cinco cliques seguidos no logo (ou Ctrl+Alt+Shift+M) abrem as Configurações nela.
-let logoTaps: number[] = []
-async function openModes(): Promise<void> {
-    if (!prefs.modes.unlocked) await prefs.setModes({ ...prefs.modes, unlocked: true })
-    settingsAt.value = 'modes'
-}
-function tapLogo(): void {
-    const { taps, open } = secretTap(logoTaps, Date.now())
-    logoTaps = taps
-    if (open) void openModes()
-}
-
-// Trocar o idioma refaz as telas; as Configurações voltam abertas onde a pessoa estava.
-watch(currentLocale, () => {
-    if (settingsAt.value) settingsAt.value = 'appearance'
-})
-
 function newAccount(): void {
-    editing.value = accounts.newAccount({ displayName: prefs.profile.name ?? '' })
+    editing.value = accounts.newAccount()
 }
 
 async function trustHost(): Promise<void> {
@@ -144,26 +95,17 @@ function onKey(event: KeyboardEvent): void {
         showGuide.value = true
         return event.preventDefault()
     }
-    const secretKey = event.ctrlKey && event.altKey && event.shiftKey && event.code === 'KeyM' // i18n-ok: tecla
-    if (secretKey) {
-        void openModes()
-        return event.preventDefault()
-    }
     const mod = event.ctrlKey || event.metaKey
     if (!mod) return
-    if (event.key.toLowerCase() === 'k') {
-        showPalette.value = !showPalette.value
-        return event.preventDefault()
-    }
     if (event.key === ',') {
-        settingsAt.value ??= 'profile'
+        settingsAt.value ??= 'appearance'
         return event.preventDefault()
     }
     const selectedCall = calls.calls.find((c) => c.id === calls.selectedId && c.state !== 'ended')
     const key = event.key.toLowerCase()
     if (key === 'l') {
         centerTab.value = 'phone'
-        void nextTick(() => (mode.value === 'phone' ? phone.value : dialer.value)?.focus())
+        void nextTick(() => dialer.value?.focus())
     } else if (key === 'enter' && calls.ringingIncoming[0]) void calls.answer(calls.ringingIncoming[0].id)
     else if (key === 'e' && selectedCall) void calls.hangup(selectedCall.id)
     else if (key === 'm' && selectedCall) calls.toggleMute(selectedCall.id)
@@ -182,30 +124,7 @@ const firstPaint = (): Promise<void> =>
         setTimeout(resolve, 500)
     })
 
-/** Link tel: ou sip: aberto no sistema (RF-53): o número vai para o discador; ligar direto é opção. */
-async function takeLink(): Promise<void> {
-    const number = await window.iris.links.take()
-    if (!number) return
-    centerTab.value = 'phone'
-    showPalette.value = false
-    await nextTick()
-    ;(mode.value === 'phone' ? phone.value : dialer.value)?.setNumber(number)
-    const from = accounts.selected
-    if (prefs.links.autoDial && from) {
-        // O link pode ter aberto o app: dá um tempo para a conta registrar antes de desistir de ligar.
-        for (let i = 0; i < 80 && accounts.statusOf(from.id).state !== 'registered'; i++)
-            await new Promise((resolve) => setTimeout(resolve, 100))
-        if (accounts.statusOf(from.id).state === 'registered') {
-            void calls.dial(from.id, number).catch(() => undefined)
-            return
-        }
-    }
-    toasts.show(t('app.link_recebido', { number }), 'info')
-}
-
 let offCert: (() => void) | undefined
-let offLink: (() => void) | undefined
-let offShortcut: (() => void) | undefined
 let offNotification: (() => void) | undefined
 let offUpdate: (() => void) | undefined
 onMounted(async () => {
@@ -259,30 +178,22 @@ onMounted(async () => {
     // As contas leem as senhas: a interface aparece antes, com um aviso se demorar.
     await firstPaint()
     await accounts.load()
-    const main = prefs.profile.mainAccountId
-    if (main && accounts.accounts.some((a) => a.id === main)) accounts.selectedId = main
     await useContactsStore().load()
     await useServersStore().load()
     await accounts.refreshProblems()
-    offLink = window.iris.links.onArrived(() => void takeLink())
-    offShortcut = window.iris.shortcuts.onFired((action) => calls.shortcut(action))
-    void takeLink()
 })
 onUnmounted(() => {
     window.removeEventListener('keydown', onKey)
     offCert?.()
-    offLink?.()
-    offShortcut?.()
     offNotification?.()
     offUpdate?.()
 })
 </script>
 
 <template>
-    <!-- A chave refaz as telas quando o idioma muda: há textos lidos uma vez só, na criação (RF-56). -->
-    <div :key="currentLocale()" class="shell">
-        <header v-if="mode === 'bench'" class="topbar">
-            <span class="brand" @click="tapLogo"
+    <div class="shell">
+        <header class="topbar">
+            <span class="brand"
                 ><img class="brand-mark" :src="prefs.theme === 'light' ? logoMarkLight : logoMarkDark" alt="" />{{
                     $t('app.iris')
                 }}</span
@@ -298,16 +209,13 @@ onUnmounted(() => {
                 }}
             </span>
             <span class="spacer"></span>
-            <button class="btn small" :title="$t('app.so_o_discador_e_a')" @click="setMode('phone')">
-                <PhoneIcon name="phone" class="top-icon" />{{ $t('app.modo_telefone') }}
-            </button>
             <button v-if="updatePending" class="btn small primary" @click="openUpdate">
                 {{ $t('app.atualizacao_disponivel') }}
             </button>
             <button class="btn small" @click="showGuide = true">
                 <PhoneIcon name="book" class="top-icon" />{{ $t('app.guia') }}
             </button>
-            <button class="btn small" :title="$t('app.configuracoes_ctrl_cmd')" @click="settingsAt = 'profile'">
+            <button class="btn small" :title="$t('app.configuracoes_ctrl_cmd')" @click="settingsAt = 'appearance'">
                 <PhoneIcon name="gear" class="top-icon" />{{ $t('app.configuracoes') }}
             </button>
         </header>
@@ -326,14 +234,7 @@ onUnmounted(() => {
             <button class="btn small" @click="accounts.secretsProblem = null">{{ $t('app.entendi') }}</button>
         </div>
 
-        <PhoneView
-            v-if="mode === 'phone'"
-            ref="phone"
-            class="phone-mode"
-            @bench="setMode('bench')"
-            @settings="settingsAt = 'profile'"
-        />
-        <main v-else class="columns" :class="{ 'no-log': !prefs.isOn('log') }">
+        <main class="columns">
             <AccountsPane @new="newAccount" @edit="(a) => (editing = a)" @health="(id) => (healthFor = id)" />
 
             <section class="center">
@@ -376,7 +277,6 @@ onUnmounted(() => {
                     <button class="btn stop" @click="calls.reject(call.id)">{{ $t('app.recusar') }}</button>
                 </div>
                 <template v-if="centerTab === 'phone'">
-                    <FirstSteps @servers="settingsAt = 'servers'" @account="newAccount" />
                     <DialerPane ref="dialer" />
                     <div class="calls-head">
                         <span class="label">{{ $t('app.chamadas') }}</span>
@@ -393,19 +293,13 @@ onUnmounted(() => {
                 <ContactsPane v-else-if="centerTab === 'contacts'" @dialed="centerTab = 'phone'" />
             </section>
 
-            <LogPane v-if="prefs.isOn('log')" />
+            <LogPane />
         </main>
 
         <AccountForm v-if="editing" :account="editing" @close="editing = null" />
         <HealthDialog v-if="healthFor" :account-id="healthFor" @close="healthFor = null" />
         <GuideDialog v-if="showGuide" @close="showGuide = false" />
         <ToastStack />
-        <CommandPalette
-            v-if="showPalette"
-            :actions="paletteActions"
-            @close="showPalette = false"
-            @tab="(tab) => (centerTab = tab)"
-        />
         <SettingsDialog
             v-if="settingsAt"
             :section="settingsAt"
@@ -462,18 +356,11 @@ onUnmounted(() => {
     background: rgba(240, 177, 62, 0.1);
     border-bottom-color: rgba(240, 177, 62, 0.4);
 }
-.phone-mode {
-    flex: 1;
-}
 .columns {
     flex: 1;
     min-height: 0;
     display: grid;
     grid-template-columns: 260px minmax(380px, 1fr) minmax(340px, 0.9fr);
-}
-/* Sem o log, o telefone ocupa o lugar dele. */
-.columns.no-log {
-    grid-template-columns: 260px minmax(380px, 1fr);
 }
 .center {
     display: flex;

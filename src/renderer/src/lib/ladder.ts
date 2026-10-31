@@ -268,6 +268,15 @@ export const SEVERITY_COLORS: Record<Severity, string> = {
     error: '#f0675e'
 }
 
+/** Mesmas cores para o tema claro, com contraste AA sobre o branco. */
+export const SEVERITY_COLORS_LIGHT: Record<Severity, string> = {
+    request: '#3b4fc4',
+    provisional: '#4f5f70',
+    ok: '#157a47',
+    auth: '#8a5700',
+    error: '#a3241c'
+}
+
 // ─── Exportação ──────────────────────────────────────────────────────────────
 
 const escapeHtml = (text: string): string =>

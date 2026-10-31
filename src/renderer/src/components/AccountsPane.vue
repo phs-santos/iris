@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { usePreferencesStore } from '@renderer/stores/preferences'
 import { t } from '@renderer/i18n'
 import type { Account } from '@shared/types'
 import { useAccountsStore } from '@renderer/stores/accounts'
@@ -9,7 +8,6 @@ import { ref } from 'vue'
 import MenuButton from './MenuButton.vue'
 
 const emit = defineEmits<{ new: []; edit: [account: Account]; health: [id: string] }>()
-const prefs = usePreferencesStore()
 const accounts = useAccountsStore()
 const calls = useCallsStore()
 const confirmDelete = ref<string | null>(null)
@@ -47,10 +45,8 @@ function toggle(account: Account): void {
 
 /** Ações menos usadas ficam no menu ⋯, para a conta escolhida não virar uma parede de botões. */
 function moreActions(account: Account): Array<{ label: string; action: () => void; danger?: boolean }> {
-    const diag = prefs.isOn('log')
     return [
-        // Diagnóstico só com o modo Log e diagnóstico ligado.
-        ...(diag ? [{ label: t('accountsPane.saude'), action: () => emit('health', account.id) }] : []),
+        { label: t('accountsPane.saude'), action: () => emit('health', account.id) },
         { label: t('accountsPane.duplicar'), action: () => void accounts.duplicate(account.id) },
         { label: t('accountsPane.excluir'), action: () => (confirmDelete.value = account.id), danger: true }
     ]
@@ -296,7 +292,7 @@ async function remove(id: string): Promise<void> {
     padding: 0 5px;
 }
 .tag.busy {
-    color: #6fe0a6;
+    color: var(--ok-text);
     border-color: rgba(63, 207, 134, 0.5);
 }
 .head-actions {

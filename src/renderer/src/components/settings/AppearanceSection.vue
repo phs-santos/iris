@@ -1,33 +1,18 @@
 <script setup lang="ts">
 import { t } from '@renderer/i18n'
 import { computed } from 'vue'
-import {
-    accentTokens,
-    DEFAULT_LANGUAGE,
-    PALETTES,
-    type InterfaceSize,
-    type Language,
-    type Theme
-} from '@shared/appearance'
+import { accentTokens, DEFAULT_ACCENT, DEFAULT_THEME, type Theme } from '@shared/appearance'
 import { usePreferencesStore } from '@renderer/stores/preferences'
 
 const prefs = usePreferencesStore()
-const tokens = computed(() => accentTokens(prefs.appearance.accent))
-/** Cor que não é de nenhuma paleta: a pessoa escolheu no seletor. */
-const custom = computed(() => !PALETTES.some((p) => p.accent === tokens.value.accent))
+const tokens = computed(() => accentTokens(prefs.appearance.accent, prefs.theme))
 
-const sizes: Array<{ id: InterfaceSize; name: string }> = [
-    { id: 'small', name: t('appearanceSection.pequena') },
-    { id: 'medium', name: t('appearanceSection.normal') },
-    { id: 'large', name: t('appearanceSection.grande') }
-]
-const size = computed(() => prefs.appearance.size ?? 'medium')
 const themes: Array<{ id: Theme; name: string }> = [
-    { id: 'dark', name: t('appearanceSection.escuro') },
     { id: 'light', name: t('appearanceSection.claro') },
+    { id: 'dark', name: t('appearanceSection.escuro') },
     { id: 'system', name: t('appearanceSection.sistema') }
 ]
-const theme = computed(() => prefs.appearance.theme ?? 'dark')
+const theme = computed(() => prefs.appearance.theme ?? DEFAULT_THEME)
 </script>
 
 <template>
@@ -40,31 +25,30 @@ const theme = computed(() => prefs.appearance.theme ?? 'dark')
         <div class="set-group">
             <div class="set-row column">
                 <span class="what">
-                    <b id="palette-label">{{ $t('appearanceSection.cor_de_destaque') }}</b>
-                    <small>{{ $t('appearanceSection.escolha_uma_paleta_pronta_ou') }}</small>
+                    <b>{{ $t('appearanceSection.cor_de_destaque') }}</b>
+                    <small>{{ $t('appearanceSection.escolha_a_cor_dos_botoes') }}</small>
                 </span>
-                <div class="swatches" role="radiogroup" aria-labelledby="palette-label">
-                    <button
-                        v-for="p in PALETTES"
-                        :key="p.id"
+                <div class="swatches">
+                    <label
                         class="swatch"
-                        role="radio"
-                        :aria-checked="tokens.accent === p.accent"
-                        :aria-label="p.name"
-                        :title="p.name"
-                        :style="{ background: p.accent }"
-                        @click="prefs.setAccent(p.accent)"
-                    ></button>
-                    <label class="swatch own" :class="{ on: custom }" :title="$t('appearanceSection.sua_cor')">
+                        :style="{ background: tokens.accent }"
+                        :title="$t('appearanceSection.sua_cor')"
+                    >
                         <input
                             type="color"
                             :value="tokens.accent"
                             :aria-label="$t('appearanceSection.escolher_outra_cor')"
                             @change="prefs.setAccent(($event.target as HTMLInputElement).value)"
                         />
-                        <span :style="custom ? { background: tokens.accent } : undefined">+</span>
                     </label>
                     <span class="hex mono">{{ tokens.accent }}</span>
+                    <button
+                        v-if="tokens.accent !== DEFAULT_ACCENT"
+                        class="btn small"
+                        @click="prefs.setAccent(DEFAULT_ACCENT)"
+                    >
+                        {{ $t('appearanceSection.cor_padrao') }}
+                    </button>
                 </div>
                 <p v-if="tokens.faint" class="warn" role="status">
                     {{ $t('appearanceSection.essa_cor_fica_apagada_contra') }}
@@ -93,49 +77,6 @@ const theme = computed(() => prefs.appearance.theme ?? 'dark')
                     </button>
                 </div>
             </div>
-            <label class="set-row">
-                <span class="what">
-                    <b>{{ $t('appearanceSection.idioma') }}</b>
-                    <small>{{ $t('appearanceSection.idioma_dica') }}</small>
-                </span>
-                <select
-                    class="input"
-                    :value="prefs.appearance.language ?? DEFAULT_LANGUAGE"
-                    @change="prefs.setLanguage(($event.target as HTMLSelectElement).value as Language)"
-                >
-                    <option value="pt-BR">{{ $t('appearanceSection.idioma_pt') }}</option>
-                    <option value="en">{{ $t('appearanceSection.idioma_en') }}</option>
-                </select>
-            </label>
-            <label class="set-row">
-                <span class="what">
-                    <b>{{ $t('appearanceSection.compacta') }}</b>
-                    <small>{{ $t('appearanceSection.compacta_dica') }}</small>
-                </span>
-                <input
-                    type="checkbox"
-                    :checked="Boolean(prefs.appearance.compact)"
-                    @change="prefs.setCompact(($event.target as HTMLInputElement).checked)"
-                />
-            </label>
-            <div class="set-row">
-                <span class="what">
-                    <b id="size-label">{{ $t('appearanceSection.tamanho_da_interface') }}</b>
-                    <small>{{ $t('appearanceSection.aumenta_ou_diminui_tudo_junto') }}</small>
-                </span>
-                <div class="seg" role="radiogroup" aria-labelledby="size-label">
-                    <button
-                        v-for="s in sizes"
-                        :key="s.id"
-                        role="radio"
-                        :aria-checked="size === s.id"
-                        :class="{ on: size === s.id }"
-                        @click="prefs.setSize(s.id)"
-                    >
-                        {{ s.name }}
-                    </button>
-                </div>
-            </div>
         </div>
     </section>
 </template>
@@ -156,43 +97,22 @@ const theme = computed(() => prefs.appearance.theme ?? 'dark')
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    border: 0;
+    border: 1px solid var(--line);
     padding: 0;
     cursor: pointer;
     position: relative;
 }
-.swatch[aria-checked='true'],
-.swatch.own.on {
-    outline: 2px solid var(--fg);
-    outline-offset: 3px;
-}
-.swatch:focus-visible,
-.swatch.own:focus-within {
+.swatch:focus-within {
     outline: 2px solid var(--accent);
     outline-offset: 3px;
 }
-.own input {
+.swatch input {
     position: absolute;
     inset: 0;
     opacity: 0;
     cursor: pointer;
     width: 100%;
     height: 100%;
-}
-.own span {
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    border: 1px dashed var(--muted);
-    color: var(--muted);
-    font-size: 15px;
-    pointer-events: none;
-}
-.own.on span {
-    border: 0;
-    color: transparent;
 }
 .hex {
     color: var(--muted);

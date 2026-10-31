@@ -1,77 +1,7 @@
 // Textos da interface em português do Brasil (RNF-13). Um grupo por componente; {nome} é trocado
-// pelo valor passado a t(). Para outro idioma, copie este arquivo, traduza os valores e registre o
-// catálogo em index.ts.
+// pelo valor passado a t(). A interface é só em português (2.0).
 
 export const ptBR = {
-    modesSection: {
-        modos: 'Modos',
-        explicacao:
-            'O que não é o padrão de chamada fica escondido. Ligue aqui só o que esta pessoa usa; o resto continua fora da tela.',
-        log: 'Log e diagnóstico',
-        log_dica: 'Painel do log, SIP bruto, Fluxo SIP, Saúde e cabeçalhos SIP.',
-        esconder: 'Esconder esta área',
-        esconder_dica:
-            'Os modos ligados continuam ligados. Para voltar aqui: cinco cliques seguidos no logo da Íris, ou Ctrl+Alt+Shift+M.'
-    },
-    shortcutsSection: {
-        atalhos: 'Atalhos globais',
-        explicacao:
-            'Funcionam com qualquer programa em foco. Use Ctrl, Alt, Cmd ou Win junto com uma tecla, ou uma tecla de função. Sem atalho definido, a Íris não registra nada no sistema.',
-        atender: 'Atender',
-        atender_dica: 'Atende a chamada que está tocando.',
-        desligar: 'Desligar',
-        desligar_dica: 'Encerra a chamada em andamento, ou recusa a que está tocando.',
-        mudo: 'Mudo',
-        mudo_dica: 'Liga e desliga o microfone da chamada em andamento.',
-        definir: 'Definir atalho',
-        definir_para: 'Atalho para {name}',
-        aperte: 'Aperte as teclas…',
-        limpar: 'Limpar',
-        limpar_de: 'Limpar o atalho de {name}',
-        recusado: 'O sistema recusou este atalho: outro programa já usa. Escolha outro.',
-        repetido: 'Este atalho já é o de {name}.',
-        fone: 'Botão do fone',
-        fone_dica:
-            'A tecla Tocar/Pausar, que é a do botão da maioria dos fones, atende a chamada que toca e desliga a que está em andamento. Fora de chamada, a tecla continua sendo do tocador de música.',
-        fone_recusado:
-            'O sistema recusou a tecla na última chamada. No macOS, libere a Íris em Ajustes do Sistema → Privacidade e Segurança → Acessibilidade.',
-        links: 'Links de telefone',
-        links_explicacao:
-            'Clicar num número numa página ou no CRM abre a Íris com o número no discador da conta escolhida.',
-        links_tel: 'Abrir links tel: com a Íris',
-        links_tel_dica: 'Vale também para callto:.',
-        links_sip: 'Abrir links sip: com a Íris',
-        links_sip_dica: 'A chamada sai pelo PBX da conta escolhida, para o ramal do link.',
-        ligar_direto: 'Ligar direto, sem confirmar',
-        ligar_direto_dica:
-            'Desligado, o número só aparece no discador. Ligue com cuidado: qualquer página pode ter um link desses.',
-        so_instalado: 'Só a Íris instalada consegue se registrar no sistema para abrir links.'
-    },
-    firstSteps: {
-        titulo: 'Primeiros passos',
-        contagem: '{n} de 3',
-        fechar: 'Fechar',
-        fechar_rotulo: 'Fechar os primeiros passos',
-        feito: 'feito',
-        passo1: 'Faça uma chamada de teste',
-        passo1_texto: 'A conta Suporte 1001 já está no PBX simulado: ligue para a URA 8000 e mande dígitos pelo DTMF.',
-        passo1_acao: 'Ligar para 8000',
-        passo2: 'Cadastre o seu PBX',
-        passo2_texto: 'Em Servidores ficam o domínio e o endereço do PBX, escritos uma vez só para todas as contas.',
-        passo2_acao: 'Abrir Servidores',
-        passo3: 'Registre o seu ramal',
-        passo3_texto: 'Crie uma conta, escolha o servidor e digite ramal e senha.',
-        passo3_acao: 'Nova conta'
-    },
-    commandPalette: {
-        titulo: 'Paleta de comandos',
-        placeholder: 'Número, contato, conta ou ação',
-        ligar_para: 'Ligar para {number}',
-        registrar: 'Registrar {name}',
-        desregistrar: 'Desregistrar {name}',
-        nada: 'Nada encontrado.',
-        teclas: '↑ ↓ escolhe · Enter executa · Esc fecha'
-    },
     toastStack: {
         fechar: 'Fechar aviso'
     },
@@ -217,24 +147,10 @@ export const ptBR = {
         importacao_invalida: 'Este arquivo não é uma exportação de contas da Íris'
     },
     app: {
-        acao_primeiros_passos: 'Mostrar os primeiros passos',
-        atalho_configuracoes: 'Ctrl/Cmd+,',
-        acao_nova_conta: 'Nova conta',
-        acao_novo_contato: 'Novo contato',
-        acao_registrar_todas: 'Registrar todas as contas',
-        acao_desregistrar_todas: 'Desregistrar todas as contas',
-        acao_aba: 'Abrir {name}',
-        acao_servidores: 'Configurações › Servidores',
-        acao_notificacoes: 'Configurações › Notificações',
-        acao_atalhos: 'Configurações › Atalhos e links',
-        acao_gravacoes: 'Abrir a pasta das gravações',
-        link_recebido: 'Número {number} recebido de um link. Aperte Enter para ligar.',
         contatos: 'Contatos',
         iris: 'Íris',
         contas_pbx_registradas_chamadas:
             '{length} contas · {pbxCount} PBX · {registeredCount} registradas · {length2} chamadas',
-        so_o_discador_e_a: 'Só o discador e a chamada, numa janela estreita',
-        modo_telefone: 'Modo Telefone',
         atualizacao_disponivel: 'Atualização disponível',
         guia: 'Guia',
         configuracoes_ctrl_cmd: 'Configurações (Ctrl/Cmd+,)',
@@ -537,75 +453,24 @@ export const ptBR = {
         nao_foi_possivel_copiar: 'Não foi possível copiar',
         salvo_em: 'Salvo em {path}'
     },
-    phoneView: {
-        conta: 'Conta',
-        bancada_contas_chamadas_e_log: 'Bancada: contas, chamadas e log lado a lado',
-        bancada: 'Bancada',
-        configuracoes: 'Configurações',
-        configuracoes_ctrl_cmd: 'Configurações (Ctrl/Cmd+,)',
-        chamada_recebida: 'Chamada recebida',
-        chamada_para: 'Chamada para {p}',
-        recusar: 'Recusar',
-        atender: 'Atender',
-        chamada_em_andamento: 'Chamada em andamento',
-        via: '{remote} · via {p}',
-        teclado: 'Teclado',
-        transferir: 'Transferir',
-        outra_chamada: 'Outra chamada',
-        ver_o_log: 'Ver o log',
-        enviar_dtmf: 'Enviar DTMF',
-        transferir_para: 'Transferir para',
-        destino_da_transferencia: 'Destino da transferência',
-        desligar: 'Desligar',
-        discar: 'Discar',
-        numero: 'Número',
-        voltar_para_a_chamada: 'Voltar para a chamada',
-        voltar: 'Voltar',
-        ligar: 'Ligar',
-        apagar: 'Apagar',
-        ultima: 'Última: {p} {p2}',
-        tambem_em_andamento: 'Também em andamento',
-        sem_conta: 'sem conta',
-        ativar_mic: 'Ativar mic',
-        mudo: 'Mudo',
-        retomar: 'Retomar',
-        espera: 'Espera',
-        nenhuma_conta_crie_uma_na: 'Nenhuma conta. Crie uma na Bancada.',
-        digite_um_numero_ou_ramal: 'Digite um número ou ramal',
-        em_espera: 'em espera',
-        em_espera_pelo_outro_lado: 'em espera pelo outro lado',
-        chamando_early_media: 'chamando (early media)',
-        qualidade_jitter_ms_perda_rtt: 'Qualidade {score}: jitter {jitterMs} ms, perda {p}%, RTT {rttMs} ms, {p2}'
-    },
     appearanceSection: {
         tema: 'Tema',
         tema_dica: 'Sistema acompanha o modo claro ou escuro do computador, e troca sozinho.',
         escuro: 'Escuro',
         claro: 'Claro',
         sistema: 'Sistema',
-        compacta: 'Listas compactas',
-        compacta_dica: 'Linhas mais baixas nas contas e nos contatos, para caber mais.',
         aparencia: 'Aparência',
         a_cor_de_destaque_aparece: 'A cor de destaque aparece nos botões principais, nas abas e no contorno do foco.',
         cor_de_destaque: 'Cor de destaque',
-        escolha_uma_paleta_pronta_ou: 'Escolha uma paleta pronta ou a sua própria cor.',
+        escolha_a_cor_dos_botoes: 'Escolha a cor dos botões principais e das abas.',
         sua_cor: 'Sua cor',
         escolher_outra_cor: 'Escolher outra cor',
+        cor_padrao: 'Cor padrão',
         essa_cor_fica_apagada_contra:
-            'Essa cor fica apagada contra o fundo escuro, e o contorno de foco pode sumir. Prefira um tom mais claro.',
+            'Essa cor fica apagada contra o fundo, e o contorno de foco pode sumir. Prefira um tom mais forte.',
         ligar: 'Ligar',
         telefone: 'Telefone',
-        com_foco: 'Com foco',
-        tamanho_da_interface: 'Tamanho da interface',
-        aumenta_ou_diminui_tudo_junto: 'Aumenta ou diminui tudo junto: texto, botões e painéis.',
-        pequena: 'Pequena',
-        normal: 'Normal',
-        grande: 'Grande',
-        idioma: 'Idioma',
-        idioma_dica:
-            'As telas mudam na hora. O log de eventos, o resultado das chamadas, e as notificações do sistema continuam em português.',
-        idioma_pt: 'Português (Brasil)',
-        idioma_en: 'English'
+        com_foco: 'Com foco'
     },
     audioSection: {
         audio: 'Áudio',
@@ -658,16 +523,6 @@ export const ptBR = {
         contas_importadas_contas_sem_senha:
             '{count} contas importadas. Contas sem senha no arquivo pedem a senha ao editar.'
     },
-    profileSection: {
-        perfil: 'Perfil',
-        quem_esta_usando_a_iris: 'Quem está usando a Íris e por qual conta ela começa.',
-        seu_nome: 'Seu nome',
-        ja_vem_preenchido_como_nome: 'Já vem preenchido como nome de exibição nas contas novas.',
-        ex_ana_do_suporte: 'Ex.: Ana do suporte',
-        conta_principal: 'Conta principal',
-        fica_escolhida_no_discador_quando: 'Fica escolhida no discador quando o app abre.',
-        a_primeira_da_lista: 'A primeira da lista'
-    },
     securitySection: {
         certificados: 'Certificados',
         pbx_com_certificado_autoassinado_que:
@@ -678,16 +533,11 @@ export const ptBR = {
         certificado_de_nao_e_mais: 'Certificado de {host} não é mais aceito'
     },
     settingsDialog: {
-        modos: 'Modos',
-        atalhos: 'Atalhos e links',
         notificacoes: 'Notificações',
         servidores: 'Servidores',
         configuracoes: 'Configurações',
         fechar: 'Fechar',
-        contas_pbx: '{length} contas · {length2} PBX',
         secoes: 'Seções',
-        sem_nome: 'Sem nome',
-        perfil: 'Perfil',
         aparencia: 'Aparência',
         audio: 'Áudio',
         conexao: 'Conexão',

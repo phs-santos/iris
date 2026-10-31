@@ -1,16 +1,13 @@
 // Tipos compartilhados entre o processo principal, o preload e a interface.
 
-import type { Appearance, Profile } from './appearance'
+import type { Appearance } from './appearance'
 import type { TrayCounts } from './tray'
 import type { Contact } from './contacts'
 import type { SipServer } from './servers'
 import type { NetDiagRequest, NetDiagResult } from './net-diag'
 import type { NotificationAction, NotificationSettings, NotifyRequest } from './notifications'
 import type { AccountTransport, SipTransportKind } from './sip-target'
-import type { LinkSettings, LinkStatus } from './links'
-import type { ShortcutAction, ShortcutSettings } from './shortcuts'
 import type { RingtoneId } from './ringtones'
-import type { ModeSettings } from './modes'
 
 export type Preset = 'asterisk' | 'kamailio' | 'generic'
 export type SipProviderName = 'sipjs' | 'jssip'
@@ -72,41 +69,21 @@ export interface Settings {
     audioOutputId?: string
     /** Volume do toque de chamada, de 0 a 100 (RF-55). Sem o campo, 50. */
     ringVolume?: number
-    /** A tecla Tocar/Pausar (o botão do fone) atende e desliga enquanto há chamada (RF-55). */
-    mediaKey?: boolean
     /** Canal de atualização (RF-35). Sem o campo, vale o estável. */
     updateChannel?: UpdateChannel
-    /** Tela de Configurações: quem usa e como a interface aparece. */
-    profile?: Profile
+    /** Tela de Configurações: tema e cor de destaque. */
     appearance?: Appearance
     /** Sem o campo, vale o padrão de `@shared/reconnect`. */
     reconnect?: ReconnectSettings
     /** Quais eventos viram notificação do sistema. */
     notifications?: NotificationSettings
-    /** Modos ligados na área secreta (padrão: só a chamada). */
-    modes?: ModeSettings
-    /** Links tel: e sip: (RF-53). */
-    links?: LinkSettings
-    /** Atalhos globais (RF-34). */
-    shortcuts?: ShortcutSettings
 }
 
 /** Campos que a interface pode mudar em `settings.json`; o canal de atualização tem canal próprio. */
 export type SettingsPatch = Partial<
     Pick<
         Settings,
-        | 'trustedHosts'
-        | 'audioInputId'
-        | 'audioOutputId'
-        | 'ringVolume'
-        | 'mediaKey'
-        | 'profile'
-        | 'appearance'
-        | 'reconnect'
-        | 'notifications'
-        | 'links'
-        | 'modes'
-        | 'shortcuts'
+        'trustedHosts' | 'audioInputId' | 'audioOutputId' | 'ringVolume' | 'appearance' | 'reconnect' | 'notifications'
     >
 >
 
@@ -264,23 +241,6 @@ export interface IrisApi {
     focusWindow(): void
     /** Clique em Atender, Recusar ou na própria notificação de uma chamada. */
     onNotificationAction(listener: (callId: string, action: NotificationAction) => void): () => void
-    /** Links de telefone (RF-53). */
-    links: {
-        /** O número do último link recebido, uma vez só; null se não há nenhum esperando. */
-        take(): Promise<string | null>
-        onArrived(listener: () => void): () => void
-        status(): Promise<LinkStatus>
-        /** Faz (ou deixa de fazer) a Íris abrir os links de telefone (`tel`) ou de SIP (`sip`) no sistema. */
-        setDefault(kind: 'tel' | 'sip', on: boolean): Promise<LinkStatus>
-    }
-    /** Atalhos globais (RF-34). */
-    shortcuts: {
-        /** Ações cujo atalho o sistema recusou (outro programa já usa). */
-        failed(): Promise<ShortcutAction[]>
-        /** A tecla Tocar/Pausar foi recusada pelo sistema na última chamada (RF-55). */
-        mediaKeyFailed(): Promise<boolean>
-        onFired(listener: (action: ShortcutAction) => void): () => void
-    }
     /** Diagnóstico de rede da Saúde (RF-46): DNS SRV, certificado TLS e STUN. */
     net: {
         diagnose(request: NetDiagRequest): Promise<NetDiagResult>
@@ -320,12 +280,7 @@ export interface IrisApi {
         onEvent(listener: (event: NativeSipEvent) => void): () => void
     }
     appInfo(): Promise<{ version: string; platform: string; electron: string; chrome: string }>
-    /** Ajusta a janela ao modo da tela: estreita no Telefone, larga na Bancada. */
-    setWindowMode(mode: WindowMode): Promise<void>
 }
-
-/** Telefone: só o discador e a chamada. Bancada: contas, telefone e log lado a lado. */
-export type WindowMode = 'phone' | 'bench'
 
 export const IPC = {
     accountsLoad: 'accounts:load',
@@ -341,25 +296,15 @@ export const IPC = {
     settingsUpdate: 'settings:update',
     filesSaveText: 'files:save-text',
     filesOpenText: 'files:open-text',
-    audioPickWav: 'audio:pick-wav',
-    audioLoadWav: 'audio:load-wav',
     audioOpenRecordings: 'audio:open-recordings',
     notify: 'app:notify',
     notifyClose: 'app:notify-close',
     notifyAction: 'app:notify-action',
     focusWindow: 'app:focus-window',
-    linksTake: 'links:take',
-    linksArrived: 'links:arrived',
-    linksStatus: 'links:status',
-    linksSetDefault: 'links:set-default',
-    shortcutsFailed: 'shortcuts:failed',
-    mediaKeyFailed: 'shortcuts:media-key-failed',
-    shortcutFired: 'shortcuts:fired',
     netDiagnose: 'net:diagnose',
     tray: 'app:tray',
     logError: 'app:log-error',
     appInfo: 'app:info',
-    windowMode: 'window:mode',
     certificateError: 'cert:error',
     updateInfo: 'update:info',
     updateSetChannel: 'update:set-channel',

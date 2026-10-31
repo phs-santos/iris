@@ -59,11 +59,6 @@ export const GUIDE: GuideSection[] = [
         title: 'Primeira chamada em 2 minutos',
         summary: 'O caminho mais curto para ver o app funcionando, com o PBX simulado e com a sua central.',
         blocks: [
-            {
-                type: 'note',
-                kind: 'dica',
-                text: 'No primeiro uso, o quadro **Primeiros passos**, no alto da aba Telefone, leva por estes três passos e marca cada um sozinho quando você o faz. Fechou e quer de volta? Ctrl/Cmd+K, "Mostrar os primeiros passos".'
-            },
             { type: 'h', text: 'Com o PBX simulado (sem servidor)' },
             {
                 type: 'p',
@@ -133,10 +128,9 @@ export const GUIDE: GuideSection[] = [
             {
                 type: 'list',
                 items: [
-                    '**Modo Telefone**: troca a janela por um telefone simples, só com o teclado e a chamada. Veja "Modo Telefone".',
                     '**Atualização disponível**: aparece só quando há versão nova. Veja "Atualização".',
                     '**Guia**: abre esta tela. A tecla **F1** também abre.',
-                    '**Configurações**: perfil, cores, áudio, certificados, importar e exportar e atualização. O atalho é **Ctrl+,** (no macOS, **Cmd+,**).'
+                    '**Configurações**: aparência, áudio, certificados, importar e exportar e atualização. O atalho é **Ctrl+,** (no macOS, **Cmd+,**).'
                 ]
             },
             {
@@ -608,46 +602,9 @@ export const GUIDE: GuideSection[] = [
         ]
     },
     {
-        id: 'telefone',
-        title: 'Modo Telefone',
-        summary: 'Uma janela estreita, como um celular, para quem só quer ligar e atender.',
-        blocks: [
-            { type: 'image', name: 'telefone', alt: 'Modo Telefone durante uma chamada' },
-            {
-                type: 'p',
-                text: 'O botão **Modo Telefone**, na barra de cima, encolhe a janela e mostra só o essencial. O botão **Bancada** volta para as três colunas, no mesmo tamanho de antes. O app sempre abre na Bancada.'
-            },
-            {
-                type: 'table',
-                head: ['Tela', 'O que aparece'],
-                rows: [
-                    [
-                        'Teclado',
-                        'A conta escolhida no topo, o número com o nome quando ele é conhecido, o teclado e o botão verde de ligar'
-                    ],
-                    [
-                        'Em chamada',
-                        'Quem está do outro lado, o tempo, a qualidade em barrinhas e os botões Mudo, Espera, Teclado (DTMF), Transferir, Outra chamada e Ver o log'
-                    ],
-                    ['Chamada recebida', 'Ocupa a tela inteira, com Recusar e Atender']
-                ]
-            },
-            {
-                type: 'list',
-                items: [
-                    'Troque a conta pelo menu do topo. O ponto ao lado mostra se ela está registrada.',
-                    'Dá para digitar o número pelo teclado do computador e ligar com **Enter**.',
-                    'Passe o mouse nas barrinhas para ver a qualidade em números (jitter, perda, RTT e codec).',
-                    '**Outra chamada** volta ao teclado sem desligar; as chamadas em andamento ficam listadas embaixo e voltam com um clique.',
-                    'A transferência do modo Telefone é a cega. Para a assistida, use a Bancada.'
-                ]
-            }
-        ]
-    },
-    {
         id: 'configuracoes',
         title: 'Configurações',
-        summary: 'Seu perfil, as cores da Íris e as preferências gerais, numa tela só.',
+        summary: 'O tema, a cor da Íris e as preferências gerais, numa tela só.',
         blocks: [
             { type: 'image', name: 'configuracoes', alt: 'Tela de Configurações aberta em Aparência' },
             {
@@ -658,14 +615,7 @@ export const GUIDE: GuideSection[] = [
                 type: 'table',
                 head: ['Seção', 'O que tem'],
                 rows: [
-                    [
-                        'Perfil',
-                        'Seu nome, que já vem como nome de exibição nas contas novas, e a conta principal, que fica escolhida no discador ao abrir'
-                    ],
-                    [
-                        'Aparência',
-                        'O tema (escuro, claro ou o do sistema), a cor de destaque (seis paletas prontas ou a sua própria cor), o idioma (português ou inglês), listas compactas e o tamanho da interface'
-                    ],
+                    ['Aparência', 'O tema (claro, escuro ou o do sistema) e a cor de destaque'],
                     ['Áudio', 'Microfone e alto-falante. Veja "Áudio"'],
                     [
                         'Notificações',
@@ -681,20 +631,20 @@ export const GUIDE: GuideSection[] = [
                     ['Atualização', 'A versão instalada e a busca por versão nova. Veja "Atualização"']
                 ]
             },
-            { type: 'h', text: 'Tema e densidade' },
+            { type: 'h', text: 'Tema' },
             {
                 type: 'p',
-                text: 'Em **Aparência**, o **Tema** pode ser Escuro (o padrão), Claro ou **Sistema**, que acompanha o modo claro ou escuro do computador e troca sozinho. **Listas compactas** deixa as linhas das contas e dos contatos mais baixas, para caber mais na tela.'
+                text: 'Em **Aparência**, o **Tema** pode ser Claro (o padrão), Escuro ou **Sistema**, que acompanha o modo claro ou escuro do computador e troca sozinho.'
             },
             { type: 'h', text: 'Cor de destaque' },
             {
                 type: 'p',
-                text: 'A cor aparece nos botões principais, nas abas e no contorno do foco do teclado. Clique numa das bolinhas para usar uma paleta pronta, ou no **+** para escolher qualquer cor. Os botões escurecem a cor o quanto for preciso para o texto branco continuar legível.'
+                text: 'A cor aparece nos botões principais, nas abas e no contorno do foco do teclado. Clique na bolinha para escolher qualquer cor; **Cor padrão** volta ao azul da Íris. Os botões escurecem a cor o quanto for preciso para o texto branco continuar legível.'
             },
             {
                 type: 'note',
                 kind: 'dica',
-                text: 'As paletas prontas evitam verde, amarelo e vermelho, porque essas cores já dizem o estado das contas e das chamadas. Se a cor que você escolher ficar apagada contra o fundo escuro, a tela avisa.'
+                text: 'Evite verde, amarelo e vermelho, porque essas cores já dizem o estado das contas e das chamadas. Se a cor que você escolher ficar apagada contra o fundo, a tela avisa.'
             }
         ]
     },
@@ -874,37 +824,13 @@ export const GUIDE: GuideSection[] = [
                     ['Ctrl/Cmd + M', 'Liga ou desliga o mudo da chamada selecionada'],
                     ['Ctrl/Cmd + H', 'Põe em espera ou retoma a chamada selecionada'],
                     ['Ctrl/Cmd + 1 a 9', 'Seleciona a conta nessa posição da lista'],
-                    [
-                        'Ctrl/Cmd + K',
-                        'Abre a paleta de comandos: digite um número, um contato, uma conta ou uma ação e tecle Enter'
-                    ],
                     ['F1', 'Abre este guia'],
                     ['Esc', 'Fecha a janela que estiver aberta por cima']
                 ]
             },
             {
                 type: 'p',
-                text: '"Chamada selecionada" é o cartão em que você clicou por último. No macOS use Cmd; no Windows e no Linux, Ctrl.'
-            },
-            { type: 'h', text: 'Atalhos globais' },
-            {
-                type: 'p',
-                text: 'Os atalhos acima só valem com a janela da Íris em foco. Para **atender, desligar e ligar o mudo com outro programa na frente**, defina atalhos globais em **Configurações → Atalhos e links**: clique em "Definir atalho" e aperte a combinação. Ela precisa de Ctrl, Alt, Cmd ou Win, ou ser uma tecla de função. Se o sistema recusar (outro programa já usa), a tela avisa.'
-            },
-            { type: 'h', text: 'Botão do fone' },
-            {
-                type: 'p',
-                text: 'Ligue **Botão do fone** na mesma tela para atender e desligar pelo botão do fone de ouvido. Ele manda a tecla Tocar/Pausar, que a Íris só usa enquanto há chamada tocando ou em andamento; fora disso a tecla continua pausando a música. No macOS, o sistema só entrega essa tecla a programas liberados em Ajustes do Sistema → Privacidade e Segurança → Acessibilidade.'
-            },
-            { type: 'h', text: 'Links de telefone' },
-            {
-                type: 'p',
-                text: 'Na mesma tela, ligue **Abrir links tel: com a Íris** (e, se quiser, os links sip:). A partir daí, clicar num número numa página ou no CRM abre a Íris com o número no discador da conta escolhida; tecle Enter para ligar.'
-            },
-            {
-                type: 'note',
-                kind: 'atenção',
-                text: '"Ligar direto, sem confirmar" faz a chamada sair assim que o link chega. Qualquer página pode ter um link desses, inclusive para números pagos: deixe desligado se você navega fora do sistema da empresa.'
+                text: '"Chamada selecionada" é o cartão em que você clicou por último. No macOS use Cmd; no Windows e no Linux, Ctrl. Os atalhos só valem com a janela da Íris em foco.'
             }
         ]
     },

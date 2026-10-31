@@ -35,7 +35,7 @@ writeFileSync(
 
 const app = await electron.launch({
     args: ['.'],
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
 })
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)

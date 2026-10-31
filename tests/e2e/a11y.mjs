@@ -12,7 +12,7 @@ const args = ['.']
 if (process.getuid?.() === 0) args.push('--no-sandbox')
 const app = await electron.launch({
     args,
-    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1', IRIS_MODES: 'all' }
+    env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
 })
 const page = await app.firstWindow()
 const step = (msg) => console.log(`✓ ${msg}`)
@@ -71,21 +71,13 @@ try {
     await page.keyboard.press('ControlOrMeta+,')
     const settings = page.getByRole('dialog', { name: 'Configurações' })
     await settings.waitFor({ timeout: 2000 }).catch(() => problems.push('[configurações] Ctrl/Cmd+, não abre'))
-    for (const name of [
-        'Perfil',
-        'Aparência',
-        'Áudio',
-        'Servidores',
-        'Conexão',
-        'Certificados',
-        'Importar e exportar'
-    ]) {
+    for (const name of ['Aparência', 'Áudio', 'Servidores', 'Conexão', 'Certificados', 'Importar e exportar']) {
         await settings.getByRole('tab', { name }).click()
         await scan(`configurações › ${name}`)
     }
-    await settings.getByRole('tab', { name: 'Perfil' }).click()
+    await settings.getByRole('tab', { name: 'Aparência' }).click()
     await page.keyboard.press('ArrowDown')
-    if ((await settings.getByRole('tab', { name: 'Aparência' }).getAttribute('aria-selected')) !== 'true')
+    if ((await settings.getByRole('tab', { name: 'Áudio' }).getAttribute('aria-selected')) !== 'true')
         problems.push('[configurações] seta para baixo não troca de seção')
     await settings.getByRole('tab', { name: 'Atualização' }).click()
     await page.getByText('funciona só no app instalado').waitFor()
@@ -107,22 +99,11 @@ try {
     await page.getByRole('menuitem', { name: 'Saúde' }).click()
     await scan('saúde da conta')
     await page.keyboard.press('Escape')
-    await page.keyboard.press('ControlOrMeta+k')
-    await page.getByRole('dialog', { name: 'Paleta de comandos' }).waitFor()
-    await scan('paleta de comandos')
-    await page.keyboard.press('Escape')
     await page.getByRole('tab', { name: 'Contatos' }).click()
     await page.getByRole('button', { name: '+ Novo contato' }).click()
     await scan('novo contato')
     await page.keyboard.press('Escape')
     await scan('agenda de contatos')
-    await page.keyboard.press('Control+Alt+Shift+M')
-    await page
-        .getByRole('dialog', { name: 'Configurações' })
-        .getByRole('tab', { name: 'Modos', selected: true })
-        .waitFor()
-    await scan('configurações, modos')
-    await page.keyboard.press('Escape')
     // Guia: todas as seções abrem, as capturas carregam e a busca filtra o índice.
     await page.keyboard.press('F1')
     const guide = page.getByRole('dialog', { name: 'Guia da Íris' })
@@ -152,26 +133,6 @@ try {
     await page.keyboard.press('Escape')
     await guide.waitFor({ state: 'detached', timeout: 2000 }).catch(() => problems.push('[guia] Esc não fecha'))
     step(`guia com ${total} seções, capturas carregadas e busca`)
-
-    // Modo Telefone: teclado, chamada recebida e chamada em andamento.
-    await page.getByRole('tab', { name: 'Telefone' }).click()
-    await page.getByRole('button', { name: 'Modo Telefone' }).click()
-    await page.getByRole('region', { name: 'Discar' }).waitFor()
-    await scan('telefone, teclado')
-    await page.getByLabel('Conta').selectOption({ label: 'Vendas 1002 · 1002' })
-    await page.getByLabel('Número').fill('1001')
-    await page.getByRole('button', { name: 'Ligar' }).click()
-    await page.getByRole('region', { name: 'Chamada recebida' }).waitFor()
-    await scan('telefone, chamada recebida')
-    await page.getByRole('button', { name: 'Atender' }).click()
-    await page.getByRole('region', { name: 'Chamada em andamento' }).waitFor()
-    await page.getByRole('button', { name: 'Teclado' }).click()
-    await scan('telefone, em chamada com o teclado DTMF')
-    await page.getByRole('button', { name: 'Desligar' }).click()
-    await page.getByRole('region', { name: 'Discar' }).waitFor()
-    await page.getByLabel('Conta').selectOption({ label: 'Suporte 1001 · 1001' })
-    await page.getByRole('button', { name: 'Bancada', exact: true }).click()
-    await page.getByRole('tab', { name: 'Telefone' }).waitFor()
 
     // Atalhos da especificação (RNF-12).
     await page.getByRole('tab', { name: 'Telefone' }).click()
@@ -203,25 +164,25 @@ try {
     if (!/Vendas 1002/.test(chosen)) problems.push('[atalhos] Ctrl/Cmd+2 não trocou a conta de origem')
     if (!problems.some((p) => p.startsWith('[atalhos]'))) step('atalhos Ctrl/Cmd + L, Enter, M, H, E e 1 a 9 funcionam')
 
-    // Tema claro: as mesmas telas principais, com o contraste conferido de novo.
+    // Tema escuro: as mesmas telas principais, com o contraste conferido de novo (o claro é o padrão).
     await page.keyboard.press('ControlOrMeta+,')
     await settings.getByRole('tab', { name: 'Aparência' }).click()
-    await settings.getByRole('radio', { name: 'Claro' }).click()
-    if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'light')
-        problems.push('[tema claro] o tema não mudou')
-    for (const name of ['Aparência', 'Servidores', 'Notificações', 'Atalhos e links']) {
+    await settings.getByRole('radio', { name: 'Escuro' }).click()
+    if ((await page.evaluate(() => document.documentElement.dataset.theme)) !== 'dark')
+        problems.push('[tema escuro] o tema não mudou')
+    for (const name of ['Aparência', 'Servidores', 'Notificações']) {
         await settings.getByRole('tab', { name }).click()
-        await scan(`tema claro › configurações › ${name}`)
+        await scan(`tema escuro › configurações › ${name}`)
     }
     await page.keyboard.press('Escape')
     await page.getByRole('tab', { name: 'Telefone' }).click()
-    await scan('tema claro › janela principal')
+    await scan('tema escuro › janela principal')
     await page.getByRole('button', { name: 'teclado' }).click()
-    await scan('tema claro › teclado do discador')
+    await scan('tema escuro › teclado do discador')
     await page.getByRole('button', { name: 'teclado' }).click()
     await page.getByRole('tab', { name: 'Contatos' }).click()
-    await scan('tema claro › contatos')
-    if (process.env.SHOTS_DIR) await page.screenshot({ path: join(process.env.SHOTS_DIR, 'tema-claro.png') })
+    await scan('tema escuro › contatos')
+    if (process.env.SHOTS_DIR) await page.screenshot({ path: join(process.env.SHOTS_DIR, 'tema-escuro.png') })
     await page.getByRole('tab', { name: 'Telefone' }).click()
 
     if (problems.length) {

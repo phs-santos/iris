@@ -1,22 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { useDialog } from '@renderer/lib/dialog'
-import { currentLocale } from '@renderer/i18n'
-import { usePreferencesStore } from '@renderer/stores/preferences'
-import type { ModeId } from '@shared/modes'
-import { GUIDE as GUIDE_PT } from '@renderer/i18n/guide.pt-BR'
-import { GUIDE_EN } from '@renderer/i18n/guide.en'
-
-/** O guia no idioma da interface (RF-56). */
-/** Seções que só aparecem com o modo ligado. */
-const SECTION_MODE: Record<string, ModeId> = {
-    log: 'log',
-    saude: 'log'
-}
-const prefs = usePreferencesStore()
-const GUIDE = (currentLocale() === 'en' ? GUIDE_EN : GUIDE_PT).filter(
-    (s) => !SECTION_MODE[s.id] || prefs.isOn(SECTION_MODE[s.id]!)
-)
+import { GUIDE } from '@renderer/i18n/guide.pt-BR'
 
 /** Guia de uso (entrega do M4): índice à esquerda, conteúdo à direita, busca por texto. */
 const emit = defineEmits<{ close: [] }>()

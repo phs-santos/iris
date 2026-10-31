@@ -1,19 +1,8 @@
-import {
-    app,
-    BrowserWindow,
-    dialog,
-    globalShortcut,
-    Menu,
-    nativeImage,
-    Notification,
-    session,
-    shell,
-    Tray
-} from 'electron'
+import { app, BrowserWindow, dialog, Menu, nativeImage, Notification, session, shell, Tray } from 'electron'
 import { promises as fs } from 'node:fs'
 import { basename, join } from 'node:path'
 import appIcon from '../../resources/icon.png?asset'
-import { IPC, type Account, type SettingsPatch, type WindowMode } from '@shared/types'
+import { IPC, type Account, type SettingsPatch } from '@shared/types'
 import {
     getSecret,
     loadAccounts,
@@ -29,28 +18,21 @@ import {
 } from './storage'
 import { check, handle, isPlainObject, isString, on, rendererUrl } from './ipc-guard'
 import { setupUpdater } from './updater'
-import { isAppearance, isProfile } from '@shared/appearance'
+import { isAppearance } from '@shared/appearance'
 import { isReconnect } from '@shared/reconnect'
 import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { isRingVolume } from '@shared/ringtones'
-import { ALL_MODES, isModeSettings } from '@shared/modes'
 import { appLog, describeError, startAppLog } from './app-log'
 import { registerNativeSipIpc } from './native-sip'
 import { diagnoseNetwork } from './net-diag'
 import { isNetDiagRequest, type NetDiagRequest } from '@shared/net-diag'
-import { findCallLink, isLinkSettings, parseCallLink, type LinkStatus } from '@shared/links'
-import { isShortcutSettings, SHORTCUT_ACTIONS, type ShortcutAction, type ShortcutSettings } from '@shared/shortcuts'
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 
-/** Tamanho da Bancada antes de virar Telefone, para voltar ao mesmo lugar. */
-let benchBounds: Electron.Rectangle | null = null
-const PHONE_SIZE = { width: 380, height: 720 }
-const PHONE_MIN = { width: 340, height: 580 }
 const BENCH_MIN = { width: 1024, height: 640 }
 
 let quitting = false
@@ -83,75 +65,6 @@ if (!app.requestSingleInstanceLock()) {
     app.quit()
 }
 
-// Links de telefone (RF-53). No Windows e no Linux o link chega como argumento; no macOS, pelo evento
-// `open-url`, que pode vir antes do app ficar pronto. O número espera aqui até a interface buscar.
-let pendingLink: string | null = findCallLink(process.argv.slice(1))
-
-function receiveLink(number: string | null): void {
-    if (!number) return
-    pendingLink = number
-    appLog('info', `Link de telefone recebido: ${number}`)
-    if (!app.isReady()) return
-    showWindow()
-    mainWindow?.webContents.send(IPC.linksArrived)
-}
-app.on('open-url', (event, url) => {
-    event.preventDefault()
-    receiveLink(parseCallLink(url))
-})
-
-// Atalhos globais (RF-34): só os que o usuário definiu. Os que o sistema recusa ficam em `failedShortcuts`.
-let failedShortcuts: ShortcutAction[] = []
-let registeredShortcuts: ShortcutSettings = {}
-
-function applyShortcuts(shortcuts: ShortcutSettings | undefined): void {
-    for (const action of SHORTCUT_ACTIONS)
-        if (registeredShortcuts[action]) globalShortcut.unregister(registeredShortcuts[action])
-    registeredShortcuts = {}
-    failedShortcuts = []
-    for (const action of SHORTCUT_ACTIONS) {
-        const accelerator = shortcuts?.[action]
-        if (!accelerator) continue
-        let ok = false
-        try {
-            ok = globalShortcut.register(accelerator, () => mainWindow?.webContents.send(IPC.shortcutFired, action))
-        } catch {
-            ok = false
-        }
-        if (ok) registeredShortcuts[action] = accelerator
-        if (!ok) {
-            failedShortcuts.push(action)
-            appLog('warn', `Atalho global recusado pelo sistema: ${accelerator}`)
-        }
-    }
-}
-
-/**
- * Botão do fone (RF-55): quase todo fone manda a tecla Tocar/Pausar. A Íris só fica com ela enquanto
- * há chamada tocando ou em andamento; no resto do tempo a tecla continua sendo do tocador de música.
- */
-const MEDIA_KEY = 'MediaPlayPause'
-let mediaKeyOn = false
-let mediaKeyFailed = false
-let callsNow = { ringing: 0, calls: 0 }
-
-function syncMediaKey(): void {
-    const wanted = mediaKeyOn && callsNow.ringing + callsNow.calls > 0
-    const has = globalShortcut.isRegistered(MEDIA_KEY)
-    if (wanted && !has) {
-        let ok = false
-        try {
-            ok = globalShortcut.register(MEDIA_KEY, () =>
-                mainWindow?.webContents.send(IPC.shortcutFired, callsNow.ringing > 0 ? 'answer' : 'hangup')
-            )
-        } catch {
-            ok = false
-        }
-        if (!ok && !mediaKeyFailed) appLog('warn', 'O sistema recusou a tecla Tocar/Pausar para o botão do fone')
-        mediaKeyFailed = !ok
-    } else if (!wanted && has) globalShortcut.unregister(MEDIA_KEY)
-}
-
 function createWindow(): void {
     mainWindow = new BrowserWindow({
         width: 1360,
@@ -160,7 +73,7 @@ function createWindow(): void {
         minHeight: BENCH_MIN.height,
         title: 'Íris',
         icon: appIcon,
-        backgroundColor: '#0f1720',
+        backgroundColor: '#eef2f6',
         show: false,
         autoHideMenuBar: true,
         webPreferences: {
@@ -296,25 +209,16 @@ function registerIpc(): void {
         return setSecret(id, password)
     })
     handle(IPC.secretsStatus, () => secretsStatus())
-    // IRIS_MODES=all liga todos os modos, para os testes de ponta a ponta; o app empacotado ignora.
-    const allModes = process.env['IRIS_MODES'] === 'all' && !app.isPackaged
-    const withModes = <T extends { modes?: unknown }>(settings: T): T =>
-        allModes ? { ...settings, modes: { ...ALL_MODES, unlocked: true } } : settings
-    handle(IPC.settingsLoad, async () => withModes(await loadSettings()))
+    handle(IPC.settingsLoad, () => loadSettings())
     // A interface manda só os campos que mudou; os outros (canal de atualização) ela não alcança.
     const patchKeys = [
         'trustedHosts',
         'audioInputId',
         'audioOutputId',
         'ringVolume',
-        'mediaKey',
-        'profile',
         'appearance',
         'reconnect',
-        'notifications',
-        'links',
-        'modes',
-        'shortcuts'
+        'notifications'
     ]
     const isDeviceId = (v: unknown): boolean => v === undefined || isString(v, 500)
     handle(IPC.settingsUpdate, async (_e, patch: SettingsPatch) => {
@@ -326,50 +230,15 @@ function registerIpc(): void {
                 isDeviceId(patch.audioInputId) &&
                 isDeviceId(patch.audioOutputId) &&
                 isRingVolume(patch.ringVolume) &&
-                (patch.mediaKey === undefined || typeof patch.mediaKey === 'boolean') &&
-                isProfile(patch.profile) &&
                 isAppearance(patch.appearance) &&
                 isReconnect(patch.reconnect) &&
-                isNotificationSettings(patch.notifications) &&
-                isLinkSettings(patch.links) &&
-                isModeSettings(patch.modes) &&
-                isShortcutSettings(patch.shortcuts),
+                isNotificationSettings(patch.notifications),
             'preferências'
         )
         const settings = await updateSettings(patch)
-        if ('shortcuts' in patch) applyShortcuts(settings.shortcuts)
-        if ('mediaKey' in patch) {
-            mediaKeyOn = Boolean(settings.mediaKey)
-            mediaKeyFailed = false
-            syncMediaKey()
-        }
         trustedHosts = new Set(settings.trustedHosts)
         return settings
     })
-
-    handle(IPC.linksTake, () => {
-        const number = pendingLink
-        pendingLink = null
-        return number
-    })
-    const linkStatus = (): LinkStatus => ({
-        supported: app.isPackaged,
-        tel: app.isDefaultProtocolClient('tel'),
-        sip: app.isDefaultProtocolClient('sip')
-    })
-    handle(IPC.linksStatus, linkStatus)
-    handle(IPC.linksSetDefault, (_e, kind: 'tel' | 'sip', enabled: boolean) => {
-        check((kind === 'tel' || kind === 'sip') && typeof enabled === 'boolean', 'links de telefone')
-        // Sem empacotar, o registro apontaria o sistema para o binário do Electron.
-        if (app.isPackaged)
-            for (const scheme of kind === 'tel' ? ['tel', 'callto'] : ['sip', 'sips']) {
-                if (enabled) app.setAsDefaultProtocolClient(scheme)
-                else app.removeAsDefaultProtocolClient(scheme)
-            }
-        return linkStatus()
-    })
-    handle(IPC.shortcutsFailed, () => failedShortcuts)
-    handle(IPC.mediaKeyFailed, () => mediaKeyFailed)
 
     handle(IPC.filesSaveText, async (_e, defaultName: string, content: string) => {
         check(isString(defaultName, 255) && isString(content, 200_000_000), 'arquivo')
@@ -459,8 +328,6 @@ function registerIpc(): void {
 
     on(IPC.tray, (_e, counts: unknown) => {
         if (!isTrayCounts(counts)) return
-        callsNow = { ringing: counts.ringing, calls: counts.calls }
-        syncMediaKey()
         if (!tray) return
         const { state, tooltip } = traySummary(counts)
         tray.setToolTip(tooltip)
@@ -484,35 +351,9 @@ function registerIpc(): void {
         isTrustedHost: (host) => trustedHosts.has(host),
         onCertificateError: (host, error) => mainWindow?.webContents.send(IPC.certificateError, { host, error })
     })
-
-    handle(IPC.windowMode, (_e, mode: WindowMode) => {
-        check(mode === 'phone' || mode === 'bench', 'modo da janela')
-        setWindowMode(mode)
-    })
 }
 
-function setWindowMode(mode: WindowMode): void {
-    if (!mainWindow) return
-    const win = mainWindow
-    if (win.isFullScreen()) win.setFullScreen(false)
-    if (win.isMaximized()) win.unmaximize()
-    if (mode === 'phone') {
-        if (!benchBounds) benchBounds = win.getBounds()
-        const { x, y, width } = win.getBounds()
-        win.setMinimumSize(PHONE_MIN.width, PHONE_MIN.height)
-        // Encolhe para a direita, onde o telefone fica do lado do que a pessoa estiver fazendo.
-        win.setBounds({ x: x + width - PHONE_SIZE.width, y, ...PHONE_SIZE }, true)
-    } else {
-        win.setMinimumSize(BENCH_MIN.width, BENCH_MIN.height)
-        if (benchBounds) win.setBounds(benchBounds, true)
-        benchBounds = null
-    }
-}
-
-app.on('second-instance', (_event, argv) => {
-    showWindow()
-    receiveLink(findCallLink(argv.slice(1)))
-})
+app.on('second-instance', () => showWindow())
 
 app.whenReady().then(async () => {
     appLog(
@@ -537,8 +378,6 @@ app.whenReady().then(async () => {
     })
     createWindow()
     createTray()
-    applyShortcuts(saved?.shortcuts)
-    mediaKeyOn = Boolean(saved?.mediaKey)
 
     app.on('activate', showWindow)
 })
@@ -546,7 +385,6 @@ app.whenReady().then(async () => {
 app.on('before-quit', () => {
     quitting = true
 })
-app.on('will-quit', () => globalShortcut.unregisterAll())
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit()

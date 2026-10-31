@@ -507,7 +507,7 @@ async function save(register: boolean): Promise<void> {
 }
 .result.ok {
     background: rgba(63, 207, 134, 0.12);
-    color: #6fe0a6;
+    color: var(--ok-text);
 }
 .result.bad {
     background: rgba(240, 103, 94, 0.12);

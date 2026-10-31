@@ -16,8 +16,7 @@ const app = await electron.launch({
     env: {
         ...process.env,
         IRIS_USER_DATA: userData,
-        IRIS_FAKE_MEDIA: '1',
-        IRIS_MODES: 'all'
+        IRIS_FAKE_MEDIA: '1'
     }
 })
 const page = await app.firstWindow()
@@ -89,19 +88,6 @@ try {
     await dialog().locator('.checks li').first().waitFor()
     await shot('saude', dialog())
     await close()
-
-    // Modo Telefone durante uma chamada.
-    await page.getByRole('button', { name: 'Modo Telefone' }).click()
-    await page.getByLabel('Conta').selectOption({ label: 'Suporte 1001 · 1001' })
-    await page.getByLabel('Número').fill('1002')
-    await page.getByRole('button', { name: 'Ligar' }).click()
-    await page.getByRole('region', { name: 'Chamada em andamento' }).getByRole('img').waitFor({ timeout: 8000 })
-    await page.waitForTimeout(2000)
-    await shot('telefone')
-    await page.getByRole('button', { name: 'Desligar' }).click()
-    await page.getByRole('button', { name: 'Bancada', exact: true }).click()
-    await page.getByRole('tab', { name: 'Telefone' }).waitFor()
-    await page.waitForTimeout(800)
 
     // Configurações: cada seção vira uma captura da tela inteira.
     await page.getByRole('button', { name: 'Configurações' }).click()

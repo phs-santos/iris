@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { NotificationAction } from '@shared/notifications'
-import type { ShortcutAction } from '@shared/shortcuts'
 import { IPC, type IrisApi, type CertificateErrorEvent, type NativeSipEvent, type UpdateStatus } from '@shared/types'
 
 // A interface só alcança o sistema por estes canais fixos (RNF-08).
@@ -42,31 +41,11 @@ const api: IrisApi = {
         ipcRenderer.on(IPC.notifyAction, handler)
         return () => ipcRenderer.removeListener(IPC.notifyAction, handler)
     },
-    links: {
-        take: () => ipcRenderer.invoke(IPC.linksTake),
-        onArrived: (listener) => {
-            const handler = (): void => listener()
-            ipcRenderer.on(IPC.linksArrived, handler)
-            return () => ipcRenderer.removeListener(IPC.linksArrived, handler)
-        },
-        status: () => ipcRenderer.invoke(IPC.linksStatus),
-        setDefault: (kind, on) => ipcRenderer.invoke(IPC.linksSetDefault, kind, on)
-    },
-    shortcuts: {
-        failed: () => ipcRenderer.invoke(IPC.shortcutsFailed),
-        mediaKeyFailed: () => ipcRenderer.invoke(IPC.mediaKeyFailed),
-        onFired: (listener) => {
-            const handler = (_e: Electron.IpcRendererEvent, action: ShortcutAction): void => listener(action)
-            ipcRenderer.on(IPC.shortcutFired, handler)
-            return () => ipcRenderer.removeListener(IPC.shortcutFired, handler)
-        }
-    },
     net: {
         diagnose: (request) => ipcRenderer.invoke(IPC.netDiagnose, request)
     },
     setTray: (counts) => ipcRenderer.send(IPC.tray, counts),
     logError: (text) => ipcRenderer.send(IPC.logError, text),
-    setWindowMode: (mode) => ipcRenderer.invoke(IPC.windowMode, mode),
     onCertificateError: (listener) => {
         const handler = (_e: Electron.IpcRendererEvent, event: CertificateErrorEvent): void => listener(event)
         ipcRenderer.on(IPC.certificateError, handler)
