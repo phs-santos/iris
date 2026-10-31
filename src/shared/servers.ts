@@ -43,6 +43,20 @@ export function simulatedServer(): SipServer {
 
 export const isSimulated = (account: Pick<Account, 'serverId'>): boolean => account.serverId === SIMULATED_SERVER_ID
 
+/** O simulado sempre primeiro; ele nunca é gravado em servers.json, então um igual vindo do arquivo é ignorado. */
+export function serversWithSimulated(saved: SipServer[]): SipServer[] {
+    return [simulatedServer(), ...saved.filter((s) => s.id !== SIMULATED_SERVER_ID)]
+}
+
+export type DeleteServerCheck = { ok: true } | { ok: false; reason: 'simulado' | 'em-uso'; count?: number }
+
+/** Não se apaga o simulado nem um servidor que alguma conta usa. Conta com serverId vazio não usa nenhum. */
+export function canDeleteServer(server: SipServer, accounts: Account[]): DeleteServerCheck {
+    if (server.id === SIMULATED_SERVER_ID) return { ok: false, reason: 'simulado' }
+    const count = accounts.filter((a) => a.serverId === server.id).length
+    return count > 0 ? { ok: false, reason: 'em-uso', count } : { ok: true }
+}
+
 /** Campos da conta que vêm do servidor: os outros (ramal, senha, nome) são de cada conta. */
 export const SERVER_FIELDS = ['domain', 'transport', 'wssUrl', 'sipServer', 'iceServers', 'preset', 'srtp'] as const
 

@@ -11,6 +11,8 @@ import {
     saveContacts,
     loadServers,
     saveServers,
+    loadTags,
+    saveTags,
     loadSettings,
     saveAccounts,
     secretsStatus,
@@ -24,6 +26,7 @@ import { isReconnect } from '@shared/reconnect'
 import { isNotificationSettings, isNotifyRequest, type NotificationAction } from '@shared/notifications'
 import { CONTACTS_LIMIT, isContact, type Contact } from '@shared/contacts'
 import { isSipServer, type SipServer } from '@shared/servers'
+import { isTag, TAGS_LIMIT, type Tag } from '@shared/tags'
 import { isTrayCounts, traySummary, type TrayState } from '@shared/tray'
 import { isRingVolume } from '@shared/ringtones'
 import { appLog, describeError, startAppLog } from './app-log'
@@ -200,6 +203,11 @@ function registerIpc(): void {
     handle(IPC.serversSave, (_e, servers: SipServer[]) => {
         check(isList(servers, 500) && servers.every(isSipServer), 'lista de servidores')
         return saveServers(servers)
+    })
+    handle(IPC.tagsLoad, () => loadTags())
+    handle(IPC.tagsSave, (_e, tags: Tag[]) => {
+        check(isList(tags, TAGS_LIMIT) && tags.every(isTag), 'lista de etiquetas')
+        return saveTags(tags)
     })
     handle(IPC.secretsGet, (_e, id: string) => {
         check(isId(id), 'id da conta')

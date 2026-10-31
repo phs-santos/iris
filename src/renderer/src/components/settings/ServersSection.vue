@@ -58,9 +58,10 @@ async function save(): Promise<void> {
 }
 
 async function remove(id: string): Promise<void> {
-    await servers.remove(id)
+    const result = await servers.remove(id)
     confirmDelete.value = null
-    message.value = t('serversSection.apagado')
+    // A tela de recusa (servidor em uso) é da Tarefa 12; até lá, só não mostra "apagado".
+    if (result.ok) message.value = t('serversSection.apagado')
 }
 
 const describe = (s: SipServer): string =>

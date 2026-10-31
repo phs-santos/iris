@@ -9,6 +9,7 @@ import { reconnectDelay, shouldReconnect } from '@shared/reconnect'
 import { usePreferencesStore } from './preferences'
 import { notify } from '@renderer/lib/notify'
 import { isSimulated } from '@shared/servers'
+import { removeTag as removeTagFrom } from '@shared/tags'
 
 interface Runtime {
     status: RegStatus
@@ -135,6 +136,12 @@ export const useAccountsStore = defineStore('accounts', () => {
         await window.iris.secrets.set(id, null)
         await persist()
         if (selectedId.value === id) selectedId.value = accounts.value[0]?.id ?? null
+    }
+
+    /** Tira uma etiqueta apagada de todas as contas (RF de etiquetas). */
+    async function removeTag(tagId: string): Promise<void> {
+        accounts.value = removeTagFrom(accounts.value, tagId)
+        await persist()
     }
 
     async function duplicate(id: string): Promise<Account | null> {
@@ -278,6 +285,7 @@ export const useAccountsStore = defineStore('accounts', () => {
         load,
         save,
         remove,
+        removeTag,
         duplicate,
         register,
         unregister,

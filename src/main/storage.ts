@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { isContact, type Contact, type ContactsFile } from '@shared/contacts'
+import { isTag, type Tag, type TagsFile } from '@shared/tags'
 import { isSipServer, type ServersFile, type SipServer } from '@shared/servers'
 import type { Account, AccountsFile, SecretsStatus, Settings, SettingsPatch } from '@shared/types'
 
@@ -88,14 +89,15 @@ const SCHEMA_FILES = ['accounts.json', 'servers.json', 'contacts.json', 'setting
  * usuário em 30/10/2026). Entram as senhas e a chave delas, porque as contas a que elas pertencem somem.
  */
 export const LEGACY_FILES = [
-    ...SCHEMA_FILES,
+    'tags.json',
     'senhas.json',
     'chave-local.bin',
     'history.json',
     'scenarios.json',
     'sdr.json',
     'messages.json',
-    'secrets.json'
+    'secrets.json',
+    ...SCHEMA_FILES
 ] as const
 
 /** Um arquivo de dados é de versão antiga quando é um objeto sem `schemaVersion: 2`. */
@@ -115,6 +117,7 @@ export async function discardLegacyData(): Promise<boolean> {
         if (isLegacyFile(data)) legacy = true
     }
     if (!legacy) return false
+    // Os arquivos de esquema vão por último: se o descarte for interrompido, a próxima abertura o refaz.
     for (const name of LEGACY_FILES) await fs.rm(file(name), { force: true })
     memorySecrets.clear()
     keyPromise = null
@@ -160,6 +163,15 @@ export async function loadServers(): Promise<SipServer[]> {
 
 export async function saveServers(servers: SipServer[]): Promise<void> {
     await writeJson('servers.json', { schemaVersion: 2, servers } satisfies ServersFile)
+}
+
+export async function loadTags(): Promise<Tag[]> {
+    const data = await readDataFile<TagsFile>('tags.json', 'etiquetas', (d) => schema2(d) && Array.isArray(d.tags))
+    return (data?.tags ?? []).filter(isTag)
+}
+
+export async function saveTags(tags: Tag[]): Promise<void> {
+    await writeJson('tags.json', { schemaVersion: 2, tags } satisfies TagsFile)
 }
 
 const defaultSettings: Settings = { schemaVersion: 2, trustedHosts: [] }

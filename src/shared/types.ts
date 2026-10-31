@@ -4,6 +4,7 @@ import type { Appearance } from './appearance'
 import type { TrayCounts } from './tray'
 import type { Contact } from './contacts'
 import type { SipServer } from './servers'
+import type { Tag } from './tags'
 import type { NetDiagRequest, NetDiagResult } from './net-diag'
 import type { NotificationAction, NotificationSettings, NotifyRequest } from './notifications'
 import type { AccountTransport, SipTransportKind } from './sip-target'
@@ -208,6 +209,10 @@ export interface IrisApi {
         load(): Promise<SipServer[]>
         save(servers: SipServer[]): Promise<void>
     }
+    tags: {
+        load(): Promise<Tag[]>
+        save(tags: Tag[]): Promise<void>
+    }
     secrets: {
         get(accountId: string): Promise<string | null>
         set(accountId: string, password: string | null): Promise<void>
@@ -283,6 +288,8 @@ export const IPC = {
     contactsSave: 'contacts:save',
     serversLoad: 'servers:load',
     serversSave: 'servers:save',
+    tagsLoad: 'tags:list',
+    tagsSave: 'tags:save',
     secretsGet: 'secrets:get',
     secretsSet: 'secrets:set',
     secretsStatus: 'secrets:status',

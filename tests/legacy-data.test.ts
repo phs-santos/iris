@@ -41,6 +41,28 @@ describe('dados de versões anteriores à 2.0', () => {
         expect(await loadAccounts()).toEqual([])
     })
 
+    it('só o settings.json antigo já basta, e tags.json também some', async () => {
+        write('accounts.json', { schemaVersion: 2, accounts: [] })
+        write('settings.json', { trustedHosts: [] })
+        write('tags.json', { schemaVersion: 2, tags: [] })
+
+        expect(await discardLegacyData()).toBe(true)
+        for (const name of ['accounts.json', 'settings.json', 'tags.json'])
+            expect(existsSync(join(dir, name)), name).toBe(false)
+    })
+
+    it('só o servers.json antigo já basta', async () => {
+        write('servers.json', { schemaVersion: 1, servers: [] })
+        write('history.json', '[]')
+        expect(await discardLegacyData()).toBe(true)
+        expect(existsSync(join(dir, 'servers.json'))).toBe(false)
+        expect(existsSync(join(dir, 'history.json'))).toBe(false)
+    })
+
+    it('os arquivos de esquema são apagados por último', () => {
+        expect(LEGACY_FILES.slice(-4)).toEqual(['accounts.json', 'servers.json', 'contacts.json', 'settings.json'])
+    })
+
     it('arquivos da 2.0 ficam como estão', async () => {
         const accounts = { schemaVersion: 2, accounts: [{ id: 'a' }] }
         write('accounts.json', accounts)
