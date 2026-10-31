@@ -4,11 +4,11 @@
 // abre, confere que as contas aparecem e registram e lê o log interno. Mede também a abertura e o
 // registro (RNF-04).
 // Uso: npm run test:pacote   (Linux sem tela: xvfb-run -a node tests/e2e/pacote.mjs depois do build)
-import { _electron as electron } from 'playwright-core'
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { execSync } from 'node:child_process'
 import { join, resolve } from 'node:path'
+import { abrir, abrirAjustes, abrirSeletor, ajustes, avatar, fecharSeletor, seletor } from './helpers/tela.mjs'
 
 const OUT = resolve('dist-diag')
 const OPEN_LIMIT_MS = 3000
@@ -42,21 +42,19 @@ let failed = false
 let app
 try {
     const started = Date.now()
-    app = await electron.launch({
-        executablePath: executable(),
-        args,
-        env: { ...process.env, IRIS_USER_DATA: userData, IRIS_FAKE_MEDIA: '1' }
-    })
-    const page = await app.firstWindow()
+    let page
+    ;({ app, page } = await abrir({ userData, executablePath: executable(), args }))
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
-    await page.locator('.topbar .brand').waitFor({ timeout: 30000 })
+    await avatar(page).waitFor({ timeout: 30000 })
     const openMs = Date.now() - started
     step(`janela desenhada em ${openMs} ms (limite do RNF-04: ${OPEN_LIMIT_MS} ms)`)
 
-    await page.getByText('3 contas').waitFor({ timeout: 30000 })
+    await abrirSeletor(page)
+    await seletor(page).getByText('3 contas').waitFor({ timeout: 30000 })
     const registering = Date.now()
-    await page.locator('.dot.registered').nth(1).waitFor({ timeout: 15000 })
+    await seletor(page).locator('.dot.registered').nth(1).waitFor({ timeout: 15000 })
+    await fecharSeletor(page)
     const registerMs = Date.now() - registering
     step(`contas de exemplo carregadas e registradas em ${registerMs} ms (limite: ${REGISTER_LIMIT_MS} ms)`)
 
@@ -67,12 +65,10 @@ try {
     step(`é o app empacotado, versão ${version}`)
 
     // Telas que falam com o processo principal ao abrir: se um canal faltar, o erro aparece aqui.
-    await page.getByRole('button', { name: 'Configurações' }).click()
-    await page.getByRole('tab', { name: /Atualização/ }).click()
-    await page.getByRole('dialog').getByRole('button', { name: 'Fechar', exact: true }).click()
-    await page.getByRole('button', { name: 'Guia' }).click()
+    await abrirAjustes(page, /Atualização/)
+    await ajustes(page).getByRole('button', { name: 'Guia' }).click()
     await page.locator('.dialog img').first().waitFor({ timeout: 10000 })
-    step('Configurações e Guia abrem, com as imagens do pacote')
+    step('Ajustes e Guia abrem, com as imagens do pacote')
 
     const log = readFileSync(join(userData, 'logs', 'iris.log'), 'utf8')
     const bad = log.split('\n').filter((line) => / ERROR /.test(line))

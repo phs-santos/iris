@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
     applyServer,
+    updateFromServer,
     canDeleteServer,
     serversWithSimulated,
     SIMULATED_SERVER_ID,
@@ -34,18 +35,25 @@ export const useServersStore = defineStore('servers', () => {
             .map((a) => a.id)
 
     /**
-     * Salva o servidor e copia os dados novos para todas as contas ligadas a ele. As que estavam no ar
+     * Salva o servidor e copia os dados novos para as contas ligadas a ele, menos o que cada conta mudou por conta própria. As que estavam no ar
      * registram de novo, com o endereço novo. Devolve quantas contas mudaram.
      */
     async function save(server: SipServer): Promise<number> {
         if (server.id === SIMULATED_SERVER_ID) return 0
         const index = servers.value.findIndex((s) => s.id === server.id)
+        const before = index >= 0 ? servers.value[index] : undefined
         if (index >= 0) servers.value[index] = server
         else servers.value.push(server)
         await persist()
         const accounts = useAccountsStore()
         const linked = accounts.accounts.filter((a) => a.serverId === server.id)
-        for (const account of linked) await accounts.save(applyServer(account, server), undefined, false)
+        // O que a conta mudou no Avançado fica; o resto acompanha o servidor.
+        for (const account of linked)
+            await accounts.save(
+                before ? updateFromServer(account, before, server) : applyServer(account, server),
+                undefined,
+                false
+            )
         return linked.length
     }
 

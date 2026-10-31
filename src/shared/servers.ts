@@ -16,7 +16,6 @@ export interface SipServer {
     /** Não aparece no formulário; servidor novo vale `'asterisk'`. O `easysip-engine` ainda usa. */
     preset: Preset
     srtp?: boolean
-    outboundProxy?: string
     dtmfMode?: DtmfMode
 }
 
@@ -84,7 +83,6 @@ export function isSipServer(v: unknown): v is SipServer {
         text(s.iceServers, 2000) &&
         ['asterisk', 'kamailio', 'generic'].includes(s.preset as string) &&
         (s.srtp === undefined || typeof s.srtp === 'boolean') &&
-        (s.outboundProxy === undefined || text(s.outboundProxy, 300)) &&
         (s.dtmfMode === undefined || ['auto', 'sip-info', 'rtp-event'].includes(s.dtmfMode as string))
     )
 }
@@ -102,6 +100,21 @@ export function applyServer(account: Account, server: SipServer): Account {
         preset: server.preset,
         srtp: server.transport !== 'ws' && server.srtp ? true : undefined
     }
+}
+
+/**
+ * Leva a edição de um servidor para uma conta ligada a ele, sem apagar o que a conta mudou no Avançado: cada campo
+ * de conexão só acompanha o servidor novo se, antes, a conta tinha o mesmo valor que o servidor antigo dava.
+ */
+export function updateFromServer(account: Account, before: SipServer, after: SipServer): Account {
+    const old = applyServer(account, before)
+    const next = applyServer(account, after)
+    const result: Account = { ...account, serverId: after.id }
+    for (const field of SERVER_FIELDS) {
+        const same = JSON.stringify(old[field] ?? '') === JSON.stringify(account[field] ?? '')
+        if (same) Object.assign(result, { [field]: next[field] })
+    }
+    return result
 }
 
 /** Monta um servidor com os dados de conexão de uma conta, para cadastrar a partir dela. */

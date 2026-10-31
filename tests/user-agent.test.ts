@@ -533,6 +533,24 @@ describe('motor próprio: chamadas por SIP puro (RF-39)', () => {
         await agent.stop()
     })
 
+    it('chamada recebida: a ordem mudada com a conta já registrada vale para a próxima resposta', async () => {
+        const offer = PBX_SDP()
+            .replace('m=audio 30000 RTP/AVP 0 101', 'm=audio 30000 RTP/AVP 0 8 101')
+            .replace('a=rtpmap:0 PCMU/8000', 'a=rtpmap:0 PCMU/8000\r\na=rtpmap:8 PCMA/8000')
+        const { agent, transport, incoming } = await registered({ codecs: ['PCMU', 'PCMA'] })
+        // O que applyCodecs (processo principal) faz em cada agente quando a ordem muda em Ajustes → Áudio.
+        agent.setCodecs(['PCMA', 'PCMU'])
+        transport.onMessage(inbound('INVITE', 'entrada-ordem-nova', [], offer))
+        await incoming.call!.answer()
+        const ok = transport.raw
+            .map((text) => parseMessage(text))
+            .filter((m) => m.kind === 'response')
+            .at(-1)!
+        expect(ok).toMatchObject({ status: 200 })
+        expect(ok.body).toContain('RTP/AVP 8 101')
+        await agent.stop()
+    })
+
     it('em andamento: espera dos dois lados, DTMF por INFO, transferência cega e o BYE do outro lado', async () => {
         const { agent, transport } = await registered()
         const { seen, events } = callRecorder()

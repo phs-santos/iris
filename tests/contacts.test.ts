@@ -9,7 +9,14 @@ import {
     suggestContacts,
     type Contact
 } from '@shared/contacts'
-import { applyServer, isSipServer, matchesServer, serverFromAccount, type SipServer } from '@shared/servers'
+import {
+    applyServer,
+    isSipServer,
+    matchesServer,
+    serverFromAccount,
+    updateFromServer,
+    type SipServer
+} from '@shared/servers'
 import { newAccount } from '@renderer/lib/accounts'
 
 const contact = (name: string, number: string, extra: Partial<Contact> = {}): Contact => ({
@@ -108,6 +115,17 @@ describe('servidores cadastrados (RF-51)', () => {
         })
         expect(matchesServer(linked, server)).toBe(true)
         expect(matchesServer({ ...linked, domain: 'outro' }, server)).toBe(false)
+    })
+
+    it('editar o servidor não apaga o que a conta mudou no Avançado', () => {
+        const linked = applyServer(newAccount({ name: 'Suporte', extension: '1001' }), server)
+        const custom = { ...linked, sipServer: '10.0.0.9:5070', srtp: undefined }
+        const edited: SipServer = { ...server, domain: 'pbx.nova.com', sipServer: 'pbx.nova.com:5061', srtp: true }
+        const updated = updateFromServer(custom, server, edited)
+        expect(updated.domain).toBe('pbx.nova.com')
+        expect(updated.sipServer).toBe('10.0.0.9:5070')
+        expect(updated.srtp).toBeUndefined()
+        expect(updateFromServer(linked, server, edited).sipServer).toBe('pbx.nova.com:5061')
     })
 
     it('monta um servidor a partir de uma conta, e WebSocket não leva SRTP nem servidor SIP', () => {

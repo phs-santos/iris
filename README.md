@@ -101,19 +101,11 @@ npm run typecheck   # TypeScript estrito
 npm run lint        # ESLint: defeitos e regras de arquitetura (sem eval, sem v-html, SIP só pelo SipEngine)
 npm test            # testes de unidade (Vitest)
 npm run test:coverage   # os mesmos, com cobertura da camada de domínio (mínimo de 70%)
-npm run test:e2e    # ponta a ponta no modo simulado (abre o app)
-npm run test:senhas # senhas cifradas em arquivo local, sem nunca usar o cofre do sistema
-npm run test:a11y   # acessibilidade: axe (WCAG A/AA) em todas as telas e atalhos de teclado
+npm run test:e2e    # testes de tela no simulado: smoke, a11y, senhas, arquivos, notificações, contatos, toques e chamada
+npm run test:e2e -- chamada a11y   # só os testes pedidos (nomes dos arquivos em tests/e2e)
+PBX_WS=wss://127.0.0.1:8089/ws npm run test:e2e -- chamada   # chamada pela tela contra o Asterisk
+npm run test:pacote # gera e abre o app EMPACOTADO: contas, Ajustes, Guia e log interno sem erro
 npm run licenses    # licenças das bibliotecas que vão dentro do app
-npm run test:arquivos   # preferências gravadas em fila, arquivos estragados e log interno
-npm run test:pacote # gera e abre o app EMPACOTADO: contas, Configurações, Guia e log interno sem erro
-npm run test:pbx    # integração com o Asterisk do docker compose
-npm run test:toques        # toque por conta e volume do toque, no simulado
-npm run test:notificacoes  # notificações no simulado: chamada recebida, Atender pelo aviso, chamada perdida e a escolha em Configurações
-npm run test:contatos   # agenda de contatos e servidores cadastrados pela tela, no simulado (RF-50, RF-51)
-npm run test:sip    # SIP puro no Asterisk: registro por UDP, TCP e TLS, chamadas com áudio, DTMF, cancelar, recusar, espera, transferência e SRTP (RF-39)
-npm run test:reconexao  # derruba o contêiner do PBX e confere que as contas voltam sozinhas (RNF-06)
-npm run test:resources   # recursos: RAM com 10 contas e 1 chamada e CPU ociosa, no Asterisk (RNF-05)
 ```
 
 Em Linux sem tela, rode os de ponta a ponta com `xvfb-run -a`.
@@ -121,9 +113,7 @@ Em Linux sem tela, rode os de ponta a ponta com `xvfb-run -a`.
 ## Gerar instaladores
 
 ```bash
-npm run dist:linux   # AppImage e .deb
-npm run dist:win     # instalador NSIS (rodar no Windows)
-npm run dist:mac     # .dmg e .zip (rodar no macOS)
+npm run dist   # do sistema em que roda: AppImage e .deb no Linux, NSIS no Windows, .dmg e .zip no macOS
 ```
 
 Os instaladores ainda não são assinados (RNF-17). O `.dmg` e o `.zip` saem para Apple Silicon e para Intel.
@@ -144,7 +134,7 @@ Os componentes não têm texto fixo (RNF-13): pedem cada texto pelo nome a `$t()
 
 O botão **Guia** na barra de cima (ou a tecla **F1**) abre o guia dentro do app: 25 seções com o que cada tela faz, para que serve e como usar, com capturas de tela, busca e uma tabela de problemas comuns.
 
-O texto fica em `src/renderer/src/i18n/guide.pt-BR.ts`. As capturas são geradas do próprio app: depois de mudar a interface, rode `npm run guide:shots`.
+O texto fica em `src/renderer/src/i18n/guide.pt-BR.ts`. As capturas são geradas do próprio app: depois de mudar a interface, rode `npx electron-vite build && node scripts/guide-shots.mjs`.
 
 ## Ajuda da IA
 

@@ -1,3 +1,17 @@
+## O que mudou na 2.0
+
+A Íris ficou mais simples: uma tela só, clara, para ligar e depurar.
+
+- **Tela nova:** barra de ícones à esquerda, a conta atual no topo com um seletor agrupado por servidor e filtro por etiquetas, discador com sugestão de contatos, coluna de chamadas de todas as contas e os detalhes da conta quando não há chamada.
+- **Depuração numa gaveta** à direita, com as abas SIP, Fluxo, Log e Saúde, filtro de conta e tamanho ajustável.
+- **Cadastro de conta mais curto:** nome, etiquetas, servidor, ramal e senha; o resto em "Avançado". O servidor tem janela própria. UDP é o padrão; WebSocket virou opção avançada.
+- **Etiquetas** reaproveitáveis entre contas e **ordem dos codecs** em Ajustes → Áudio (SIP puro).
+- **Contatos por conta**, como sugestão ao digitar no discador.
+- **Tema claro** passou a ser o padrão.
+- **Saíram:** histórico, cenários e linha de comando, SDR, mensagens, carga, ajuda da IA, vídeo, PCAP, requisição manual, BLF/MWI, modo Telefone, modos escondidos, paleta de comandos, inglês, atalhos globais e links `tel:`.
+
+> **Atenção: os dados antigos são apagados.** Ao abrir a 2.0 pela primeira vez, contas, servidores, contatos, preferências e senhas das versões anteriores são descartados. Cadastre as contas de novo. Exportações da 1.x não podem ser importadas.
+
 ## Baixar
 
 Baixe só o arquivo do seu sistema:

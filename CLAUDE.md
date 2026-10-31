@@ -24,7 +24,7 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
 1. **[x] RNF-05 (recursos).** Fechado em 03/10/2026 com a CPU aprovada e a memória reprovada no macOS, por decisão do usuário.
     - CPU ociosa com 10 contas registradas: 0,1% (limite de 2%).
     - Memória com 10 contas e 1 chamada: de 331 a 389 MB no macOS com tela retina (limite de 300 MB). Veja as pendências conhecidas.
-    - `npm run test:resources` mede os dois. Ele falha na memória no macOS e no Linux (350 MB por PSS); saiu do CI em 04/10/2026.
+    - `node tests/e2e/resources.mjs` mede os dois (depois de `npx electron-vite build`). Ele falha na memória no macOS e no Linux (350 MB por PSS); saiu do CI em 04/10/2026.
 2. **[ ] RF-35 (atualização automática).** O código está pronto: `electron-updater` com GitHub Releases em `phs-santos/iris` (repositório público), canais estável e beta, e a tela "Atualização".
     - Onde está: regras em `src/shared/update.ts` (com `tests/updater.test.ts`), ligação com o Electron em `src/main/updater.ts`, tela em `UpdateDialog.vue`, `publish` no `electron-builder.yml`.
     - Restrições que valem: sem atualizar no modo CLI, sem baixar nada sem o usuário pedir e com a verificação de assinatura mantida.
@@ -39,9 +39,9 @@ Faça um passo de cada vez, com um commit por passo. Marque o item aqui quando e
     - **RNF-06: feito.** A biblioteca reconecta depois de uma queda com espera crescente e o limite das Configurações → Conexão; a store de contas refaz a primeira conexão que falha (`src/shared/reconnect.ts`). Senha errada (401, 403, 404, 407) não é tentada de novo. `test:reconexao` derruba o contêiner do PBX.
     - **RNF-04 e RNF-01: feito.** `test:pacote` abre o app empacotado e mede abertura e registro; o job `pacote` roda nos três sistemas e passou no CI. Os tempos só reprovam com `STRICT_TIMES=1` (no macOS local a abertura variou de 2,8 a 4,5 s, conforme a carga da máquina).
     - **RNF-02:** falta o checklist manual com FreeSWITCH e Kamailio.
-    - **RNF-17:** falta só a assinatura (passo 3). O `.deb` já sai no `dist:linux` e no release; a instalação foi conferida num contêiner Ubuntu 24.04, mas o app instalado por `.deb` ainda não foi aberto numa máquina com tela.
+    - **RNF-17:** falta só a assinatura (passo 3). O `.deb` já sai no `npm run dist` do Linux e no release; a instalação foi conferida num contêiner Ubuntu 24.04, mas o app instalado por `.deb` ainda não foi aberto numa máquina com tela.
 5. **[ ] Entregas do M4 que não são código:** o guia de uso e o teste com 3 pessoas (RNF-11: primeira chamada em até 2 minutos).
-    - **Guia: feito**, como tela dentro do app (botão "Guia" ou F1). Texto em `src/renderer/src/i18n/guide.pt-BR.ts`, tela em `GuideDialog.vue`, capturas em `src/renderer/src/assets/guide` geradas por `npm run guide:shots`. Quando uma tela mudar, atualize a seção do guia e refaça as capturas.
+    - **Guia: feito**, como tela dentro do app (botão "Guia" ou F1). Texto em `src/renderer/src/i18n/guide.pt-BR.ts`, tela em `GuideDialog.vue`, capturas em `src/renderer/src/assets/guide` geradas por `node scripts/guide-shots.mjs` (depois de `npx electron-vite build`). Quando uma tela mudar, atualize a seção do guia e refaça as capturas.
     - **Falta:** o roteiro do teste com 3 pessoas (o agente prepara) e o teste em si (com o usuário).
 6. **[ ] Fechar o M4.** Critério de saída: todos os RF/RNF essenciais e importantes aprovados, sem defeito crítico aberto. Atualize o "Estado atual" do README, que ainda diz "M0 a M3" e "RNF-17 fica para o M4", e as pendências do `docs/SEGURANCA.md`.
 
@@ -125,8 +125,8 @@ Pendências conhecidas, que não precisam ser feitas agora:
     - só faça o commit quando o usuário pedir.
 - **Requisitos no código:** cite o RF/RNF no comentário quando ele explica uma decisão, por exemplo `// … (RNF-19)`. Comente o *porquê*, com a mesma densidade do código ao redor.
 - **Formato:** Prettier, com 4 espaços, sem ponto e vírgula, aspas simples e 120 colunas. Rode `npm run format` antes do commit.
-- **Testes por publicação (decisão do usuário em 04/10/2026: "não precisa de todos esses testes em todas as publicações"):** no PR, o CI roda só a verificação rápida (lint, typecheck, unidade) nos três sistemas; o e2e com o Asterisk roda na main e sob pedido, sem bloquear; o release só gera, abre o app empacotado e cria os instaladores. Antes de publicar, rode localmente `test:pacote` e os testes da área que mudou, não a bateria inteira. O passo de memória (RNF-05) saiu do CI; `npm run test:resources` continua existindo.
-- **Antes de dar algo por pronto:** rode `npm run typecheck`, `npm run lint`, `npm run test:coverage` e `npm run format:check`. Se mexer na interface, rode também `npm run test:e2e` e `npm run test:a11y`. Se mexer no SIP, rode `test:pbx` ou `test:sip` com o Asterisk. Só o que tem a ver com a mudança. Informe o que rodou e o que não rodou.
+- **Testes por publicação (decisão do usuário em 04/10/2026: "não precisa de todos esses testes em todas as publicações"):** no PR, o CI roda só a verificação rápida (lint, typecheck, unidade) nos três sistemas; o e2e com o Asterisk roda na main e sob pedido, sem bloquear; o release só gera, abre o app empacotado e cria os instaladores. Antes de publicar, rode localmente `test:pacote` e os testes da área que mudou, não a bateria inteira. O passo de memória (RNF-05) saiu do CI; `tests/e2e/resources.mjs` continua existindo.
+- **Antes de dar algo por pronto:** rode `npm run typecheck`, `npm run lint`, `npm run test:coverage` e `npm run format:check`. Se mexer na interface, rode também `npm run test:e2e` (todos os testes de tela, ou `npm run test:e2e -- chamada a11y` para escolher). Se mexer no SIP, rode `PBX_WS=wss://127.0.0.1:8089/ws npm run test:e2e -- chamada` com o Asterisk. Só o que tem a ver com a mudança. Informe o que rodou e o que não rodou.
 - **Arquitetura que deve ser mantida:**
     - a interface só conhece `SipEngine` (`src/renderer/src/sip/engine.ts`, RNF-16). O motor real é `easysip-engine.ts`; o simulado é `mock-engine.ts`. Recursos novos entram nos dois;
     - o IPC passa só pelos canais fixos de `src/preload`, registrados com `handle`/`on` de `src/main/ipc-guard.ts`, e os argumentos são conferidos (veja `docs/SEGURANCA.md`);

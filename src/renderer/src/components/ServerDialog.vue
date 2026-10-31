@@ -36,7 +36,7 @@ const form = reactive<SipServer>(
           }
 )
 // WebSocket precisa do endereço WSS, que fica em Avançado: abre junto.
-const showAdvanced = ref(form.transport === 'ws' || Boolean(form.outboundProxy))
+const showAdvanced = ref(form.transport === 'ws')
 const errors = ref<Record<string, string>>({})
 const saving = ref(false)
 const testing = ref(false)
@@ -70,7 +70,6 @@ const summary = computed(() =>
             : form.dtmfMode === 'rtp-event'
               ? t('serverDialog.resumo_rtp')
               : '',
-        form.outboundProxy ? t('serverDialog.com_proxy') : '',
         !native.value && form.wssUrl ? form.wssUrl : ''
     ]
         .filter(Boolean)
@@ -105,7 +104,6 @@ function clean(): SipServer {
         wssUrl: native.value ? '' : form.wssUrl.trim(),
         sipServer: native.value ? form.sipServer.trim() : '',
         iceServers: form.iceServers.trim(),
-        outboundProxy: form.outboundProxy?.trim() || undefined,
         srtp: native.value && form.srtp ? true : undefined
     }
 }
@@ -277,13 +275,6 @@ const portHint = computed(() =>
                         :placeholder="$t('serverDialog.stun_exemplo')"
                     />
                 </template>
-                <label class="lbl" for="srv-proxy">{{ $t('serverDialog.proxy') }}</label>
-                <input
-                    id="srv-proxy"
-                    v-model="form.outboundProxy"
-                    class="input mono"
-                    :placeholder="$t('serverDialog.proxy_exemplo')"
-                />
                 <span id="srv-dtmf" class="lbl">{{ $t('serverDialog.dtmf') }}</span>
                 <div class="segmented" role="radiogroup" aria-labelledby="srv-dtmf">
                     <button type="button" role="radio" :aria-checked="dtmf === 'auto'" @click="dtmf = 'auto'">
