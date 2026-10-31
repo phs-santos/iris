@@ -87,3 +87,13 @@ jobs:
             - name: Chamada pela tela, simulada e no Asterisk
               if: ${{ !cancelled() }}
               run: PBX_WS=wss://127.0.0.1:8089/ws xvfb-run -a node tests/e2e/chamada.mjs
+            # Na falha, os testes de tela deixam a pasta de dados com a captura (falha.png) e o log do app.
+            - name: Guardar a captura e o log da falha
+              if: ${{ failure() }}
+              uses: actions/upload-artifact@v4
+              with:
+                  name: falha-e2e
+                  path: |
+                      /tmp/iris-e2e-*/falha.png
+                      /tmp/iris-e2e-*/logs/
+                  if-no-files-found: ignore
