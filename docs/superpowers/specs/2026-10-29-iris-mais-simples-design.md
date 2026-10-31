@@ -1,5 +1,7 @@
 # Íris mais simples: desenho
 
+> **Entregue na 2.0.0, publicada em 31/10/2026.** Depois da publicação, também a pedido do usuário, o guia de uso saiu do app (o botão Guia no pé dos Ajustes e a tecla F1 deixaram de existir). Onde este texto fala em "guia curto", vale isso. A especificação ([docs/ESPECIFICACAO.md](../../ESPECIFICACAO.md)) registra o que saiu na seção "Retirados em 29/10/2026"; nela, a ordem dos codecs virou o RF-60 e as etiquetas, o RF-61.
+
 Data: 29/10/2026. Combinado com o usuário em conversa, com esboços de tela em `.superpowers/brainstorm/67562-1793284940/content/` (a versão final da tela principal é `bancada-v7.html` + `bancada-v6.html` B; cadastro em `conta-servidor.html` e `conta-ajustes.html`).
 
 ## Por que
